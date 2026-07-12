@@ -1,0 +1,42 @@
+[
+    {
+        "id":1,
+        "name":"Admin User",
+        "registerNumber":"ADM001",
+        "email":"admin@allclub.com",
+        "password":"admin123",
+        "role":"ADMIN"
+    },
+    {
+        "id":2,
+        "name":"Dr. Meena Rao",
+        "registerNumber":"FAC001",
+        "email":"meena@allclub.com",
+        "password":"faculty123",
+        "role":"FACULTY"
+    },
+    {
+        "id":3,
+        "name":"Dr. Ravi Kumar",
+        "registerNumber":"FAC002",
+        "email":"ravi@allclub.com",
+        "password":"faculty123",
+        "role":"FACULTY"
+    },
+    {
+        "id":4,
+        "name":"Rahul Sharma",
+        "registerNumber":"CB.SC.U4CSE22001",
+        "email":"rahul@allclub.com",
+        "password":"student123",
+        "role":"STUDENT"
+    },
+    {
+        "id":5,
+        "name":"Priya Nair",
+        "registerNumber":"CB.SC.U4CSE22002",
+        "email":"priya@allclub.com",
+        "password":"student123",
+        "role":"STUDENT"
+    }
+]
