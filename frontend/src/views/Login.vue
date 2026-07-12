@@ -1,4 +1,27 @@
 <script setup>
+import {ref} from 'vue'
+import {useRouter} from 'vue-router'
+import {login} from '../services/authService'
+
+const router=useRouter()
+
+const username=ref('')
+const password=ref('')
+
+function handleLogin(){
+    const user=login(username.value,password.value)
+    //console.log(username.value)
+    //console.log(password.value)
+
+    if(!user){
+        alert('Invalid Credentials')
+        return
+    }
+
+    if(user.role==='ADMIN'){
+        router.push('/admin')
+    }
+}
 </script>
 
 <template>
@@ -9,13 +32,13 @@
                     <h2 class="text-center fw-bold mb-4">Login</h2>
                     <div class="mb-3">
                         <label class="form-label">Register Number / Email</label>
-                        <input type="text" class="form-control" placeholder="Enter register number or email">
+                        <input v-model="username" type="text" class="form-control" placeholder="Enter register number or email">
                     </div>
                     <div class="mb-4">
                         <label class="form-label">Password</label>
-                        <input type="password"class="form-control" placeholder="Enter password">
+                        <input v-model="password" type="password"class="form-control" placeholder="Enter password">
                     </div>
-                    <button class="btn btn-primary w-100">Login</button>
+                    <button class="btn btn-primary w-100" @click="handleLogin">Login</button>
                     <p class="text-center mt-4 mb-0">Don't have an account?
                         <RouterLink to="/register">Register</RouterLink>
                     </p>
