@@ -1,0 +1,29 @@
+[
+    {
+        "id": 1,
+        "requestedBy": "Rahul Sharma",
+        "registerNumber": "CB.SC.U4CSE22001",
+        "subject": "Join Photography Club",
+        "club": "Photography Club",
+        "date": "20 Jul 2026",
+        "status": "Pending"
+    },
+    {
+        "id": 2,
+        "requestedBy": "Priya Nair",
+        "registerNumber": "CB.SC.U4CSE22002",
+        "subject": "Create Chess Club",
+        "club": "Chess Club",
+        "date": "18 Jul 2026",
+        "status": "Pending"
+    },
+    {
+        "id": 3,
+        "requestedBy": "Dr. Meena Rao",
+        "registerNumber": "FAC001",
+        "subject": "Approve Robotics Club",
+        "club": "Robotics Club",
+        "date": "15 Jul 2026",
+        "status": "Pending"
+    }
+]

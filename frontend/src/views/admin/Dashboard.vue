@@ -1,11 +1,10 @@
 <script setup>
-import Sidebar from '../../components/Sidebar.vue'
+import AdminLayout from '../../layouts/AdminLayout.vue'
 </script>
 
 <template>
-    <div class="dashboard">
-        <Sidebar />
-
+    <AdminLayout>
+        <section class="dashboard-page">
         <main class="content">
             <h2 class="fw-bold mb-4">Admin Dashboard</h2>
             <div class="row g-4">
@@ -38,20 +37,13 @@ import Sidebar from '../../components/Sidebar.vue'
                 <h4 class="mb-3">Website Analytics</h4>
                 <div class="placeholder">Analytics / Charts will be displayed here</div>
             </div>
-        </main>
-    </div>
+        </main>            
+        </section>
+    </AdminLayout>
 </template>
 
 <style scoped>
-.dashboard{
-    display:flex;
-    background:#F8FAFC;
-    min-height:100vh;
-}
-
-.content{
-    margin-left:250px;
-    padding:35px;
+.dashboard-page{
     width:100%;
 }
 
@@ -62,8 +54,9 @@ import Sidebar from '../../components/Sidebar.vue'
     box-shadow:0 8px 20px rgba(0,0,0,.05);
 }
 
-.stat-card h5{
+.stat-card h6{
     color:#64748B;
+    margin-bottom:12px;
 }
 
 .stat-card h2{
@@ -81,7 +74,7 @@ import Sidebar from '../../components/Sidebar.vue'
 .placeholder{
     height:350px;
     border:2px dashed #CBD5E1;
-    border-radius:12px;
+    border-radius:14px;
     display:flex;
     justify-content:center;
     align-items:center;
