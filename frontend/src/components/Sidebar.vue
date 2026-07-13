@@ -1,12 +1,19 @@
 <script setup>
 import {ref} from 'vue'
+import {useRouter} from 'vue-router'
 
 const collapsed=ref(false)
+const showLogoutMenu=ref(false)
+const router=useRouter()
 const emit=defineEmits(['toggle'])
 
 function toggleSidebar(){
     collapsed.value=!collapsed.value
     emit('toggle',collapsed.value)
+}
+
+function handleLogout(){
+    router.push('/login')
 }
 </script>
 
@@ -67,11 +74,19 @@ function toggleSidebar(){
                 </li>
             </ul>
         </div>
-        <div class="profile">
-            <div class="profile-icon">A</div>
-            <div v-if="!collapsed">
-                <h6>Admin</h6>
-                <small>Administrator</small>
+        <div class="profile-wrapper">
+            <div class="profile" @click="showLogoutMenu = !showLogoutMenu">
+                <div class="profile-icon">A</div>
+                <div v-if="!collapsed">
+                    <h6>Admin</h6>
+                    <small>Administrator</small>
+                </div>
+            </div>
+            <div v-if="showLogoutMenu" class="logout-menu">
+                <button @click="handleLogout" class="logout-btn">
+                    <i class="bi bi-box-arrow-right"></i>
+                    <span v-if="!collapsed">Log Out</span>
+                </button>
             </div>
         </div>
     </aside>
@@ -166,12 +181,24 @@ function toggleSidebar(){
     color:white;
 }
 
-.profile{
+.profile-wrapper{
     border-top:1px solid #E2E8F0;
-    padding-top:20px;
+    padding-top:10px;
+    position:relative;
+}
+
+.profile{
+    padding:10px 5px;
     display:flex;
     align-items:center;
     gap:12px;
+    cursor:pointer;
+    border-radius:10px;
+    transition:background .2s;
+}
+
+.profile:hover{
+    background:#F1F5F9;
 }
 
 .profile-icon{
@@ -192,6 +219,44 @@ function toggleSidebar(){
 
 .profile small{
     color:#64748B;
+}
+
+.logout-menu{
+    position:absolute;
+    bottom:70px;
+    left:0;
+    right:0;
+    background:white;
+    border:1px solid #E2E8F0;
+    border-radius:10px;
+    box-shadow:0 4px 12px rgba(0,0,0,.08);
+    z-index:100;
+    overflow:hidden;
+}
+
+.logout-btn{
+    width:100%;
+    border:none;
+    background:none;
+    padding:12px;
+    color:#EF4444;
+    font-weight:500;
+    font-size:.9rem;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    gap:8px;
+    cursor:pointer;
+    transition:background .2s;
+}
+
+.logout-btn:hover{
+    background:#FEF2F2;
+}
+
+.sidebar.collapsed .logout-menu{
+    left:0;
+    right:0;
 }
 
 .sidebar.collapsed .nav-item{
