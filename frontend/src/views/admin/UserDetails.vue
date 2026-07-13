@@ -1,5 +1,5 @@
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import AdminLayout from '../../layouts/AdminLayout.vue'
 import initialUsers from '../../data/users.json'
@@ -8,6 +8,43 @@ const route = useRoute()
 const router = useRouter()
 const user = ref(null)
 const usersList = ref([])
+
+const studentProfiles = {
+    4: {
+        year: '3rd Year',
+        branch: 'Computer Science & Engineering',
+        clubs: [
+            { name: 'Photography Club', role: 'President' },
+            { name: 'AI Club', role: 'Member' }
+        ]
+    },
+    5: {
+        year: '2nd Year',
+        branch: 'Electronics & Communication Engineering',
+        clubs: [
+            { name: 'Music Club', role: 'Vice President' },
+            { name: 'Drama Club', role: 'Member' }
+        ]
+    }
+}
+
+const facultyProfiles = {
+    2: {
+        type: 'Teaching Faculty',
+        department: 'Computer Science',
+        monitoredClubs: [
+            { name: 'AI Club', role: 'Faculty Advisor' }
+        ]
+    },
+    3: {
+        type: 'Non-Teaching Staff',
+        department: 'Student Affairs Office',
+        monitoredClubs: [
+            { name: 'Sports Club', role: 'Main Coordinator' },
+            { name: 'Music Club', role: 'Staff Mentor' }
+        ]
+    }
+}
 
 onMounted(() => {
     const stored = localStorage.getItem('allclub_users')
@@ -20,6 +57,24 @@ onMounted(() => {
     
     const id = parseInt(route.params.id)
     user.value = usersList.value.find(u => u.id === id)
+})
+
+const profileDetails = computed(() => {
+    if (!user.value) return null
+    if (user.value.role === 'STUDENT') {
+        return studentProfiles[user.value.id] || {
+            year: '1st Year',
+            branch: 'General Sciences & Engineering',
+            clubs: []
+        }
+    } else if (user.value.role === 'FACULTY') {
+        return facultyProfiles[user.value.id] || {
+            type: 'Teaching Faculty',
+            department: 'General Administration',
+            monitoredClubs: []
+        }
+    }
+    return null
 })
 
 function toggleBlock() {
@@ -105,12 +160,58 @@ function goBack() {
                               <label class="form-label text-muted small text-uppercase">Role</label>
                               <p class="fw-semibold text-dark">{{ user.role.charAt(0) + user.role.slice(1).toLowerCase() }}</p>
                           </div>
+
+                          <!-- Student Specific Details -->
+                          <div class="col-md-6" v-if="user.role === 'STUDENT'">
+                              <label class="form-label text-muted small text-uppercase">Academic Year</label>
+                              <p class="fw-semibold text-dark">{{ profileDetails.year }}</p>
+                          </div>
+                          
+                          <div class="col-md-6" v-if="user.role === 'STUDENT'">
+                              <label class="form-label text-muted small text-uppercase">Branch / Department</label>
+                              <p class="fw-semibold text-dark">{{ profileDetails.branch }}</p>
+                          </div>
+
+                          <!-- Faculty Specific Details -->
+                          <div class="col-md-6" v-if="user.role === 'FACULTY'">
+                              <label class="form-label text-muted small text-uppercase">Staff Type</label>
+                              <p class="fw-semibold text-dark">{{ profileDetails.type }}</p>
+                          </div>
+                          
+                          <div class="col-md-6" v-if="user.role === 'FACULTY'">
+                              <label class="form-label text-muted small text-uppercase">Department</label>
+                              <p class="fw-semibold text-dark">{{ profileDetails.department }}</p>
+                          </div>
                           
                           <div class="col-12">
                               <label class="form-label text-muted small text-uppercase">Biography / Description</label>
                               <p class="text-secondary leading-relaxed mb-0">
                                   {{ user.role === 'STUDENT' ? 'Active student participant at AllClub. Interested in collaborating in technology workshops, cultural events, photography, and community service projects.' : 'Experienced faculty coordinator guiding student organizations, evaluating proposed club activities, and organizing guest seminars.' }}
                               </p>
+                          </div>
+
+                          <!-- Student Clubs & Roles -->
+                          <div class="col-12" v-if="user.role === 'STUDENT'">
+                              <label class="form-label text-muted small text-uppercase mb-2">Registered Clubs & Roles</label>
+                              <div class="d-flex flex-column gap-2">
+                                  <div v-for="club in profileDetails.clubs" :key="club.name" class="p-3 border rounded-3 bg-light d-flex justify-content-between align-items-center">
+                                      <span class="fw-semibold text-dark">{{ club.name }}</span>
+                                      <span class="badge bg-primary px-3 py-2">{{ club.role }}</span>
+                                  </div>
+                                  <p v-if="profileDetails.clubs.length === 0" class="text-secondary small mb-0">Not registered in any clubs currently.</p>
+                              </div>
+                          </div>
+
+                          <!-- Faculty Monitored Clubs -->
+                          <div class="col-12" v-if="user.role === 'FACULTY'">
+                              <label class="form-label text-muted small text-uppercase mb-2">Monitored Clubs & Roles</label>
+                              <div class="d-flex flex-column gap-2">
+                                  <div v-for="club in profileDetails.monitoredClubs" :key="club.name" class="p-3 border rounded-3 bg-light d-flex justify-content-between align-items-center">
+                                      <span class="fw-semibold text-dark">{{ club.name }}</span>
+                                      <span class="badge bg-success px-3 py-2">{{ club.role }}</span>
+                                  </div>
+                                  <p v-if="profileDetails.monitoredClubs.length === 0" class="text-secondary small mb-0">No clubs assigned for monitoring.</p>
+                              </div>
                           </div>
 
                           <div class="col-md-6">
