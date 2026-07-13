@@ -45,7 +45,7 @@ function goBack() {
             <div class="d-flex align-items-center justify-content-between flex-wrap gap-3 mb-4">
                 <div class="d-flex align-items-center gap-3">
                     <button @click="goBack" class="btn btn-icon-back" aria-label="Back">
-                        <i class="bi bi-arrow-left"></i>
+                        <i class="bi bi-arrow-left" style="color: #000; font-size: 1.2rem;"></i>
                     </button>
                     <div>
                         <h2 class="fw-bold mb-1">User Profile</h2>

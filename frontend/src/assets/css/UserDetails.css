@@ -8,16 +8,23 @@
     border-radius: 10px;
     background: #E2E8F0;
     border: none;
-    color: #334155;
     display: flex;
     align-items: center;
     justify-content: center;
     transition: all 0.25s ease;
 }
 
+.btn-icon-back i {
+    color: #000000 !important;
+    font-size: 1.2rem;
+}
+
 .btn-icon-back:hover {
     background: #CBD5E1;
-    color: #1E293B;
+}
+
+.btn-icon-back:hover i {
+    color: #000000 !important;
 }
 
 .profile-side-card, .profile-details-card {
