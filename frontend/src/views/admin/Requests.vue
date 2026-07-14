@@ -46,19 +46,17 @@ function openRequest(request){
                     placeholder="Search requests...">
             </div>
 
-            <div class="toggle-buttons mb-4">
-                <button
-                    class="btn"
-                    :class="activeTab==='clubs' ? 'btn-primary' : 'btn-outline-primary'"
+            <div class="request-toggle mb-4">
+                    <button
+                    class="toggle-option"
+                    :class="{active:activeTab==='clubs'}"
                     @click="activeTab='clubs'">Club Requests
-                    <span class="badge bg-light text-dark ms-2">{{clubRequests.length}}</span>
-                </button>
+                    <span class="count">{{clubRequests.length}}</span>
+                    </button>
 
-                <button
-                    class="btn"
-                    :class="activeTab==='events' ? 'btn-primary' : 'btn-outline-primary'"
+                    <button class="toggle-option" :class="{active:activeTab==='events'}" 
                     @click="activeTab='events'">Event Requests
-                    <span class="badge bg-light text-dark ms-2">{{eventRequests.length}}</span>
+                    <span class="count">{{eventRequests.length}}</span>
                 </button>
             </div>
             <div class="row">
@@ -93,10 +91,53 @@ function openRequest(request){
     width:320px;
 }
 
-.toggle-buttons{
+.request-toggle{
+    display:inline-flex;
+    background:white;
+    border:1px solid #D1D5DB;
+    border-radius:14px;
+    padding:5px;
+    gap:4px;
+}
+
+.toggle-option{
+    border:none;
+    background:transparent;
+    padding:12px 24px;
+    border-radius:10px;
+    font-weight:600;
+    color:#475569;
     display:flex;
-    gap:12px;
-    flex-wrap:wrap;
+    align-items:center;
+    gap:10px;
+    transition:all .25s ease;
+}
+
+.toggle-option:hover{
+    background:#EFF6FF;
+}
+
+.toggle-option.active{
+    background:#2563EB;
+    color:white;
+}
+
+.count{
+    width:24px;
+    height:24px;
+    border-radius:50%;
+    display:flex;
+    justify-content:center;
+    align-items:center;
+    background:rgba(255,255,255,.9);
+    color:#111827;
+    font-size:.75rem;
+    font-weight:700;
+}
+
+.toggle-option.active .count{
+    background:white;
+    color:#2563EB;
 }
 
 .empty-state{

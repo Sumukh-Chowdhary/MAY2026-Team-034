@@ -1,13 +1,39 @@
 <script setup>
-import {ref} from 'vue'
+import {ref,onMounted,onBeforeUnmount} from 'vue'
+import {Modal} from 'bootstrap'
 
 const collapsed=ref(false)
+const showProfileMenu=ref(false)
 const emit=defineEmits(['toggle'])
 
 function toggleSidebar(){
     collapsed.value=!collapsed.value
     emit('toggle',collapsed.value)
 }
+
+function toggleProfileMenu(){
+    showProfileMenu.value=!showProfileMenu.value
+}
+
+function openLogoutModal(){
+    showProfileMenu.value=false
+    const modal=new Modal(document.getElementById('logoutModal'))
+    modal.show()
+}
+
+function handleOutsideClick(event){
+    if(!event.target.closest('.profile-container')){
+        showProfileMenu.value=false
+    }
+}
+
+onMounted(()=>{
+    document.addEventListener('click',handleOutsideClick)
+})
+
+onBeforeUnmount(()=>{
+    document.removeEventListener('click',handleOutsideClick)
+})
 </script>
 
 <template>
@@ -67,13 +93,25 @@ function toggleSidebar(){
                 </li>
             </ul>
         </div>
-        <div class="profile">
-            <div class="profile-icon">A</div>
-            <div v-if="!collapsed">
-                <h6>Admin</h6>
-                <small>Administrator</small>
+        <div class="profile-container">
+            <div class="profile" @click.stop="toggleProfileMenu">
+                <div class="profile-icon">A</div>
+                <div class="profile-info" v-if="!collapsed">
+                    <h6>Admin</h6>
+                    <small>Administrator</small>
+                </div>
             </div>
+            <Transition name="dropdown">
+            <div v-if="showProfileMenu" class="profile-menu">
+                <button class="menu-item"><i class="bi bi-person-circle"></i>Profile</button>
+                <button
+                class="menu-item logout"
+                @click="openLogoutModal">
+                <i class="bi bi-box-arrow-right"></i>Logout
+            </button>
         </div>
+            </Transition>
+            </div>
     </aside>
 </template>
 
@@ -205,5 +243,82 @@ function toggleSidebar(){
 
 .sidebar.collapsed .toggle-btn{
     margin:auto;
+}
+
+.profile-container{
+    position:relative;
+}
+
+.profile{
+    display:flex;
+    align-items:center;
+    gap:12px;
+    border-top:1px solid #E2E8F0;
+    padding-top:18px;
+    cursor:pointer;
+}
+
+.profile-info h6{
+    margin:0;
+}
+
+.profile-info small{
+    color:#64748B;
+}
+
+.profile-menu{
+    position:absolute;
+    bottom:72px;
+    left:0;
+    width:180px;
+    background:#fff;
+    border:1px solid #E2E8F0;
+    border-radius:14px;
+    box-shadow:0 10px 30px rgba(0,0,0,.12);
+    overflow:hidden;
+    z-index:9999;
+}
+
+.menu-item{
+    width:100%;
+    border:none;
+    background:white;
+    padding:14px 18px;
+    display:flex;
+    align-items:center;
+    gap:12px;
+    transition:.2s;
+}
+
+.menu-item:hover{
+    background:#F8FAFC;
+}
+
+.logout{
+    color:#DC2626;
+}
+
+.logout:hover{
+    background:#FEF2F2;
+}
+
+.sidebar.collapsed .profile{
+    justify-content:center;
+}
+
+.sidebar.collapsed .profile-menu{
+    left:70px;
+    bottom:0;
+}
+
+.dropdown-enter-active,
+.dropdown-leave-active{
+    transition:all .2s ease;
+}
+
+.dropdown-enter-from,
+.dropdown-leave-to{
+    opacity:0;
+    transform:translateY(8px);
 }
 </style>

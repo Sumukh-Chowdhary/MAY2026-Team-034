@@ -1,6 +1,7 @@
 <script setup>
 import {ref} from 'vue'
 import Sidebar from '../components/Sidebar.vue'
+import LogoutModal from '../components/LogoutModal.vue'
 
 const collapsed=ref(false)
 </script>
@@ -12,6 +13,7 @@ const collapsed=ref(false)
         <main class="page-content">
             <slot/>
         </main>
+        <LogoutModal/>
     </div>
 </template>
 
