@@ -3,9 +3,9 @@ import { createRouter, createWebHistory } from 'vue-router'
 import Landing from '../views/Landing.vue'
 import Login from '../views/Login.vue'
 import Register from '../views/Register.vue'
-import ClubsPage from '../pages/Clubs/ClubsPage.vue'
-import EventsPage from '../pages/Events/EventsPage.vue'
-import EventDetailView from '../pages/Events/EventDetailView.vue'
+import ClubsPage from '../views/ClubsPage.vue'
+import Events from '@/views/admin/Events.vue'
+import EventDetails from '@/views/admin/EventDetails.vue'
 import Dashboard from '@/views/admin/Dashboard.vue'
 import Requests from '@/views/admin/Requests.vue'
 import Clubs from '@/views/admin/Clubs.vue'
@@ -15,11 +15,12 @@ const routes = [
   { path: '/login', name: 'Login', component: Login },
   { path: '/register', name: 'Register', component: Register },
   { path: '/clubs', name: 'Clubs', component: ClubsPage },
-  { path: '/events', name: 'Events', component: EventsPage },
-  { path: '/events/:id', name: 'EventDetail', component: EventDetailView },
+  { path: '/events/:id', name: 'EventDetail', component: EventDetails},
   { path: '/admin', name: 'AdminDashboard', component: Dashboard },
   { path: '/admin/requests', name:'AdminRequests', component: Requests },
-  { path: '/admin/clubs', name:'AdminClubs', component: Clubs }
+  { path: '/admin/clubs', name:'AdminClubs', component: Clubs },
+  { path: '/admin/events', name:'AdminEvents', component: Events },
+  { path: '/admin/events/:id', name: 'EventDetail', component: EventDetails}
 ]
 
 const router = createRouter({
