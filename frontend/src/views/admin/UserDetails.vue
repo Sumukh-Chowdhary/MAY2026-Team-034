@@ -1,240 +1,362 @@
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import AdminLayout from '../../layouts/AdminLayout.vue'
-import initialUsers from '../../data/users.json'
+import AdminLayout from '@/layouts/AdminLayout.vue'
+import usersData from '@/data/users.json'
+import '@/assets/css/UserDetails.css'
 
-const route = useRoute()
+const route  = useRoute()
 const router = useRouter()
-const user = ref(null)
-const usersList = ref([])
 
-const studentProfiles = {
-    4: {
-        year: '3rd Year',
-        branch: 'Computer Science & Engineering',
-        clubs: [
-            { name: 'Photography Club', role: 'President' },
-            { name: 'AI Club', role: 'Member' }
-        ]
-    },
-    5: {
-        year: '2nd Year',
-        branch: 'Electronics & Communication Engineering',
-        clubs: [
-            { name: 'Music Club', role: 'Vice President' },
-            { name: 'Drama Club', role: 'Member' }
-        ]
-    }
+// ── Load User ─────────────────────────────────────
+const userId = Number(route.params.id)
+const user   = ref(usersData.find(u => u.id === userId) ? { ...usersData.find(u => u.id === userId) } : null)
+
+// ── Club emoji map (matches clubs.js data) ────────
+const clubEmojiMap = {
+  'AI Club':            '🤖',
+  'Music Club':         '🎵',
+  'Sports Club':        '⚽',
+  'Drama Club':         '🎭',
+  'Photography Club':   '📷',
+  'Science Club':       '🧪',
 }
 
-const facultyProfiles = {
-    2: {
-        type: 'Teaching Faculty',
-        department: 'Computer Science',
-        monitoredClubs: [
-            { name: 'AI Club', role: 'Faculty Advisor' }
-        ]
-    },
-    3: {
-        type: 'Non-Teaching Staff',
-        department: 'Student Affairs Office',
-        monitoredClubs: [
-            { name: 'Sports Club', role: 'Main Coordinator' },
-            { name: 'Music Club', role: 'Staff Mentor' }
-        ]
-    }
+function getEmoji(clubName) {
+  return clubEmojiMap[clubName] || '🏛️'
 }
 
-onMounted(() => {
-    const stored = localStorage.getItem('allclub_users')
-    if (stored) {
-        usersList.value = JSON.parse(stored)
-    } else {
-        usersList.value = initialUsers.map(u => ({ ...u, blocked: u.blocked || false }))
-        localStorage.setItem('allclub_users', JSON.stringify(usersList.value))
-    }
-    
-    const id = parseInt(route.params.id)
-    user.value = usersList.value.find(u => u.id === id)
+// ── Helpers ────────────────────────────────────────
+function roleBadge(role) {
+  const map = { ADMIN: 'role-admin', FACULTY: 'role-faculty', STUDENT: 'role-student' }
+  return map[role] || 'role-student'
+}
+
+function roleLabel(role) {
+  if (!role) return ''
+  return role.charAt(0) + role.slice(1).toLowerCase()
+}
+
+function initial(name) {
+  return name ? name.charAt(0).toUpperCase() : '?'
+}
+
+function formatDate(dateStr) {
+  if (!dateStr) return '—'
+  return new Date(dateStr).toLocaleDateString('en-IN', {
+    day: 'numeric', month: 'long', year: 'numeric'
+  })
+}
+
+// ── Toggle Status ──────────────────────────────────
+function toggleStatus() {
+  if (!user.value) return
+  user.value.status = user.value.status === 'ACTIVE' ? 'INACTIVE' : 'ACTIVE'
+}
+
+// ── Edit Modal ─────────────────────────────────────
+const showEditModal = ref(false)
+const editForm = ref({})
+
+function openEditModal() {
+  editForm.value = { ...user.value }
+  showEditModal.value = true
+}
+
+function closeEditModal() {
+  showEditModal.value = false
+}
+
+function saveEdit() {
+  user.value = { ...editForm.value }
+  closeEditModal()
+}
+
+// ── Activity Timeline (derived) ────────────────────
+const timeline = computed(() => {
+  if (!user.value) return []
+  const items = []
+
+  if (user.value.joinedDate) {
+    items.push({
+      type: 'join',
+      label: 'Joined the platform',
+      date: formatDate(user.value.joinedDate),
+      icon: 'bi-person-check-fill',
+      dot: 'dot-join'
+    })
+  }
+
+  if (user.value.clubs && user.value.clubs.length) {
+    user.value.clubs.forEach(club => {
+      items.push({
+        type: 'club',
+        label: `Joined ${club}`,
+        date: 'Member',
+        icon: 'bi-collection-fill',
+        dot: 'dot-club'
+      })
+    })
+  }
+
+  return items
 })
-
-const profileDetails = computed(() => {
-    if (!user.value) return null
-    if (user.value.role === 'STUDENT') {
-        return studentProfiles[user.value.id] || {
-            year: '1st Year',
-            branch: 'General Sciences & Engineering',
-            clubs: []
-        }
-    } else if (user.value.role === 'FACULTY') {
-        return facultyProfiles[user.value.id] || {
-            type: 'Teaching Faculty',
-            department: 'General Administration',
-            monitoredClubs: []
-        }
-    }
-    return null
-})
-
-function toggleBlock() {
-    if (user.value) {
-        user.value.blocked = !user.value.blocked
-        // Sync back to usersList
-        const index = usersList.value.findIndex(u => u.id === user.value.id)
-        if (index !== -1) {
-            usersList.value[index] = { ...user.value }
-            localStorage.setItem('allclub_users', JSON.stringify(usersList.value))
-        }
-    }
-}
-
-function goBack() {
-    router.push('/admin/users')
-}
 </script>
 
 <template>
-    <AdminLayout>
-        <section class="user-details-page" v-if="user">
-            <div class="d-flex align-items-center justify-content-between flex-wrap gap-3 mb-4">
-                <div class="d-flex align-items-center gap-3">
-                    <button @click="goBack" class="btn btn-icon-back" aria-label="Back">
-                        <i class="bi bi-arrow-left" style="color: #000; font-size: 1.2rem;"></i>
-                    </button>
-                    <div>
-                        <h2 class="fw-bold mb-1">User Profile</h2>
-                        <p class="text-secondary mb-0">View and manage detailed profile information.</p>
-                    </div>
+  <AdminLayout>
+    <section class="user-details-page">
+
+      <!-- ── Back ── -->
+      <button class="back-btn" @click="router.push('/admin/users')">
+        <i class="bi bi-arrow-left"></i> Back to Users
+      </button>
+
+      <!-- ── Not Found ── -->
+      <div v-if="!user" class="not-found">
+        <i class="bi bi-person-x"></i>
+        <h3>User Not Found</h3>
+        <p>The user you're looking for doesn't exist.</p>
+      </div>
+
+      <!-- ── Profile Content ── -->
+      <template v-else>
+
+        <!-- ── Profile Header Card ── -->
+        <div class="profile-header-card">
+          <div class="avatar-large" :style="{ background: user.avatarColor }">
+            {{ initial(user.name) }}
+          </div>
+
+          <div class="profile-meta">
+            <h2 class="profile-name">{{ user.name }}</h2>
+            <p class="profile-reg">{{ user.registerNumber }}</p>
+            <div class="profile-badges">
+              <span class="role-badge" :class="roleBadge(user.role)">
+                {{ roleLabel(user.role) }}
+              </span>
+              <span
+                class="status-badge"
+                :class="user.status === 'ACTIVE' ? 'status-active' : 'status-inactive'"
+              >
+                <span class="status-dot"></span>
+                {{ user.status === 'ACTIVE' ? 'Active' : 'Inactive' }}
+              </span>
+            </div>
+          </div>
+
+          <div class="header-actions">
+            <button class="btn-edit" @click="openEditModal">
+              <i class="bi bi-pencil-fill"></i> Edit Profile
+            </button>
+            <button class="btn-deactivate" @click="toggleStatus">
+              <i class="bi" :class="user.status === 'ACTIVE' ? 'bi-slash-circle' : 'bi-check-circle'"></i>
+              {{ user.status === 'ACTIVE' ? 'Deactivate' : 'Activate' }}
+            </button>
+          </div>
+        </div>
+
+        <!-- ── Detail Grid ── -->
+        <div class="detail-grid">
+
+          <!-- Left Column -->
+          <div style="display:flex; flex-direction:column; gap:20px;">
+
+            <!-- Personal Information -->
+            <div class="info-card">
+              <div class="card-header">
+                <i class="bi bi-person-lines-fill"></i>
+                <h4>Personal Information</h4>
+              </div>
+              <div class="card-body">
+                <div class="info-grid">
+                  <div class="info-field">
+                    <label>Full Name</label>
+                    <div class="value">{{ user.name }}</div>
+                  </div>
+                  <div class="info-field">
+                    <label>Register Number</label>
+                    <div class="value">{{ user.registerNumber }}</div>
+                  </div>
+                  <div class="info-field">
+                    <label>Email Address</label>
+                    <a :href="'mailto:' + user.email" class="value email-val">{{ user.email }}</a>
+                  </div>
+                  <div class="info-field">
+                    <label>Phone Number</label>
+                    <div class="value phone-val">{{ user.phone || '—' }}</div>
+                  </div>
+                  <div class="info-field">
+                    <label>Department</label>
+                    <div class="value">{{ user.department || '—' }}</div>
+                  </div>
+                  <div class="info-field">
+                    <label>Year of Study</label>
+                    <div class="value">{{ user.year || '—' }}</div>
+                  </div>
+                  <div class="info-field">
+                    <label>Role</label>
+                    <div class="value">{{ roleLabel(user.role) }}</div>
+                  </div>
+                  <div class="info-field">
+                    <label>Joined Date</label>
+                    <div class="value">{{ formatDate(user.joinedDate) }}</div>
+                  </div>
                 </div>
-                <button @click="goBack" class="btn btn-outline-secondary px-3">
-                    Back to Users
+
+                <!-- Bio -->
+                <div class="bio-section" v-if="user.bio">
+                  <label>About / Bio</label>
+                  <p class="bio-text">{{ user.bio }}</p>
+                </div>
+              </div>
+            </div>
+
+          </div>
+
+          <!-- Right Column -->
+          <div style="display:flex; flex-direction:column; gap:20px;">
+
+            <!-- Club Memberships -->
+            <div class="info-card">
+              <div class="card-header">
+                <i class="bi bi-collection-fill"></i>
+                <h4>Club Memberships</h4>
+              </div>
+              <div class="card-body">
+                <div class="clubs-list" v-if="user.clubs && user.clubs.length">
+                  <div
+                    v-for="club in user.clubs"
+                    :key="club"
+                    class="club-item"
+                  >
+                    <span class="club-emoji">{{ getEmoji(club) }}</span>
+                    <span class="club-name">{{ club }}</span>
+                  </div>
+                </div>
+                <div class="no-clubs-msg" v-else>
+                  <i class="bi bi-collection"></i>
+                  <p>Not a member of any club yet.</p>
+                </div>
+              </div>
+            </div>
+
+            <!-- Activity Timeline -->
+            <div class="info-card">
+              <div class="card-header">
+                <i class="bi bi-clock-history"></i>
+                <h4>Activity Timeline</h4>
+              </div>
+              <div class="card-body">
+                <div class="timeline" v-if="timeline.length">
+                  <div
+                    v-for="(item, idx) in timeline"
+                    :key="idx"
+                    class="timeline-item"
+                  >
+                    <div class="timeline-dot" :class="item.dot">
+                      <i class="bi" :class="item.icon"></i>
+                    </div>
+                    <div class="timeline-content">
+                      <p>{{ item.label }}</p>
+                      <span>{{ item.date }}</span>
+                    </div>
+                  </div>
+                </div>
+                <div class="no-clubs-msg" v-else>
+                  <p>No activity recorded.</p>
+                </div>
+              </div>
+            </div>
+
+          </div>
+        </div>
+
+        <!-- ── Edit Modal ── -->
+        <Teleport to="body">
+          <div v-if="showEditModal" class="modal-overlay" @click.self="closeEditModal">
+            <div class="edit-modal">
+              <div class="edit-modal-header">
+                <h4><i class="bi bi-pencil-fill me-2" style="color:#2563eb;"></i>Edit Profile</h4>
+                <button class="close-btn" @click="closeEditModal">
+                  <i class="bi bi-x-lg"></i>
                 </button>
-            </div>
+              </div>
 
-            <div class="row g-4">
-                <div class="col-lg-4">
-                    <div class="card border-0 shadow-sm text-center p-4 profile-side-card">
-                        <div class="avatar-large mx-auto mb-3">{{ user.name.charAt(0) }}</div>
-                        <h4 class="fw-bold mb-1">{{ user.name }}</h4>
-                        <p class="text-secondary small mb-3">
-                            {{ user.role === 'STUDENT' ? 'Student' : (user.role === 'FACULTY' ? 'Faculty Member' : 'Administrator') }}
-                        </p>
-                        
-                        <div class="mb-3">
-                            <span class="badge px-3 py-2" :class="user.blocked ? 'bg-danger-subtle text-danger' : 'bg-success-subtle text-success'">
-                                {{ user.blocked ? 'Blocked' : 'Active' }}
-                            </span>
-                        </div>
-                        
-                        <hr class="w-100 my-4">
-                        
-                        <button @click="toggleBlock" class="btn w-100 d-flex align-items-center justify-content-center gap-2" :class="user.blocked ? 'btn-success' : 'btn-danger'">
-                            <i class="bi" :class="user.blocked ? 'bi-unlock-fill' : 'bi-slash-circle-fill'"></i>
-                            {{ user.blocked ? 'Unblock User' : 'Block User' }}
-                        </button>
-                    </div>
+              <div class="edit-modal-body">
+                <div class="form-row">
+                  <div class="form-group">
+                    <label>Full Name</label>
+                    <input v-model="editForm.name" type="text" placeholder="Full name" />
+                  </div>
+                  <div class="form-group">
+                    <label>Register Number</label>
+                    <input v-model="editForm.registerNumber" type="text" placeholder="Register number" />
+                  </div>
                 </div>
-                
-                <div class="col-lg-8">
-                    <div class="card border-0 shadow-sm p-4 profile-details-card">
-                        <h5 class="fw-bold mb-4">Profile Information</h5>
-                        
-                        <div class="row g-4">
-                          <div class="col-md-6">
-                              <label class="form-label text-muted small text-uppercase">Full Name</label>
-                              <p class="fw-semibold text-dark">{{ user.name }}</p>
-                          </div>
-                          
-                          <div class="col-md-6">
-                              <label class="form-label text-muted small text-uppercase">Register Number</label>
-                              <p class="fw-semibold text-dark">{{ user.registerNumber }}</p>
-                          </div>
-                          
-                          <div class="col-md-6">
-                              <label class="form-label text-muted small text-uppercase">Email Address</label>
-                              <p class="fw-semibold text-dark">{{ user.email }}</p>
-                          </div>
-                          
-                          <div class="col-md-6">
-                              <label class="form-label text-muted small text-uppercase">Role</label>
-                              <p class="fw-semibold text-dark">{{ user.role.charAt(0) + user.role.slice(1).toLowerCase() }}</p>
-                          </div>
 
-                          <!-- Student Specific Details -->
-                          <div class="col-md-6" v-if="user.role === 'STUDENT'">
-                              <label class="form-label text-muted small text-uppercase">Academic Year</label>
-                              <p class="fw-semibold text-dark">{{ profileDetails.year }}</p>
-                          </div>
-                          
-                          <div class="col-md-6" v-if="user.role === 'STUDENT'">
-                              <label class="form-label text-muted small text-uppercase">Branch / Department</label>
-                              <p class="fw-semibold text-dark">{{ profileDetails.branch }}</p>
-                          </div>
-
-                          <!-- Faculty Specific Details -->
-                          <div class="col-md-6" v-if="user.role === 'FACULTY'">
-                              <label class="form-label text-muted small text-uppercase">Staff Type</label>
-                              <p class="fw-semibold text-dark">{{ profileDetails.type }}</p>
-                          </div>
-                          
-                          <div class="col-md-6" v-if="user.role === 'FACULTY'">
-                              <label class="form-label text-muted small text-uppercase">Department</label>
-                              <p class="fw-semibold text-dark">{{ profileDetails.department }}</p>
-                          </div>
-                          
-                          <div class="col-12">
-                              <label class="form-label text-muted small text-uppercase">Biography / Description</label>
-                              <p class="text-secondary leading-relaxed mb-0">
-                                  {{ user.role === 'STUDENT' ? 'Active student participant at AllClub. Interested in collaborating in technology workshops, cultural events, photography, and community service projects.' : 'Experienced faculty coordinator guiding student organizations, evaluating proposed club activities, and organizing guest seminars.' }}
-                              </p>
-                          </div>
-
-                          <!-- Student Clubs & Roles -->
-                          <div class="col-12" v-if="user.role === 'STUDENT'">
-                              <label class="form-label text-muted small text-uppercase mb-2">Registered Clubs & Roles</label>
-                              <div class="d-flex flex-column gap-2">
-                                  <div v-for="club in profileDetails.clubs" :key="club.name" class="p-3 border rounded-3 bg-light d-flex justify-content-between align-items-center">
-                                      <span class="fw-semibold text-dark">{{ club.name }}</span>
-                                      <span class="badge bg-primary px-3 py-2">{{ club.role }}</span>
-                                  </div>
-                                  <p v-if="profileDetails.clubs.length === 0" class="text-secondary small mb-0">Not registered in any clubs currently.</p>
-                              </div>
-                          </div>
-
-                          <!-- Faculty Monitored Clubs -->
-                          <div class="col-12" v-if="user.role === 'FACULTY'">
-                              <label class="form-label text-muted small text-uppercase mb-2">Monitored Clubs & Roles</label>
-                              <div class="d-flex flex-column gap-2">
-                                  <div v-for="club in profileDetails.monitoredClubs" :key="club.name" class="p-3 border rounded-3 bg-light d-flex justify-content-between align-items-center">
-                                      <span class="fw-semibold text-dark">{{ club.name }}</span>
-                                      <span class="badge bg-success px-3 py-2">{{ club.role }}</span>
-                                  </div>
-                                  <p v-if="profileDetails.monitoredClubs.length === 0" class="text-secondary small mb-0">No clubs assigned for monitoring.</p>
-                              </div>
-                          </div>
-
-                          <div class="col-md-6">
-                              <label class="form-label text-muted small text-uppercase">Joined Date</label>
-                              <p class="text-secondary mb-0">January 2026</p>
-                          </div>
-
-                          <div class="col-md-6">
-                              <label class="form-label text-muted small text-uppercase">Last Login Activity</label>
-                              <p class="text-secondary mb-0">Recent (July 2026)</p>
-                          </div>
-                      </div>
-                    </div>
+                <div class="form-row">
+                  <div class="form-group">
+                    <label>Email</label>
+                    <input v-model="editForm.email" type="email" placeholder="Email address" />
+                  </div>
+                  <div class="form-group">
+                    <label>Phone</label>
+                    <input v-model="editForm.phone" type="text" placeholder="Phone number" />
+                  </div>
                 </div>
+
+                <div class="form-row">
+                  <div class="form-group">
+                    <label>Department</label>
+                    <input v-model="editForm.department" type="text" placeholder="Department" />
+                  </div>
+                  <div class="form-group">
+                    <label>Year of Study</label>
+                    <select v-model="editForm.year">
+                      <option value="">N/A</option>
+                      <option>1st Year</option>
+                      <option>2nd Year</option>
+                      <option>3rd Year</option>
+                      <option>4th Year</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div class="form-row">
+                  <div class="form-group">
+                    <label>Role</label>
+                    <select v-model="editForm.role">
+                      <option value="STUDENT">Student</option>
+                      <option value="FACULTY">Faculty</option>
+                      <option value="ADMIN">Admin</option>
+                    </select>
+                  </div>
+                  <div class="form-group">
+                    <label>Status</label>
+                    <select v-model="editForm.status">
+                      <option value="ACTIVE">Active</option>
+                      <option value="INACTIVE">Inactive</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div class="form-group">
+                  <label>Bio / About</label>
+                  <textarea v-model="editForm.bio" placeholder="Short bio about the user…"></textarea>
+                </div>
+              </div>
+
+              <div class="edit-modal-footer">
+                <button class="btn-cancel" @click="closeEditModal">Cancel</button>
+                <button class="btn-save" @click="saveEdit">Save Changes</button>
+              </div>
             </div>
-        </section>
-        <section v-else class="text-center py-5">
-            <div class="spinner-border text-primary" role="status"></div>
-            <p class="mt-3 text-secondary">Loading profile...</p>
-        </section>
-    </AdminLayout>
+          </div>
+        </Teleport>
+
+      </template>
+
+    </section>
+  </AdminLayout>
 </template>
-
-<style scoped>
-@import "@/assets/css/UserDetails.css";
-</style>
