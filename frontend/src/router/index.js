@@ -9,6 +9,8 @@ import EventDetails from '@/views/admin/EventDetails.vue'
 import Dashboard from '@/views/admin/Dashboard.vue'
 import Requests from '@/views/admin/Requests.vue'
 import Clubs from '@/views/admin/Clubs.vue'
+import Users from '@/views/admin/Users.vue'
+import UserDetails from '@/views/admin/UserDetails.vue'
 
 import FDashboard from '@/views/faculty/Dashboard.vue'
 
@@ -23,6 +25,8 @@ const routes = [
   { path: '/admin', name: 'AdminDashboard', component: Dashboard },
   { path: '/admin/requests', name:'AdminRequests', component: Requests },
   { path: '/admin/clubs', name:'AdminClubs', component: Clubs },
+  { path: '/admin/users', name:'AdminUsers', component: Users },
+  { path: '/admin/users/:id', name:'AdminUserDetails', component: UserDetails },
   { path: '/admin/events', name:'AdminEvents', component: Events },
   { path: '/admin/events/:id', name: 'EventDetail', component: EventDetails},
   { path: '/faculty', name:'FacultyDashboard', component: FDashboard},
