@@ -1,6 +1,7 @@
 <script setup>
 import {ref} from 'vue'
 import Sidebar from '../components/Sidebar.vue'
+import LogoutModal from '../components/LogoutModal.vue'
 
 const collapsed=ref(false)
 </script>
@@ -12,6 +13,7 @@ const collapsed=ref(false)
         <main class="page-content">
             <slot/>
         </main>
+        <LogoutModal/>
     </div>
 </template>
 
@@ -32,5 +34,24 @@ const collapsed=ref(false)
 .dashboard.collapsed .page-content{
     margin-left:75px;
     width:calc(100% - 75px);
+}
+
+
+@media (max-width: 992px) {
+    .page-content,
+    .dashboard.collapsed .page-content {
+        margin-left: 80px;
+        width: calc(100% - 80px);
+        padding: 24px;
+    }
+}
+
+@media (max-width: 576px) {
+    .page-content,
+    .dashboard.collapsed .page-content {
+        margin-left: 70px;
+        width: calc(100% - 70px);
+        padding: 16px;
+    }
 }
 </style>

@@ -1,41 +1,44 @@
 <template>
-  <article class="club-card">
+  <article class="event-card">
 
-    <div class="club-header">
+    <div class="event-header">
 
-      <div class="club-image">
-        {{ club.emoji }}
+      <div class="event-image">
+        {{ event.emoji }}
       </div>
 
-      <span class="category">
-        {{ club.category }}
+      <span class="status-badge" :class="event.status.toLowerCase()">
+        {{ event.status }}
       </span>
 
     </div>
 
-    <div class="club-content">
+    <div class="event-content">
 
-      <h3>{{ club.name }}</h3>
+      <span class="club-tag">
+        {{ event.club }}
+      </span>
+
+      <h3>{{ event.name }}</h3>
 
       <p class="description">
-        {{ club.description }}
+        {{ event.description }}
       </p>
 
     </div>
 
-    <div class="club-footer">
+    <div class="event-footer">
 
-      <span class="members">
-        👥 {{ club.members }}
-        {{ club.members === 1 ? 'Member' : 'Members' }}
+      <span class="date">
+        📅 {{ event.startDate }}
       </span>
 
-      <button
-        type="button"
+      <RouterLink
+        :to="{ name: 'EventDetail', params: { id: event.id } }"
         class="view-btn"
       >
-        View Details
-      </button>
+        View
+      </RouterLink>
 
     </div>
 
@@ -45,7 +48,7 @@
 <script setup>
 
 defineProps({
-  club: {
+  event: {
     type: Object,
     required: true
   }
@@ -55,7 +58,7 @@ defineProps({
 
 <style scoped>
 
-.club-card{
+.event-card{
 
     background:#fff;
 
@@ -71,7 +74,7 @@ defineProps({
 
     justify-content:space-between;
 
-    gap:20px;
+    gap:18px;
 
     min-height:330px;
 
@@ -81,7 +84,7 @@ defineProps({
 
 }
 
-.club-card:hover{
+.event-card:hover{
 
     transform:translateY(-6px);
 
@@ -91,7 +94,7 @@ defineProps({
 
 }
 
-.club-header{
+.event-header{
 
     display:flex;
 
@@ -101,7 +104,7 @@ defineProps({
 
 }
 
-.club-image{
+.event-image{
 
     width:72px;
 
@@ -121,11 +124,7 @@ defineProps({
 
 }
 
-.category{
-
-    background:#eef4ff;
-
-    color:#2563eb;
+.status-badge{
 
     padding:6px 12px;
 
@@ -137,7 +136,43 @@ defineProps({
 
 }
 
-.club-content h3{
+.status-badge.live{
+
+    background:#dcfce7;
+
+    color:#16a34a;
+
+}
+
+.status-badge.completed{
+
+    background:#f1f5f9;
+
+    color:#64748b;
+
+}
+
+.club-tag{
+
+    display:inline-block;
+
+    background:#eef4ff;
+
+    color:#2563eb;
+
+    padding:4px 10px;
+
+    border-radius:999px;
+
+    font-size:12px;
+
+    font-weight:600;
+
+    margin-bottom:10px;
+
+}
+
+.event-content h3{
 
     margin:0 0 12px;
 
@@ -161,7 +196,7 @@ defineProps({
 
 }
 
-.club-footer{
+.event-footer{
 
     display:flex;
 
@@ -173,7 +208,7 @@ defineProps({
 
 }
 
-.members{
+.date{
 
     color:#64748b;
 
@@ -201,6 +236,8 @@ defineProps({
 
     transition:all .2s ease;
 
+    text-decoration:none;
+
 }
 
 .view-btn:hover{
@@ -211,7 +248,7 @@ defineProps({
 
 @media (max-width:576px){
 
-.club-footer{
+.event-footer{
 
     flex-direction:column;
 
@@ -222,6 +259,8 @@ defineProps({
 .view-btn{
 
     width:100%;
+
+    text-align:center;
 
 }
 
