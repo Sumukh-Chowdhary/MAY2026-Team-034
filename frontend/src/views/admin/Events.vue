@@ -5,6 +5,7 @@ import EventSearch from '@/components/events/EventSearch.vue'
 import EventStatusTabs from '@/components/events/EventStatusTabs.vue'
 import EventGrid from '@/components/events/EventGrid.vue'
 import { events } from '@/data/events'
+import AdminLayout from '@/layouts/AdminLayout.vue'
 
 const search = ref('')
 const statusFilter = ref('all')
@@ -36,7 +37,7 @@ const filteredEvents = computed(() => {
 </script>
 
 <template>
-  <div class="container py-5">
+  <AdminLayout>
     <section class="hero">
       <h1>Explore Club Events</h1>
       <p>
@@ -53,7 +54,7 @@ const filteredEvents = computed(() => {
       <h3>No events matched your search.</h3>
       <p>Try searching with another keyword or switching tabs.</p>
     </div>
-  </div>
+  </AdminLayout>
 </template>
 <style scoped>
 

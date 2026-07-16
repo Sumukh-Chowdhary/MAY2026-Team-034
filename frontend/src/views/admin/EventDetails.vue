@@ -3,6 +3,7 @@ import { ref, computed } from 'vue'
 import { useRoute } from 'vue-router'
 
 import { events } from '@/data/events'
+import AdminLayout from '@/layouts/AdminLayout.vue'
 
 const route = useRoute()
 const activeTab = ref('schedule')
@@ -20,6 +21,8 @@ const tabs = [
 </script>
 
 <template>
+    <AdminLayout>
+        <section class="event-details-page">
   <div class="container py-5" v-if="event">
     <div class="event-detail-card">
       <div class="detail-header">
@@ -161,17 +164,94 @@ const tabs = [
       <p>The event you are looking for does not exist.</p>
     </div>
   </div>
+  </section>
+  </AdminLayout>
 </template>
-<style scoped>
 
-.event-detail-card{
-    max-width:900px;
+<style scoped>
+.event-details-page{
+    width:100%;
+    max-width:1500px;
     margin:0 auto;
-    background:#fff;
-    border:1px solid #edf2f7;
-    border-radius:18px;
-    padding:32px;
-    box-shadow:0 8px 24px rgba(15,23,42,.06);
+}
+
+.page-header{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    margin-bottom:28px;
+}
+
+.page-header h2{
+    margin:0;
+    font-size:2rem;
+    font-weight:700;
+    color:#1f2937;
+}
+
+.page-header p{
+    margin-top:6px;
+    color:#64748b;
+}
+
+.header-left{
+    display:flex;
+    align-items:center;
+    gap:18px;
+}
+
+.event-image{
+    width:70px;
+    height:70px;
+    border-radius:50%;
+    background:#EEF4FF;
+    display:flex;
+    justify-content:center;
+    align-items:center;
+    font-size:36px;
+    flex-shrink:0;
+}
+
+.info-grid{
+    display:grid;
+    grid-template-columns:repeat(2,1fr);
+    gap:20px;
+    margin-bottom:24px;
+}
+
+.info-box{
+    background:white;
+    border:1px solid #E5E7EB;
+    border-radius:16px;
+    padding:22px;
+}
+
+.info-box label{
+    display:block;
+    color:#64748b;
+    font-size:.85rem;
+    font-weight:600;
+    margin-bottom:8px;
+}
+
+.info-box p{
+    margin:0;
+    font-size:1rem;
+}
+
+.description-box{
+    margin-bottom:28px;
+}
+
+.club-tag{
+    display:inline-block;
+    background:#EEF4FF;
+    color:#2563EB;
+    padding:5px 12px;
+    border-radius:999px;
+    font-size:12px;
+    font-weight:600;
+    margin-bottom:10px;
 }
 
 .detail-header{
@@ -179,35 +259,6 @@ const tabs = [
     justify-content:space-between;
     align-items:flex-start;
     margin-bottom:28px;
-}
-
-.header-left{
-    display:flex;
-    gap:18px;
-    align-items:center;
-}
-
-.event-image{
-    width:72px;
-    height:72px;
-    border-radius:50%;
-    display:flex;
-    justify-content:center;
-    align-items:center;
-    background:#eef4ff;
-    font-size:38px;
-    flex-shrink:0;
-}
-
-.club-tag{
-    display:inline-block;
-    background:#eef4ff;
-    color:#2563eb;
-    padding:4px 10px;
-    border-radius:999px;
-    font-size:12px;
-    font-weight:600;
-    margin-bottom:8px;
 }
 
 .detail-header h2{
@@ -275,24 +326,24 @@ const tabs = [
 
 .detail-tabs{
     display:flex;
-    gap:4px;
+    width:100%;
+    gap:6px;
     background:#f8fafc;
     border:1px solid #D1D5DB;
-    border-radius:14px;
-    padding:5px;
-    margin-bottom:24px;
-    overflow-x:auto;
+    border-radius:16px;
+    padding:6px;
+    margin-bottom:28px;
 }
 
 .tab-option{
+    flex:1;
     border:none;
     background:transparent;
-    padding:10px 20px;
+    padding:12px;
     border-radius:10px;
     font-weight:600;
-    color:#475569;
-    white-space:nowrap;
-    transition:all .25s ease;
+    text-align:center;
+    transition:.25s;
 }
 
 .tab-option:hover{
