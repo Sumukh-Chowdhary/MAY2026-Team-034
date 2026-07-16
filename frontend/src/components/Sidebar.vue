@@ -321,4 +321,56 @@ onBeforeUnmount(()=>{
     opacity:0;
     transform:translateY(8px);
 }
+
+
+/* Tablet */
+@media (max-width: 992px) {
+    .sidebar {
+        width: 80px;
+    }
+
+    .sidebar .logo-section,
+    .sidebar .menu-title,
+    .sidebar .nav-item span,
+    .sidebar .profile-info {
+        display: none;
+    }
+
+    .sidebar .nav-item {
+        justify-content: center;
+        padding: 14px 0;
+    }
+
+    .sidebar .profile {
+        justify-content: center;
+    }
+
+    /* Sidebar is already collapsed on tablet,
+       so the manual collapse/expand button is not needed */
+    .sidebar .toggle-btn {
+        display: none;
+    }
+
+    .sidebar .profile-menu {
+        left: 70px;
+        bottom: 0;
+    }
+}
+
+/* Mobile */
+@media (max-width: 576px) {
+    .sidebar {
+        width: 70px;
+        padding: 15px 10px;
+    }
+
+    .profile-icon {
+        width: 40px;
+        height: 40px;
+    }
+
+    .sidebar .profile-menu {
+        left: 60px;
+    }
+}
 </style>
