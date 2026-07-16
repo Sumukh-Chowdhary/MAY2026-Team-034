@@ -1,5 +1,5 @@
 <template>
-  <article class="club-card">
+  <article class="club-card" @click="$emit('view', club)">
 
     <div class="club-header">
 
@@ -30,12 +30,15 @@
         {{ club.members === 1 ? 'Member' : 'Members' }}
       </span>
 
-      <button
-        type="button"
-        class="view-btn"
-      >
-        View Details
-      </button>
+      <div class="footer-actions">
+        <button
+          type="button"
+          class="view-btn"
+          @click.stop="$emit('view', club)"
+        >
+          View Details
+        </button>
+      </div>
 
     </div>
 
@@ -48,8 +51,14 @@ defineProps({
   club: {
     type: Object,
     required: true
+  },
+  isAdmin: {
+    type: Boolean,
+    default: false
   }
 })
+
+const emit = defineEmits(['view'])
 
 </script>
 

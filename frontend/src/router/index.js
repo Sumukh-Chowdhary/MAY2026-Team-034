@@ -6,6 +6,7 @@ import Register from '../views/Register.vue'
 import ClubsPage from '../pages/Clubs/ClubsPage.vue'
 import Dashboard from '@/views/admin/Dashboard.vue'
 import Requests from '@/views/admin/Requests.vue'
+import Clubs from '@/views/admin/Clubs.vue'
 
 const routes = [
   { path: '/', name: 'Landing', component: Landing },
@@ -13,7 +14,8 @@ const routes = [
   { path: '/register', name: 'Register', component: Register },
   { path: '/clubs', name: 'Clubs', component: ClubsPage },
   { path: '/admin', name: 'AdminDashboard', component: Dashboard },
-  { path: '/admin/requests', name:'AdminRequests', component: Requests }
+  { path: '/admin/requests', name:'AdminRequests', component: Requests },
+  { path: '/admin/clubs', name:'AdminClubs', component: Clubs }
 ]
 
 const router = createRouter({
