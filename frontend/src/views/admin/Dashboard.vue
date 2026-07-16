@@ -1,10 +1,10 @@
 <script setup>
 import AdminLayout from '../../layouts/AdminLayout.vue'
 
-import StatCard from '@/components/analytics/StatCard.vue'
-import UserDistributionChart from '@/components/analytics/UserDistributionChart.vue'
-import ClubMembershipChart from '@/components/analytics/ClubMembershipChart.vue'
-import PlatformActivityChart from '@/components/analytics/PlatformActivityChart.vue'
+import StatCard from '@/components/admin/analytics/StatCard.vue'
+import UserDistributionChart from '@/components/admin/analytics/UserDistributionChart.vue'
+import ClubMembershipChart from '@/components/admin/analytics/ClubMembershipChart.vue'
+import PlatformActivityChart from '@/components/admin/analytics/PlatformActivityChart.vue'
 
 import { dashboardStats } from '@/data/analytics.js'
 </script>

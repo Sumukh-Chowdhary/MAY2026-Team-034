@@ -4,9 +4,9 @@ import {Modal} from 'bootstrap'
 import AdminLayout from '../../layouts/AdminLayout.vue'
 import clubRequests from '../../data/clubRequests.json'
 import eventRequests from '../../data/eventRequests.json'
-import RequestCard from '@/components/admin-requests/RequestCard.vue'
-import RequestDetailsModal from '@/components/admin-requests/RequestDetailsModal.vue'
-import RejectModal from '@/components/admin-requests/RejectModal.vue'
+import RequestCard from '@/components/admin/requests/RequestCard.vue'
+import RequestDetailsModal from '@/components/admin/requests/RequestDetailsModal.vue'
+import RejectModal from '@/components/admin/requests/RejectModal.vue'
 
 const activeTab=ref('clubs')
 const search=ref('')

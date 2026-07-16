@@ -1,12 +1,12 @@
 <script setup>
 import { ref, computed } from 'vue'
 import AdminLayout from '@/layouts/AdminLayout.vue'
-import ClubSearch from '@/components/club/ClubSearch.vue'
-import ClubGrid from '@/components/club/ClubGrid.vue'
-import AddClubModal from '@/components/club/AddClubModal.vue'
-import EditClubModal from '@/components/club/EditClubModal.vue'
-import DeleteClubModal from '@/components/club/DeleteClubModal.vue'
-import ClubDetailsModal from '@/components/club/ClubDetailsModal.vue'
+import ClubSearch from '@/components/admin/club/ClubSearch.vue'
+import ClubGrid from '@/components/admin/club/ClubGrid.vue'
+import AddClubModal from '@/components/admin/club/AddClubModal.vue'
+import EditClubModal from '@/components/admin/club/EditClubModal.vue'
+import DeleteClubModal from '@/components/admin/club/DeleteClubModal.vue'
+import ClubDetailsModal from '@/components/admin/club/ClubDetailsModal.vue'
 import { clubs } from '@/data/clubs'
 
 const search = ref('')

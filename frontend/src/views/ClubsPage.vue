@@ -1,7 +1,7 @@
 <script setup>
 import { ref, computed } from 'vue'
-import ClubSearch from '@/components/club/ClubSearch.vue'
-import ClubGrid from '@/components/club/ClubGrid.vue'
+import ClubSearch from '@/components/admin/club/ClubSearch.vue'
+import ClubGrid from '@/components/admin/club/ClubGrid.vue' //Change later these are home page things
 import { clubs } from '@/data/clubs'
 
 const search = ref('')

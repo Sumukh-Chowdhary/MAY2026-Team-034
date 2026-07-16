@@ -1,9 +1,9 @@
 <script setup>
 import { ref, computed } from 'vue'
 
-import EventSearch from '@/components/events/EventSearch.vue'
-import EventStatusTabs from '@/components/events/EventStatusTabs.vue'
-import EventGrid from '@/components/events/EventGrid.vue'
+import EventSearch from '@/components/admin/events/EventSearch.vue'
+import EventStatusTabs from '@/components/admin/events/EventStatusTabs.vue'
+import EventGrid from '@/components/admin/events/EventGrid.vue'
 import { events } from '@/data/events'
 import AdminLayout from '@/layouts/AdminLayout.vue'
 
