@@ -5,6 +5,8 @@
       v-for="club in clubs"
       :key="club.id"
       :club="club"
+      :isAdmin="isAdmin"
+      @view="$emit('view', $event)"
     />
 
   </section>
@@ -19,8 +21,14 @@ defineProps({
     type: Array,
     required: true,
     default: () => []
+  },
+  isAdmin: {
+    type: Boolean,
+    default: false
   }
 })
+
+const emit = defineEmits(['view'])
 
 </script>
 
@@ -36,9 +44,31 @@ defineProps({
 
     display:grid;
 
-    grid-template-columns:repeat(auto-fit,minmax(300px,1fr));
+    grid-template-columns:repeat(3,minmax(360px,1fr));
+
+    justify-content:center;
 
     gap:28px;
+
+}
+
+@media (max-width:1200px){
+
+.club-grid{
+
+    grid-template-columns:repeat(2,minmax(320px,1fr));
+
+}
+
+}
+
+@media (max-width:768px){
+
+.club-grid{
+
+    grid-template-columns:1fr;
+
+}
 
 }
 
