@@ -13,6 +13,7 @@ import Users from '@/views/admin/Users.vue'
 import UserDetails from '@/views/admin/UserDetails.vue'
 
 import FDashboard from '@/views/faculty/Dashboard.vue'
+import fRequests from '@/views/faculty/Requests.vue'
 
 import SDashboard from '@/views/student/Dashboard.vue'
 
@@ -31,6 +32,7 @@ const routes = [
   { path: '/admin/events/:id', name: 'EventDetail', component: EventDetails},
   { path: '/faculty', name:'FacultyDashboard', component: FDashboard},
   { path: '/student', name:'StudentDashboard', component: SDashboard},
+  { path: '/faculty/requests', name:'FacultyRequests', component: fRequests}
 ]
 
 const router = createRouter({

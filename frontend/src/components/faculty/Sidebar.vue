@@ -54,7 +54,7 @@ onBeforeUnmount(()=>{
                 <li>
                     <RouterLink
                         class="nav-item"
-                        to="/admin">
+                        to="/faculty">
                         <i class="bi bi-grid-fill"></i>
                         <span v-if="!collapsed">Dashboard</span>
                     </RouterLink>
@@ -86,7 +86,7 @@ onBeforeUnmount(()=>{
                 <li>
                     <RouterLink
                         class="nav-item"
-                        to="/admin/requests">
+                        to="/faculty/requests">
                         <i class="bi bi-file-earmark-text-fill"></i>
                         <span v-if="!collapsed">Requests</span>
                     </RouterLink>
