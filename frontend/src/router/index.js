@@ -15,10 +15,14 @@ import UserDetails from '@/views/admin/UserDetails.vue'
 import FDashboard from '@/views/faculty/Dashboard.vue'
 import fRequests from '@/views/faculty/Requests.vue'
 import FClubs from '@/views/faculty/Clubs.vue'
+import FEvents from '@/views/faculty/Events.vue'
+import FEventDetails from '@/views/faculty/EventDetails.vue'
 
 import SDashboard from '@/views/student/Dashboard.vue'
 import SClubs from '@/views/student/Clubs.vue'
 import SRequests from '@/views/student/Requests.vue'
+import SEvents from '@/views/student/Events.vue'
+import SEventDetails from '@/views/studentEventDetails.vue'
 
 const routes = [
   { path: '/', name: 'Landing', component: Landing },
@@ -36,9 +40,13 @@ const routes = [
   { path: '/faculty', name:'FacultyDashboard', component: FDashboard},
   { path: '/faculty/clubs', name:'FacultyClubs', component: FClubs},
   { path: '/faculty/requests', name:'FacultyRequests', component: fRequests},
+  { path: '/faculty/events', name:'FacultyEvents', component: FEvents},
+  { path: '/faculty/events/:id', name:'FacultyEventDetail', component: FEventDetails},
   { path: '/student', name:'StudentDashboard', component: SDashboard},
   { path: '/student/clubs', name:'StudentClubs', component: SClubs},
   { path: '/student/requests', name:'StudentRequests', component: SRequests},
+  { path: '/student/events', name:'StudentEvents', component: SEvents},
+  { path: '/student/events/:id', name:'StudentEventDetail', component: SEventDetails},
 ]
 
 const router = createRouter({
