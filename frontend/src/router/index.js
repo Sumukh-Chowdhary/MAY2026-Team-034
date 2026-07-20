@@ -13,6 +13,7 @@ import Users from '@/views/admin/Users.vue'
 import UserDetails from '@/views/admin/UserDetails.vue'
 
 import FDashboard from '@/views/faculty/Dashboard.vue'
+import fRequests from '@/views/faculty/Requests.vue'
 import FClubs from '@/views/faculty/Clubs.vue'
 
 import SDashboard from '@/views/student/Dashboard.vue'
@@ -34,6 +35,7 @@ const routes = [
   { path: '/faculty', name:'FacultyDashboard', component: FDashboard},
   { path: '/faculty/clubs', name:'FacultyClubs', component: FClubs},
   { path: '/student', name:'StudentDashboard', component: SDashboard},
+  { path: '/faculty/requests', name:'FacultyRequests', component: fRequests}
   { path: '/student/clubs', name:'StudentClubs', component: SClubs},
 ]
 
