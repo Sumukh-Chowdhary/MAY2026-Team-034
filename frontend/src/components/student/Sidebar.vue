@@ -54,7 +54,7 @@ onBeforeUnmount(()=>{
                 <li>
                     <RouterLink
                         class="nav-item"
-                        to="/admin">
+                        to="/student">
                         <i class="bi bi-grid-fill"></i>
                         <span v-if="!collapsed">Dashboard</span>
                     </RouterLink>
@@ -62,7 +62,7 @@ onBeforeUnmount(()=>{
                 <li>
                     <RouterLink
                         class="nav-item"
-                        to="/admin/users">
+                        to="/student/users">
                         <i class="bi bi-people-fill"></i>
                         <span v-if="!collapsed">My Roles</span>
                     </RouterLink>
@@ -70,7 +70,7 @@ onBeforeUnmount(()=>{
                 <li>
                     <RouterLink
                         class="nav-item"
-                        to="/admin/clubs">
+                        to="/student/clubs">
                         <i class="bi bi-collection-fill"></i>
                         <span v-if="!collapsed">Clubs</span>
                     </RouterLink>
@@ -78,7 +78,7 @@ onBeforeUnmount(()=>{
                 <li>
                     <RouterLink
                         class="nav-item"
-                        to="/admin/events">
+                        to="/student/events">
                         <i class="bi bi-calendar-event-fill"></i>
                         <span v-if="!collapsed">Events</span>
                     </RouterLink>
@@ -86,7 +86,7 @@ onBeforeUnmount(()=>{
                 <li>
                     <RouterLink
                         class="nav-item"
-                        to="/admin/requests">
+                        to="/student/requests">
                         <i class="bi bi-file-earmark-text-fill"></i>
                         <span v-if="!collapsed">Requests</span>
                     </RouterLink>

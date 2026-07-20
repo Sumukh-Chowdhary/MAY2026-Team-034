@@ -18,6 +18,7 @@ import FClubs from '@/views/faculty/Clubs.vue'
 
 import SDashboard from '@/views/student/Dashboard.vue'
 import SClubs from '@/views/student/Clubs.vue'
+import SRequests from '@/views/student/Requests.vue'
 
 const routes = [
   { path: '/', name: 'Landing', component: Landing },
@@ -34,9 +35,10 @@ const routes = [
   { path: '/admin/events/:id', name: 'EventDetail', component: EventDetails},
   { path: '/faculty', name:'FacultyDashboard', component: FDashboard},
   { path: '/faculty/clubs', name:'FacultyClubs', component: FClubs},
+  { path: '/faculty/requests', name:'FacultyRequests', component: fRequests},
   { path: '/student', name:'StudentDashboard', component: SDashboard},
-  { path: '/faculty/requests', name:'FacultyRequests', component: fRequests}
   { path: '/student/clubs', name:'StudentClubs', component: SClubs},
+  { path: '/student/requests', name:'StudentRequests', component: SRequests},
 ]
 
 const router = createRouter({
