@@ -6,6 +6,9 @@
       :key="club.id"
       :club="club"
       :isAdmin="isAdmin"
+      :isFaculty="isFaculty"
+      :section="section"
+      :isMember="myClubNames.includes(club.name)"
       @view="$emit('view', $event)"
     />
 
@@ -25,6 +28,18 @@ defineProps({
   isAdmin: {
     type: Boolean,
     default: false
+  },
+  isFaculty: {
+    type: Boolean,
+    default: false
+  },
+    section: {
+        type: String,
+        default: ""
+  },
+  myClubNames: {
+    type: Array,
+    default: () => []
   }
 })
 

@@ -33,23 +33,61 @@
       </div>
 
       <div class="actions-row">
-        <button type="button" class="visit-btn" @click.stop="emit('visit')">Visit Club Page</button>
-        <button type="button" class="edit-btn" @click.stop="emit('edit')">Edit</button>
-        <button type="button" class="delete-btn" @click.stop="emit('delete')">Delete</button>
+        <button type="button" class="visit-btn" @click.stop="emit('visit')">
+          Visit Club Page
+        </button>
+        <button
+          v-if="!isAdmin && !isFaculty && isMember"
+          type="button"
+          class="leave-btn"
+          @click.stop="emit('leave')"
+        >
+          Leave Club
+        </button>
+        <button
+          v-if="isAdmin || isFaculty"
+          type="button"
+          class="edit-btn"
+          @click.stop="emit('edit')"
+        >
+          Edit
+        </button>
+
+        <button
+          v-if="isAdmin || isFaculty"
+          type="button"
+          class="delete-btn"
+          @click.stop="emit('delete')"
+        >
+          Delete
+        </button>
       </div>
     </div>
   </div>
 </template>
 
 <script setup>
+
 const props = defineProps({
   club: {
     type: Object,
     required: true
+  },
+  isAdmin: {
+    type: Boolean,
+    default: false
+  },
+  isFaculty: {
+    type: Boolean,
+    default: false
+  },
+  isMember: {
+    type: Boolean,
+    default: false
   }
 })
 
-const emit = defineEmits(['close', 'visit', 'edit', 'delete'])
+const emit = defineEmits(['close', 'visit', 'edit', 'delete', 'leave'])
 </script>
 
 <style scoped>
@@ -188,6 +226,17 @@ const emit = defineEmits(['close', 'visit', 'edit', 'delete'])
   color: #fff;
 }
 
+.leave-btn{
+    background:#dc2626;
+    color:#fff;
+    border:none;
+    border-radius:10px;
+    padding:10px 18px;
+    font-weight:600;
+    cursor:pointer;
+    transition:.2s;
+}
+
 .visit-btn:hover {
   background: #1d4ed8;
 }
@@ -198,6 +247,10 @@ const emit = defineEmits(['close', 'visit', 'edit', 'delete'])
 
 .delete-btn:hover {
   background: #b91c1c;
+}
+
+.leave-btn:hover{
+    background:#b91c1c;
 }
 
 @media (max-width: 640px) {

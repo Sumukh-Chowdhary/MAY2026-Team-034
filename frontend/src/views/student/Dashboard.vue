@@ -2,24 +2,12 @@
 import StudentLayout from '@/layouts/StudentLayout.vue'
 import StatCard from '@/components/admin/analytics/StatCard.vue'
 
-const studentStats = [
-  {
-    label: 'My Clubs',
-    value: 3
-  },
-  {
-    label: 'Upcoming Events',
-    value: 5
-  },
-  {
-    label: 'My Roles',
-    value: 2
-  },
-  {
-    label: 'Notifications',
-    value: 7
-  }
-]
+import {
+  studentStats,
+  myClubs,
+  upcomingEvents,
+  recentActivity
+} from '@/data/studentDashboard.js'
 </script>
 
 <template>
@@ -70,27 +58,98 @@ const studentStats = [
 
     <div class="row g-4 mt-1">
 
-        <div class="col-12">
-
-            <div class="placeholder-card">
-
-                <div class="placeholder-header">
-                    <h5>My Activity</h5>
-
-                    <p>
-                        Recent club registrations and upcoming events.
-                    </p>
+    <!-- My Clubs -->
+    <div class="col-12 col-lg-6">
+        <div class="dashboard-card">
+            <div class="card-header">
+                <div>
+                    <h5>My Clubs</h5>
+                    <p>Clubs you are currently part of.</p>
                 </div>
-
-                <div class="placeholder-body">
-                    No recent activity available.
-                </div>
-
             </div>
 
-        </div>
+            <div class="card-content">
+                <div
+                    v-for="club in myClubs"
+                    :key="club.id"
+                    class="club-item"
+                >
+                    <div class="club-info">
+                        <div class="club-icon">
+                            {{ club.emoji }}
+                        </div>
 
+                        <div>
+                            <h6>{{ club.name }}</h6>
+                            <span>{{ club.role }}</span>
+                        </div>
+                    </div>
+
+                    <button class="view-btn">
+                        View
+                    </button>
+                </div>
+            </div>
+        </div>
     </div>
+
+    <!-- Upcoming Events -->
+    <div class="col-12 col-lg-6">
+        <div class="dashboard-card">
+            <div class="card-header">
+                <div>
+                    <h5>Upcoming Events</h5>
+                    <p>Events you may be interested in.</p>
+                </div>
+            </div>
+
+            <div class="card-content">
+                <div
+                    v-for="event in upcomingEvents"
+                    :key="event.id"
+                    class="event-item"
+                >
+                    <div>
+                        <h6>{{ event.title }}</h6>
+                        <span>{{ event.club }}</span>
+                    </div>
+
+                    <div class="event-date">
+                        {{ event.date }}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Recent Activity -->
+    <div class="col-12">
+        <div class="dashboard-card">
+            <div class="card-header">
+                <div>
+                    <h5>Recent Activity</h5>
+                    <p>Your latest club and event activity.</p>
+                </div>
+            </div>
+
+            <div class="card-content">
+                <div
+                    v-for="activity in recentActivity"
+                    :key="activity.id"
+                    class="activity-item"
+                >
+                    <div class="activity-dot"></div>
+
+                    <div class="activity-info">
+                        <h6>{{ activity.text }}</h6>
+                        <span>{{ activity.time }}</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</div>
 
 </section>
 
@@ -161,40 +220,142 @@ background:#2563EB;
 color:#fff;
 }
 
-.placeholder-card{
-background:#fff;
-border-radius:24px;
-box-shadow:0 8px 30px rgba(15,23,42,.05);
-overflow:hidden;
-min-height:420px;
+
+
+.dashboard-card {
+    height: 100%;
+    background: #fff;
+    border-radius: 20px;
+    box-shadow: 0 8px 30px rgba(15, 23, 42, .05);
+    overflow: hidden;
 }
 
-.placeholder-header{
-padding:28px 30px;
-border-bottom:1px solid #E2E8F0;
+.card-header {
+    padding: 22px 24px;
+    border-bottom: 1px solid #E2E8F0;
 }
 
-.placeholder-header h5{
-margin:0;
-font-size:1.6rem;
-font-weight:700;
-color:#1E293B;
+.card-header h5 {
+    margin: 0;
+    color: #1E293B;
+    font-size: 1.15rem;
+    font-weight: 700;
 }
 
-.placeholder-header p{
-margin-top:6px;
-font-size:.95rem;
-color:#64748B;
+.card-header p {
+    margin: 5px 0 0;
+    color: #64748B;
+    font-size: .9rem;
 }
 
-.placeholder-body{
-height:320px;
-display:flex;
-align-items:center;
-justify-content:center;
-color:#94A3B8;
-font-size:1.05rem;
+.card-content {
+    padding: 8px 24px;
 }
+
+.club-item,
+.event-item,
+.activity-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 18px 0;
+    border-bottom: 1px solid #F1F5F9;
+}
+
+.club-item:last-child,
+.event-item:last-child,
+.activity-item:last-child {
+    border-bottom: none;
+}
+
+.club-info {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+}
+
+.club-icon {
+    width: 46px;
+    height: 46px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #F1F5F9;
+    border-radius: 12px;
+    font-size: 1.4rem;
+}
+
+.club-item h6,
+.event-item h6,
+.activity-item h6 {
+    margin: 0 0 4px;
+    color: #1E293B;
+    font-weight: 600;
+}
+
+.club-item span,
+.event-item span,
+.activity-item span {
+    color: #64748B;
+    font-size: .85rem;
+}
+
+.view-btn {
+    padding: 7px 16px;
+    background: #EFF6FF;
+    border: none;
+    border-radius: 9px;
+    color: #2563EB;
+    font-size: .85rem;
+    font-weight: 600;
+    transition: .2s;
+}
+
+.view-btn:hover {
+    background: #2563EB;
+    color: #fff;
+}
+
+.event-date {
+    flex-shrink: 0;
+    padding: 7px 12px;
+    background: #F8FAFC;
+    border-radius: 8px;
+    color: #475569;
+    font-size: .85rem;
+    font-weight: 500;
+}
+
+.activity-item {
+    justify-content: flex-start;
+}
+
+.activity-dot {
+    width: 10px;
+    height: 10px;
+    flex-shrink: 0;
+    background: #2563EB;
+    border-radius: 50%;
+}
+
+.activity-info {
+    flex: 1;
+}
+
+@media(max-width: 576px) {
+    .card-header,
+    .card-content {
+        padding-left: 18px;
+        padding-right: 18px;
+    }
+
+    .event-item {
+        align-items: flex-start;
+        flex-direction: column;
+    }
+}
+
 
 @media(max-width:768px){
 .dashboard-header{
