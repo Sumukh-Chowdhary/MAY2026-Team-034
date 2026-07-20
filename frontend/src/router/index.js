@@ -15,10 +15,12 @@ import UserDetails from '@/views/admin/UserDetails.vue'
 import FDashboard from '@/views/faculty/Dashboard.vue'
 import fRequests from '@/views/faculty/Requests.vue'
 import FClubs from '@/views/faculty/Clubs.vue'
+import FRoles from '@/views/faculty/Roles.vue'
 
 import SDashboard from '@/views/student/Dashboard.vue'
 import SClubs from '@/views/student/Clubs.vue'
 import SRequests from '@/views/student/Requests.vue'
+import SRoles from '@/views/student/Roles.vue'
 
 const routes = [
   { path: '/', name: 'Landing', component: Landing },
@@ -36,9 +38,11 @@ const routes = [
   { path: '/faculty', name:'FacultyDashboard', component: FDashboard},
   { path: '/faculty/clubs', name:'FacultyClubs', component: FClubs},
   { path: '/faculty/requests', name:'FacultyRequests', component: fRequests},
+  { path: '/faculty/roles', name:'FacultyRoles', component: FRoles},
   { path: '/student', name:'StudentDashboard', component: SDashboard},
   { path: '/student/clubs', name:'StudentClubs', component: SClubs},
   { path: '/student/requests', name:'StudentRequests', component: SRequests},
+  { path: '/student/roles', name:'StudentRoles', component: SRoles},
 ]
 
 const router = createRouter({
