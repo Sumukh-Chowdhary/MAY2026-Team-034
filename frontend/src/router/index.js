@@ -22,7 +22,7 @@ import SDashboard from '@/views/student/Dashboard.vue'
 import SClubs from '@/views/student/Clubs.vue'
 import SRequests from '@/views/student/Requests.vue'
 import SEvents from '@/views/student/Events.vue'
-import SEventDetails from '@/views/studentEventDetails.vue'
+import SEventDetails from '@/views/student/EventDetails.vue'
 
 const routes = [
   { path: '/', name: 'Landing', component: Landing },
