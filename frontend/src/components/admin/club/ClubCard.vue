@@ -23,25 +23,24 @@
 
     </div>
 
-    <div class="club-footer">
+    <div class="footer-actions">
+      <button
+        type="button"
+        class="view-btn"
+        @click.stop="$emit('view', club)"
+      >
+        View Details
+      </button>
 
-      <span class="members">
-        👥 {{ club.members }}
-        {{ club.members === 1 ? 'Member' : 'Members' }}
-      </span>
-
-      <div class="footer-actions">
-        <button
-          type="button"
-          class="view-btn"
-          @click.stop="$emit('view', club)"
-        >
-          View Details
-        </button>
-      </div>
-
+      <button
+        v-if="section === 'all-clubs' && !isMember"
+        type="button"
+        class="join-btn"
+        @click.stop="$emit('join', club)"
+      >
+        Join
+      </button>
     </div>
-
   </article>
 </template>
 
@@ -55,10 +54,26 @@ defineProps({
   isAdmin: {
     type: Boolean,
     default: false
+  },
+  isFaculty: {
+    type: Boolean,
+    default: false
+  },
+  section: {
+    type: String,
+    default: ""
+  },
+  isMember: {
+    type: Boolean,
+    default: false
   }
 })
 
-const emit = defineEmits(['view'])
+const emit = defineEmits([
+  'view',
+  'join',
+  'leave'
+])
 
 </script>
 
@@ -212,9 +227,34 @@ const emit = defineEmits(['view'])
 
 }
 
+.join-btn{
+    background:#16a34a;
+    color:white;
+    border:none;
+    border-radius:10px;
+    padding:10px 18px;
+    font-weight:600;
+    cursor:pointer;
+    transition:.2s;
+}
+
+.join-btn:hover{
+    background:#15803d;
+}
+
 .view-btn:hover{
 
     background:#1d4ed8;
+
+}
+
+.footer-actions{
+
+    display:flex;
+
+    gap:10px;
+
+    flex-wrap:wrap;
 
 }
 
@@ -228,9 +268,54 @@ const emit = defineEmits(['view'])
 
 }
 
-.view-btn{
+.view-btn,
+.join-btn,
+.leave-btn{
 
     width:100%;
+
+}
+
+.join-btn,
+.leave-btn{
+
+    border:none;
+
+    border-radius:10px;
+
+    color:#fff;
+
+    padding:10px 18px;
+
+    font-weight:600;
+
+    cursor:pointer;
+
+    transition:all .2s ease;
+
+}
+
+.join-btn{
+
+    background:#16a34a;
+
+}
+
+.join-btn:hover{
+
+    background:#15803d;
+
+}
+
+.leave-btn{
+
+    background:#dc2626;
+
+}
+
+.leave-btn:hover{
+
+    background:#b91c1c;
 
 }
 
