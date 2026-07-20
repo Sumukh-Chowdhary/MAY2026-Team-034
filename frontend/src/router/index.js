@@ -13,8 +13,10 @@ import Users from '@/views/admin/Users.vue'
 import UserDetails from '@/views/admin/UserDetails.vue'
 
 import FDashboard from '@/views/faculty/Dashboard.vue'
+import FClubs from '@/views/faculty/Clubs.vue'
 
 import SDashboard from '@/views/student/Dashboard.vue'
+import SClubs from '@/views/student/Clubs.vue'
 
 const routes = [
   { path: '/', name: 'Landing', component: Landing },
@@ -30,7 +32,9 @@ const routes = [
   { path: '/admin/events', name:'AdminEvents', component: Events },
   { path: '/admin/events/:id', name: 'EventDetail', component: EventDetails},
   { path: '/faculty', name:'FacultyDashboard', component: FDashboard},
+  { path: '/faculty/clubs', name:'FacultyClubs', component: FClubs},
   { path: '/student', name:'StudentDashboard', component: SDashboard},
+  { path: '/student/clubs', name:'StudentClubs', component: SClubs},
 ]
 
 const router = createRouter({
