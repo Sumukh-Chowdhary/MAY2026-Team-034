@@ -6,7 +6,7 @@ import StudentLayout from '@/layouts/StudentLayout.vue'
 const router = useRouter()
 
 function navigateToEventDetails(eventId) {
-  router.push(`/events/${eventId}`)
+  router.push(`/student/events/${eventId}`)
 }
 
 // Student's assigned roles

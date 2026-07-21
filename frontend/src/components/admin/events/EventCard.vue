@@ -34,7 +34,7 @@
       </span>
 
       <RouterLink
-        :to="{ name: 'EventDetail', params: { id: event.id } }"
+        :to="eventTargetUrl"
         class="view-btn"
       >
         View
@@ -46,14 +46,26 @@
 </template>
 
 <script setup>
+import { computed } from 'vue'
+import { useRoute } from 'vue-router'
 
-defineProps({
+const route = useRoute()
+
+const props = defineProps({
   event: {
     type: Object,
     required: true
   }
 })
 
+const eventTargetUrl = computed(() => {
+  const rolePrefix = route.path.startsWith('/admin')
+    ? 'admin'
+    : route.path.startsWith('/faculty')
+    ? 'faculty'
+    : 'student'
+  return `/${rolePrefix}/events/${props.event.id}`
+})
 </script>
 
 <style scoped>

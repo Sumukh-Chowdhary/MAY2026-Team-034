@@ -10,7 +10,7 @@ const router = useRouter()
 const activeTab = ref('schedule')
 
 const event = computed(() =>
-  events.find((item) => item.id === Number(route.params.id))
+  events.find((item) => String(item.id) === String(route.params.id))
 )
 
 const tabs = [

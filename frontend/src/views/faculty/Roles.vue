@@ -28,7 +28,7 @@ const facultyRoles = ref([
     ],
     events: [
       {
-        id: 1,
+        id: 301,
         title: 'AI & Machine Learning Workshop',
         club: 'AI Club',
         status: 'Active',
@@ -37,7 +37,7 @@ const facultyRoles = ref([
         description: 'Hands-on intensive workshop covering Neural Networks, PyTorch, and Deep Learning model deployment.'
       },
       {
-        id: 2,
+        id: 302,
         title: 'AI Hackathon 2026',
         club: 'AI Club',
         status: 'Active',
@@ -66,7 +66,7 @@ const facultyRoles = ref([
     ],
     events: [
       {
-        id: 1,
+        id: 401,
         title: 'Campus Photography Walk',
         club: 'Photography Club',
         status: 'Active',
@@ -75,7 +75,7 @@ const facultyRoles = ref([
         description: 'Golden hour outdoor photography expedition focusing on architectural and nature composition.'
       },
       {
-        id: 3,
+        id: 402,
         title: 'Portrait Lighting Masterclass',
         club: 'Photography Club',
         status: 'Completed',
@@ -136,9 +136,9 @@ function openUserProfile(student) {
   showUserProfileModal.value = true
 }
 
-// Separate Page Navigation for Event Details (instead of popup!)
+// Separate Page Navigation for Event Details (strictly /faculty/events/:id)
 function navigateToEventDetails(eventId) {
-  router.push(`/events/${eventId}`)
+  router.push(`/faculty/events/${eventId}`)
 }
 
 // Faculty Event Creation

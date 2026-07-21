@@ -23,14 +23,13 @@ import SRequests from '@/views/student/Requests.vue'
 import SRoles from '@/views/student/Roles.vue'
 
 const routes = [
+  // Public Landing & Auth Routes
   { path: '/', name: 'Landing', component: Landing },
   { path: '/login', name: 'Login', component: Login },
   { path: '/register', name: 'Register', component: Register },
   { path: '/clubs', name: 'Clubs', component: ClubsPage },
-  { path: '/events', name: 'Events', component: Events },
-  { path: '/events/:id', name: 'EventDetail', component: EventDetails },
 
-  // Admin Routes
+  // Strict Admin Routes (All starting with /admin)
   { path: '/admin', name: 'AdminDashboard', component: Dashboard },
   { path: '/admin/requests', name: 'AdminRequests', component: Requests },
   { path: '/admin/clubs', name: 'AdminClubs', component: Clubs },
@@ -39,7 +38,7 @@ const routes = [
   { path: '/admin/events', name: 'AdminEvents', component: Events },
   { path: '/admin/events/:id', name: 'AdminEventDetail', component: EventDetails },
 
-  // Faculty Routes
+  // Strict Faculty Routes (All starting with /faculty)
   { path: '/faculty', name: 'FacultyDashboard', component: FDashboard },
   { path: '/faculty/clubs', name: 'FacultyClubs', component: FClubs },
   { path: '/faculty/requests', name: 'FacultyRequests', component: fRequests },
@@ -47,7 +46,7 @@ const routes = [
   { path: '/faculty/events', name: 'FacultyEvents', component: Events },
   { path: '/faculty/events/:id', name: 'FacultyEventDetail', component: EventDetails },
 
-  // Student Routes
+  // Strict Student Routes (All starting with /student)
   { path: '/student', name: 'StudentDashboard', component: SDashboard },
   { path: '/student/clubs', name: 'StudentClubs', component: SClubs },
   { path: '/student/requests', name: 'StudentRequests', component: SRequests },
