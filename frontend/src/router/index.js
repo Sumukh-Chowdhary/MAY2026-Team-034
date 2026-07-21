@@ -27,22 +27,33 @@ const routes = [
   { path: '/login', name: 'Login', component: Login },
   { path: '/register', name: 'Register', component: Register },
   { path: '/clubs', name: 'Clubs', component: ClubsPage },
-  { path: '/events/:id', name: 'EventDetail', component: EventDetails},
+  { path: '/events', name: 'Events', component: Events },
+  { path: '/events/:id', name: 'EventDetail', component: EventDetails },
+
+  // Admin Routes
   { path: '/admin', name: 'AdminDashboard', component: Dashboard },
-  { path: '/admin/requests', name:'AdminRequests', component: Requests },
-  { path: '/admin/clubs', name:'AdminClubs', component: Clubs },
-  { path: '/admin/users', name:'AdminUsers', component: Users },
-  { path: '/admin/users/:id', name:'AdminUserDetails', component: UserDetails },
-  { path: '/admin/events', name:'AdminEvents', component: Events },
-  { path: '/admin/events/:id', name: 'EventDetail', component: EventDetails},
-  { path: '/faculty', name:'FacultyDashboard', component: FDashboard},
-  { path: '/faculty/clubs', name:'FacultyClubs', component: FClubs},
-  { path: '/faculty/requests', name:'FacultyRequests', component: fRequests},
-  { path: '/faculty/roles', name:'FacultyRoles', component: FRoles},
-  { path: '/student', name:'StudentDashboard', component: SDashboard},
-  { path: '/student/clubs', name:'StudentClubs', component: SClubs},
-  { path: '/student/requests', name:'StudentRequests', component: SRequests},
-  { path: '/student/roles', name:'StudentRoles', component: SRoles},
+  { path: '/admin/requests', name: 'AdminRequests', component: Requests },
+  { path: '/admin/clubs', name: 'AdminClubs', component: Clubs },
+  { path: '/admin/users', name: 'AdminUsers', component: Users },
+  { path: '/admin/users/:id', name: 'AdminUserDetails', component: UserDetails },
+  { path: '/admin/events', name: 'AdminEvents', component: Events },
+  { path: '/admin/events/:id', name: 'AdminEventDetail', component: EventDetails },
+
+  // Faculty Routes
+  { path: '/faculty', name: 'FacultyDashboard', component: FDashboard },
+  { path: '/faculty/clubs', name: 'FacultyClubs', component: FClubs },
+  { path: '/faculty/requests', name: 'FacultyRequests', component: fRequests },
+  { path: '/faculty/roles', name: 'FacultyRoles', component: FRoles },
+  { path: '/faculty/events', name: 'FacultyEvents', component: Events },
+  { path: '/faculty/events/:id', name: 'FacultyEventDetail', component: EventDetails },
+
+  // Student Routes
+  { path: '/student', name: 'StudentDashboard', component: SDashboard },
+  { path: '/student/clubs', name: 'StudentClubs', component: SClubs },
+  { path: '/student/requests', name: 'StudentRequests', component: SRequests },
+  { path: '/student/roles', name: 'StudentRoles', component: SRoles },
+  { path: '/student/events', name: 'StudentEvents', component: Events },
+  { path: '/student/events/:id', name: 'StudentEventDetail', component: EventDetails },
 ]
 
 const router = createRouter({

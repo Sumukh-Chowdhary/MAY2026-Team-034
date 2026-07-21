@@ -1,6 +1,10 @@
 <script setup>
 import { ref } from 'vue'
+import { useRouter } from 'vue-router'
 import FacultyLayout from '@/layouts/FacultyLayout.vue'
+import { events } from '@/data/events'
+
+const router = useRouter()
 
 // Faculty assigned roles (Clubs & Events)
 const facultyRoles = ref([
@@ -24,46 +28,22 @@ const facultyRoles = ref([
     ],
     events: [
       {
-        id: 301,
+        id: 1,
         title: 'AI & Machine Learning Workshop',
         club: 'AI Club',
         status: 'Active',
         startDate: '25 Jul 2026',
         endDate: '27 Jul 2026',
-        description: 'Hands-on intensive workshop covering Neural Networks, PyTorch, and Deep Learning model deployment.',
-        schedule: [
-          { time: '09:30 AM', activity: 'Keynote & AI Trends Overview' },
-          { time: '11:15 AM', activity: 'Building Convolutional Neural Nets' },
-          { time: '02:30 PM', activity: 'Model Optimization & Deployment' }
-        ],
-        announcements: [
-          { id: 1, title: 'Pre-requisites Released', date: '20 Jul 2026', message: 'Please install Python 3.10 and PyTorch before attending.', target: 'All' }
-        ],
-        registrations: [
-          { name: 'Kavya Singh', registerNumber: '21B0012', branch: 'CSE' },
-          { name: 'Rohan Verma', registerNumber: '21B0045', branch: 'ECE' }
-        ],
-        attendance: [
-          { name: 'Kavya Singh', registerNumber: '21B0012', present: true },
-          { name: 'Rohan Verma', registerNumber: '21B0045', present: true }
-        ]
+        description: 'Hands-on intensive workshop covering Neural Networks, PyTorch, and Deep Learning model deployment.'
       },
       {
-        id: 302,
+        id: 2,
         title: 'AI Hackathon 2026',
         club: 'AI Club',
         status: 'Active',
         startDate: '15 Aug 2026',
         endDate: '16 Aug 2026',
-        description: '24-hour campus hackathon building generative AI applications for real-world problems.',
-        schedule: [
-          { time: '09:00 AM', activity: 'Hackathon Kickoff & Problem Statements' },
-          { time: '09:00 PM', activity: 'Mid-way Mentorship Checkin' },
-          { time: '04:00 PM', activity: 'Final Demos & Judging' }
-        ],
-        announcements: [],
-        registrations: [],
-        attendance: []
+        description: '24-hour campus hackathon building generative AI applications for real-world problems.'
       }
     ]
   },
@@ -86,45 +66,22 @@ const facultyRoles = ref([
     ],
     events: [
       {
-        id: 401,
+        id: 1,
         title: 'Campus Photography Walk',
         club: 'Photography Club',
         status: 'Active',
         startDate: '02 Aug 2026',
         endDate: '02 Aug 2026',
-        description: 'Golden hour outdoor photography expedition focusing on architectural and nature composition.',
-        schedule: [
-          { time: '06:30 AM', activity: 'Gathering at Main Gate & Lens Briefing' },
-          { time: '08:00 AM', activity: 'Botanical Garden Trail Walk' },
-          { time: '10:30 AM', activity: 'Photo Review & Critique Session' }
-        ],
-        announcements: [
-          { id: 1, title: 'Bring Extra SD Cards', date: '21 Jul 2026', message: 'Charge your camera batteries and format SD cards in advance.', target: 'Students' }
-        ],
-        registrations: [
-          { name: 'Varun K', registerNumber: '22B0011', branch: 'ME' },
-          { name: 'Divya P', registerNumber: '22B0077', branch: 'CIVIL' }
-        ],
-        attendance: [
-          { name: 'Varun K', registerNumber: '22B0011', present: true },
-          { name: 'Divya P', registerNumber: '22B0077', present: true }
-        ]
+        description: 'Golden hour outdoor photography expedition focusing on architectural and nature composition.'
       },
       {
-        id: 402,
+        id: 3,
         title: 'Portrait Lighting Masterclass',
         club: 'Photography Club',
         status: 'Completed',
         startDate: '10 Jun 2026',
         endDate: '10 Jun 2026',
-        description: 'Studio lighting workshop exploring 3-point lighting setups, reflectors, and portrait retouching.',
-        schedule: [
-          { time: '02:00 PM', activity: 'Lighting Fundamentals & Softboxes' },
-          { time: '04:00 PM', activity: 'Live Studio Model Shooting' }
-        ],
-        announcements: [],
-        registrations: [],
-        attendance: []
+        description: 'Studio lighting workshop exploring 3-point lighting setups, reflectors, and portrait retouching.'
       }
     ]
   }
@@ -141,14 +98,20 @@ const incomingRequests = ref([
 const activeRoleView = ref(null)
 const activeClubTab = ref('details') // 'details', 'members', 'events', 'alumni'
 
-// Modals State
+// User Profile Modal State
 const showUserProfileModal = ref(false)
 const selectedUserProfile = ref(null)
 
-const showEventDetailsModal = ref(false)
-const selectedEventDetails = ref(null)
-const activeEventTabInModal = ref('schedule') // 'schedule', 'announcements', 'registrations', 'attendance'
+// Faculty Create Event Modal State
+const showCreateEventModal = ref(false)
+const newEventForm = ref({
+  name: '',
+  startDate: '',
+  endDate: '',
+  description: ''
+})
 
+// Assign Role Modal State
 const showAssignRoleModal = ref(false)
 const selectedStudentForAssign = ref(null)
 const assignRoleInput = ref('')
@@ -157,16 +120,6 @@ const assignRoleDescInput = ref('')
 const showRejectModal = ref(false)
 const selectedRequestForReject = ref(null)
 const rejectionReason = ref('')
-
-// Form state inside Event Details modal
-const showAddScheduleModal = ref(false)
-const newScheduleTime = ref('')
-const newScheduleActivity = ref('')
-
-const showAddAnnouncementModal = ref(false)
-const newAnnouncementTitle = ref('')
-const newAnnouncementMessage = ref('')
-const newAnnouncementTarget = ref('All')
 
 function openFacultyDashboard(role) {
   activeRoleView.value = JSON.parse(JSON.stringify(role))
@@ -183,11 +136,45 @@ function openUserProfile(student) {
   showUserProfileModal.value = true
 }
 
-// Event Details Trigger
-function openEventDetails(event) {
-  selectedEventDetails.value = JSON.parse(JSON.stringify(event))
-  activeEventTabInModal.value = 'schedule'
-  showEventDetailsModal.value = true
+// Separate Page Navigation for Event Details (instead of popup!)
+function navigateToEventDetails(eventId) {
+  router.push(`/events/${eventId}`)
+}
+
+// Faculty Event Creation
+function submitFacultyCreateEvent() {
+  if (!newEventForm.value.name.trim()) return alert('Please enter Event Name.')
+
+  const newId = events.length ? Math.max(...events.map(e => e.id)) + 1 : 101
+  const created = {
+    id: newId,
+    emoji: '🎉',
+    name: newEventForm.value.name,
+    title: newEventForm.value.name,
+    club: activeRoleView.value.clubName,
+    status: 'Live',
+    startDate: newEventForm.value.startDate || '25 Jul 2026',
+    endDate: newEventForm.value.endDate || '25 Jul 2026',
+    description: newEventForm.value.description || 'New club event created by Faculty.',
+    schedule: [],
+    announcements: [],
+    registrations: [],
+    attendance: []
+  }
+
+  activeRoleView.value.events.unshift({
+    id: newId,
+    title: created.name,
+    club: created.club,
+    status: 'Active',
+    startDate: created.startDate,
+    description: created.description
+  })
+
+  events.unshift(created)
+  alert(`Event "${created.name}" created successfully!`)
+  showCreateEventModal.value = false
+  newEventForm.value = { name: '', startDate: '', endDate: '', description: '' }
 }
 
 // Assign Role (Faculty Only)
@@ -210,41 +197,6 @@ function handleRemoveRole(student) {
   if (confirm(`Are you sure you want to revoke the role from ${student.name}?`)) {
     student.role = 'Member'
   }
-}
-
-// Add Agenda to Event
-function addScheduleItem() {
-  if (!newScheduleActivity.value.trim()) return
-  selectedEventDetails.value.schedule.push({
-    time: newScheduleTime.value || '10:00 AM',
-    activity: newScheduleActivity.value
-  })
-  showAddScheduleModal.value = false
-  newScheduleTime.value = ''
-  newScheduleActivity.value = ''
-}
-
-// Add Announcement to Event
-function addAnnouncementItem() {
-  if (!newAnnouncementTitle.value.trim()) return
-  selectedEventDetails.value.announcements.unshift({
-    id: Date.now(),
-    title: newAnnouncementTitle.value,
-    date: new Date().toLocaleDateString(),
-    message: newAnnouncementMessage.value,
-    target: newAnnouncementTarget.value
-  })
-  alert(`Announcement broadcasted to ${newAnnouncementTarget.value}!`)
-  showAddAnnouncementModal.value = false
-  newAnnouncementTitle.value = ''
-  newAnnouncementMessage.value = ''
-}
-
-// Post Attendance for Event
-function postAttendanceInModal() {
-  const count = selectedEventDetails.value.attendance.filter(a => a.present).length
-  const total = selectedEventDetails.value.attendance.length
-  alert(`Attendance updated: ${count}/${total} Present.`)
 }
 
 // Request Approvals
@@ -430,18 +382,19 @@ function confirmRejectRequest() {
           </table>
         </div>
 
-        <!-- Tab 3: Events -->
+        <!-- Tab 3: Events (With + Create Event and Navigating to Dedicated Event Details Page!) -->
         <div v-if="activeClubTab === 'events'" class="card p-4 shadow-sm border-0 rounded-4">
           <div class="d-flex justify-content-between align-items-center mb-3">
             <div>
               <h5 class="fw-bold m-0">Club Events</h5>
-              <span class="text-secondary text-sm">Click on any event card to view full event schedule, announcements, registrations, and attendance.</span>
+              <span class="text-secondary text-sm">Click on any event card to open its dedicated separate event details page.</span>
             </div>
+            <button class="btn btn-success font-semibold" @click="showCreateEventModal = true">+ Create Event</button>
           </div>
 
           <div class="row g-3">
             <div v-for="ev in activeRoleView.events" :key="ev.id" class="col-md-6">
-              <div class="event-card-item p-3 border rounded-3 bg-white shadow-sm" @click="openEventDetails(ev)">
+              <div class="event-card-item p-3 border rounded-3 bg-white shadow-sm" @click="navigateToEventDetails(ev.id)">
                 <div class="d-flex justify-content-between align-items-start mb-2">
                   <h6 class="m-0 fw-bold text-primary">{{ ev.title }}</h6>
                   <span class="badge" :class="ev.status === 'Active' ? 'bg-success' : 'bg-secondary'">{{ ev.status }}</span>
@@ -449,7 +402,9 @@ function confirmRejectRequest() {
                 <p class="text-sm text-secondary mb-2 line-clamp-2">{{ ev.description }}</p>
                 <div class="d-flex justify-content-between align-items-center pt-2 border-top">
                   <small class="text-muted">🗓️ {{ ev.startDate }}</small>
-                  <button class="btn btn-sm btn-outline-primary py-0 px-2">View Event →</button>
+                  <button class="btn btn-sm btn-outline-primary py-0 px-2" @click.stop="navigateToEventDetails(ev.id)">
+                    View Event Details →
+                  </button>
                 </div>
               </div>
             </div>
@@ -485,7 +440,7 @@ function confirmRejectRequest() {
       </div>
 
       <!-- ==================================================================== -->
-      <!-- MODALS: USER PROFILE, EVENT DETAILS DASHBOARD, ASSIGN ROLE, REJECT   -->
+      <!-- MODALS: USER PROFILE, CREATE EVENT, ASSIGN ROLE, REJECT REASON       -->
       <!-- ==================================================================== -->
 
       <!-- 👤 User Profile Modal -->
@@ -547,159 +502,31 @@ function confirmRejectRequest() {
         </div>
       </div>
 
-      <!-- 📅 EVENT DETAILS DASHBOARD MODAL (4 Sub-Tabs: Schedule, Announcements, Registrations, Attendance) -->
-      <div v-if="showEventDetailsModal && selectedEventDetails" class="modal-backdrop" @click.self="showEventDetailsModal = false">
-        <div class="modal-dialog-custom modal-lg-custom">
-          <div class="d-flex justify-content-between align-items-center mb-3 pb-2 border-bottom">
-            <div>
-              <span class="badge bg-primary me-2">{{ selectedEventDetails.club }}</span>
-              <span class="badge" :class="selectedEventDetails.status === 'Active' ? 'bg-success' : 'bg-secondary'">
-                {{ selectedEventDetails.status }}
-              </span>
-              <h4 class="m-0 fw-bold mt-1 text-dark">{{ selectedEventDetails.title }}</h4>
-            </div>
-            <button class="close-btn" @click="showEventDetailsModal = false">&times;</button>
-          </div>
-
-          <!-- Event Details Tabs -->
-          <div class="detail-tabs mb-3">
-            <button class="tab-option" :class="{ active: activeEventTabInModal === 'schedule' }" @click="activeEventTabInModal = 'schedule'">🗓️ Schedule</button>
-            <button class="tab-option" :class="{ active: activeEventTabInModal === 'announcements' }" @click="activeEventTabInModal = 'announcements'">📢 Announcements</button>
-            <button class="tab-option" :class="{ active: activeEventTabInModal === 'registrations' }" @click="activeEventTabInModal = 'registrations'">📝 Registrations</button>
-            <button class="tab-option" :class="{ active: activeEventTabInModal === 'attendance' }" @click="activeEventTabInModal = 'attendance'">✅ Attendance</button>
-          </div>
-
-          <!-- Tab 1: Schedule -->
-          <div v-if="activeEventTabInModal === 'schedule'">
-            <div class="d-flex justify-content-between align-items-center mb-3">
-              <h6 class="fw-bold m-0">Event Timeline & Agenda</h6>
-              <button class="btn btn-sm btn-outline-primary" @click="showAddScheduleModal = true">+ Create Schedule</button>
-            </div>
-            <div v-if="selectedEventDetails.schedule.length === 0" class="text-secondary text-center py-3">No schedule added yet.</div>
-            <div v-else class="schedule-list">
-              <div v-for="(item, idx) in selectedEventDetails.schedule" :key="idx" class="schedule-row">
-                <span class="time">{{ item.time }}</span>
-                <span class="activity">{{ item.activity }}</span>
-              </div>
-            </div>
-          </div>
-
-          <!-- Tab 2: Announcements -->
-          <div v-if="activeEventTabInModal === 'announcements'">
-            <div class="d-flex justify-content-between align-items-center mb-3">
-              <h6 class="fw-bold m-0">Broadcast Announcements</h6>
-              <button class="btn btn-sm btn-success" @click="showAddAnnouncementModal = true">+ Trigger Announcement</button>
-            </div>
-            <div v-if="selectedEventDetails.announcements.length === 0" class="text-secondary text-center py-3">No announcements yet.</div>
-            <div v-for="ann in selectedEventDetails.announcements" :key="ann.id" class="p-2 border-bottom">
-              <div class="d-flex justify-content-between">
-                <h6 class="fw-bold m-0">{{ ann.title }}</h6>
-                <small class="text-secondary">{{ ann.date }}</small>
-              </div>
-              <p class="m-0 mt-1 text-secondary text-sm">{{ ann.message }}</p>
-            </div>
-          </div>
-
-          <!-- Tab 3: Registrations -->
-          <div v-if="activeEventTabInModal === 'registrations'">
-            <h6 class="fw-bold mb-3">Registered Participants / Teams</h6>
-            <div v-if="selectedEventDetails.registrations.length === 0" class="text-secondary text-center py-3">No registrations yet.</div>
-            <table v-else class="table table-hover align-middle">
-              <thead>
-                <tr>
-                  <th>Participant Name</th>
-                  <th>Register No</th>
-                  <th>Branch</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr v-for="(reg, idx) in selectedEventDetails.registrations" :key="idx">
-                  <td>{{ reg.name }}</td>
-                  <td>{{ reg.registerNumber }}</td>
-                  <td>{{ reg.branch }}</td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-
-          <!-- Tab 4: Attendance -->
-          <div v-if="activeEventTabInModal === 'attendance'">
-            <div class="d-flex justify-content-between align-items-center mb-3">
-              <h6 class="fw-bold m-0">Mark Attendance</h6>
-              <button class="btn btn-sm btn-primary" @click="postAttendanceInModal">Post Attendance</button>
-            </div>
-            <div v-if="selectedEventDetails.attendance.length === 0" class="text-secondary text-center py-3">No attendance records yet.</div>
-            <table v-else class="table align-middle">
-              <thead>
-                <tr>
-                  <th>Name</th>
-                  <th>Register Number</th>
-                  <th>Status</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr v-for="(att, idx) in selectedEventDetails.attendance" :key="idx">
-                  <td>{{ att.name }}</td>
-                  <td>{{ att.registerNumber }}</td>
-                  <td>
-                    <input type="checkbox" v-model="att.present" class="form-check-input me-2" />
-                    <span class="badge" :class="att.present ? 'bg-success' : 'bg-danger'">
-                      {{ att.present ? 'Present' : 'Absent' }}
-                    </span>
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-
-          <div class="d-flex justify-content-end mt-4">
-            <button class="btn btn-secondary" @click="showEventDetailsModal = false">Close</button>
-          </div>
-        </div>
-      </div>
-
-      <!-- Add Agenda Item Modal -->
-      <div v-if="showAddScheduleModal" class="modal-backdrop" @click.self="showAddScheduleModal = false">
+      <!-- ➕ Faculty Create Event Modal -->
+      <div v-if="showCreateEventModal" class="modal-backdrop" @click.self="showCreateEventModal = false">
         <div class="modal-dialog-custom">
-          <h5 class="fw-bold mb-3">+ Create Schedule Item</h5>
+          <h4 class="fw-bold mb-3 text-dark">+ Create Club Event</h4>
           <div class="mb-3">
-            <label class="form-label">Time</label>
-            <input v-model="newScheduleTime" type="text" class="form-control" placeholder="e.g. 10:00 AM" />
+            <label class="form-label font-semibold">Event Name</label>
+            <input v-model="newEventForm.name" type="text" class="form-control" placeholder="Enter event name" />
+          </div>
+          <div class="row g-2 mb-3">
+            <div class="col-6">
+              <label class="form-label font-semibold">Start Date</label>
+              <input v-model="newEventForm.startDate" type="text" class="form-control" placeholder="e.g. 25 Jul 2026" />
+            </div>
+            <div class="col-6">
+              <label class="form-label font-semibold">End Date</label>
+              <input v-model="newEventForm.endDate" type="text" class="form-control" placeholder="e.g. 27 Jul 2026" />
+            </div>
           </div>
           <div class="mb-3">
-            <label class="form-label">Activity</label>
-            <input v-model="newScheduleActivity" type="text" class="form-control" placeholder="e.g. Opening Keynote" />
+            <label class="form-label font-semibold">Event Description</label>
+            <textarea v-model="newEventForm.description" class="form-control" rows="3" placeholder="Enter event description..."></textarea>
           </div>
           <div class="d-flex justify-content-end gap-2">
-            <button class="btn btn-secondary" @click="showAddScheduleModal = false">Cancel</button>
-            <button class="btn btn-primary" @click="addScheduleItem">Add</button>
-          </div>
-        </div>
-      </div>
-
-      <!-- Add Announcement Modal -->
-      <div v-if="showAddAnnouncementModal" class="modal-backdrop" @click.self="showAddAnnouncementModal = false">
-        <div class="modal-dialog-custom">
-          <h5 class="fw-bold mb-3">+ Trigger Announcement</h5>
-          <div class="mb-3">
-            <label class="form-label">Title</label>
-            <input v-model="newAnnouncementTitle" type="text" class="form-control" />
-          </div>
-          <div class="mb-3">
-            <label class="form-label">Target</label>
-            <select v-model="newAnnouncementTarget" class="form-select">
-              <option value="Students">Students</option>
-              <option value="Users">Users</option>
-              <option value="All">All</option>
-            </select>
-          </div>
-          <div class="mb-3">
-            <label class="form-label">Message</label>
-            <textarea v-model="newAnnouncementMessage" class="form-control" rows="3"></textarea>
-          </div>
-          <div class="d-flex justify-content-end gap-2">
-            <button class="btn btn-secondary" @click="showAddAnnouncementModal = false">Cancel</button>
-            <button class="btn btn-success" @click="addAnnouncementItem">+ Trigger</button>
+            <button class="btn btn-secondary" @click="showCreateEventModal = false">Cancel</button>
+            <button class="btn btn-success" @click="submitFacultyCreateEvent">Create Event</button>
           </div>
         </div>
       </div>
@@ -774,29 +601,6 @@ function confirmRejectRequest() {
   margin: 7px 0 0;
   color: #64748b;
   font-size: 0.95rem;
-}
-
-.header-actions {
-  display: flex;
-  gap: 14px;
-}
-
-.request-btn {
-  padding: 12px 22px;
-  background: #fff;
-  border: 2px solid #22c55e;
-  color: #22c55e;
-  border-radius: 14px;
-  font-weight: 600;
-}
-
-.notification-btn {
-  padding: 12px 22px;
-  background: #fff;
-  border: 2px solid #2563eb;
-  color: #2563eb;
-  border-radius: 14px;
-  font-weight: 600;
 }
 
 .role-card {
@@ -950,19 +754,6 @@ function confirmRejectRequest() {
   font-size: 1.8rem;
 }
 
-.schedule-row {
-  display: flex;
-  gap: 20px;
-  padding: 12px 0;
-  border-bottom: 1px solid #f1f5f9;
-}
-
-.schedule-row .time {
-  color: #2563eb;
-  font-weight: 600;
-  min-width: 90px;
-}
-
 .close-btn {
   background: none;
   border: none;
@@ -992,9 +783,5 @@ function confirmRejectRequest() {
   max-width: 600px;
   padding: 24px;
   box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
-}
-
-.modal-lg-custom {
-  max-width: 750px;
 }
 </style>

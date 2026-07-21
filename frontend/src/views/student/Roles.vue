@@ -1,6 +1,13 @@
 <script setup>
 import { ref } from 'vue'
+import { useRouter } from 'vue-router'
 import StudentLayout from '@/layouts/StudentLayout.vue'
+
+const router = useRouter()
+
+function navigateToEventDetails(eventId) {
+  router.push(`/events/${eventId}`)
+}
 
 // Student's assigned roles
 const assignedRoles = ref([
@@ -320,12 +327,15 @@ function postAttendance() {
 
             <div class="row g-3">
               <div v-for="ev in activeRoleView.events" :key="ev.id" class="col-md-6">
-                <div class="p-3 border rounded-3 bg-white d-flex justify-content-between align-items-center">
+                <div class="p-3 border rounded-3 bg-white d-flex justify-content-between align-items-center cursor-pointer shadow-sm" @click="navigateToEventDetails(ev.id)">
                   <div>
-                    <h6 class="m-0 fw-bold">{{ ev.title }}</h6>
+                    <h6 class="m-0 fw-bold text-primary">{{ ev.title }}</h6>
                     <small class="text-secondary">Date: {{ ev.date }}</small>
                   </div>
-                  <span class="badge" :class="ev.status === 'Active' ? 'bg-success' : 'bg-secondary'">{{ ev.status }}</span>
+                  <div class="d-flex align-items-center gap-2">
+                    <span class="badge" :class="ev.status === 'Active' ? 'bg-success' : 'bg-secondary'">{{ ev.status }}</span>
+                    <button class="btn btn-sm btn-outline-primary py-0 px-2">View →</button>
+                  </div>
                 </div>
               </div>
             </div>
