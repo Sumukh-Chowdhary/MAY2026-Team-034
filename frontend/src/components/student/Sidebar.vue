@@ -62,7 +62,7 @@ onBeforeUnmount(()=>{
                 <li>
                     <RouterLink
                         class="nav-item"
-                        to="/student/users">
+                        to="/student/roles">
                         <i class="bi bi-people-fill"></i>
                         <span v-if="!collapsed">My Roles</span>
                     </RouterLink>

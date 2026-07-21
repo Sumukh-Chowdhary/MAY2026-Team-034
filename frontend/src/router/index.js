@@ -15,22 +15,48 @@ import UserDetails from '@/views/admin/UserDetails.vue'
 import FDashboard from '@/views/faculty/Dashboard.vue'
 import fRequests from '@/views/faculty/Requests.vue'
 import FClubs from '@/views/faculty/Clubs.vue'
+import FRoles from '@/views/faculty/Roles.vue'
 import FEvents from '@/views/faculty/Events.vue'
 import FEventDetails from '@/views/faculty/EventDetails.vue'
 
 import SDashboard from '@/views/student/Dashboard.vue'
 import SClubs from '@/views/student/Clubs.vue'
 import SRequests from '@/views/student/Requests.vue'
+import SRoles from '@/views/student/Roles.vue'
 import SEvents from '@/views/student/Events.vue'
 import SEventDetails from '@/views/student/EventDetails.vue'
 
 const routes = [
+  // Public Landing & Auth Routes
   { path: '/', name: 'Landing', component: Landing },
   { path: '/login', name: 'Login', component: Login },
   { path: '/register', name: 'Register', component: Register },
   { path: '/clubs', name: 'Clubs', component: ClubsPage },
-  { path: '/events/:id', name: 'EventDetail', component: EventDetails},
+
+  // Strict Admin Routes (All starting with /admin)
   { path: '/admin', name: 'AdminDashboard', component: Dashboard },
+  { path: '/admin/requests', name: 'AdminRequests', component: Requests },
+  { path: '/admin/clubs', name: 'AdminClubs', component: Clubs },
+  { path: '/admin/users', name: 'AdminUsers', component: Users },
+  { path: '/admin/users/:id', name: 'AdminUserDetails', component: UserDetails },
+  { path: '/admin/events', name: 'AdminEvents', component: Events },
+  { path: '/admin/events/:id', name: 'AdminEventDetail', component: EventDetails },
+
+  // Strict Faculty Routes (All starting with /faculty)
+  { path: '/faculty', name: 'FacultyDashboard', component: FDashboard },
+  { path: '/faculty/clubs', name: 'FacultyClubs', component: FClubs },
+  { path: '/faculty/requests', name: 'FacultyRequests', component: fRequests },
+  { path: '/faculty/roles', name: 'FacultyRoles', component: FRoles },
+  { path: '/faculty/events', name: 'FacultyEvents', component: Events },
+  { path: '/faculty/events/:id', name: 'FacultyEventDetail', component: EventDetails },
+
+  // Strict Student Routes (All starting with /student)
+  { path: '/student', name: 'StudentDashboard', component: SDashboard },
+  { path: '/student/clubs', name: 'StudentClubs', component: SClubs },
+  { path: '/student/requests', name: 'StudentRequests', component: SRequests },
+  { path: '/student/roles', name: 'StudentRoles', component: SRoles },
+  { path: '/student/events', name: 'StudentEvents', component: Events },
+  { path: '/student/events/:id', name: 'StudentEventDetail', component: EventDetails },
   { path: '/admin/requests', name:'AdminRequests', component: Requests },
   { path: '/admin/clubs', name:'AdminClubs', component: Clubs },
   { path: '/admin/users', name:'AdminUsers', component: Users },
