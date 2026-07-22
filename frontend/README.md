@@ -1,7 +1,16 @@
-# .
+# Frontend
 
-This template should help get you started developing with Vue 3 in Vite.
+This repository contains the frontend application built with **Vue 3** and **Vite**. 
 
+## Tech Stack
+
+* Vue 3
+* Vite
+* JavaScript
+* Vue Router
+* Bootstrap 
+
+---
 ## Recommended IDE Setup
 
 [VS Code](https://code.visualstudio.com/) + [Vue (Official)](https://marketplace.visualstudio.com/items?itemName=Vue.volar) (and disable Vetur).
@@ -19,20 +28,60 @@ This template should help get you started developing with Vue 3 in Vite.
 
 See [Vite Configuration Reference](https://vite.dev/config/).
 
-## Project Setup
+---
+# Prerequisites
 
-```sh
+Before running the project, ensure you have the following installed:
+
+* Node.js (v18 or later recommended)
+* npm (comes with Node.js)
+
+Verify your installation:
+
+```bash
+node -v
+npm -v
+```
+
+---
+
+# Installation
+
+Clone the repository:
+
+```bash
+git clone https://github.com/Sumukh-Chowdhary/MAY2026-Team-034
+cd frontend
+```
+
+Install all dependencies:
+
+```bash
 npm install
 ```
 
-### Compile and Hot-Reload for Development
+---
 
-```sh
+# Running the Application
+
+Start the development server:
+
+```bash
 npm run dev
 ```
 
-### Compile and Minify for Production
+After the server starts, open the URL displayed in the terminal:
 
-```sh
+```
+http://localhost:5173
+```
+
+---
+
+# Building for Production
+
+Generate an optimized production build:
+
+```bash
 npm run build
 ```
