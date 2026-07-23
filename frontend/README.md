@@ -1,87 +1,142 @@
-# Frontend
+# AllClub Frontend
 
-This repository contains the frontend application built with **Vue 3** and **Vite**. 
+This directory contains the frontend application for **AllClub**, a centralized multi-club management platform for student organizations, developed as part of the Software Engineering Project (May 2026).
 
 ## Tech Stack
 
-* Vue 3
-* Vite
-* JavaScript
-* Vue Router
-* Bootstrap 
+- **Framework:** Vue 3
+- **Build Tool:** Vite
+- **Language:** JavaScript
+- **Routing:** Vue Router
+- **Styling:** Bootstrap 5
+- **Icons:** Bootstrap Icons
+- **Charts:** Chart.js and Vue Chart.js
 
----
-## Recommended IDE Setup
+## Project Setup
 
-[VS Code](https://code.visualstudio.com/) + [Vue (Official)](https://marketplace.visualstudio.com/items?itemName=Vue.volar) (and disable Vetur).
+### Prerequisites
 
-## Recommended Browser Setup
+Ensure that Node.js and npm are installed on your system.
 
-- Chromium-based browsers (Chrome, Edge, Brave, etc.):
-  - [Vue.js devtools](https://chromewebstore.google.com/detail/vuejs-devtools/nhdogjmejiglipccpnnnanhbledajbpd)
-  - [Turn on Custom Object Formatter in Chrome DevTools](http://bit.ly/object-formatters)
-- Firefox:
-  - [Vue.js devtools](https://addons.mozilla.org/en-US/firefox/addon/vue-js-devtools/)
-  - [Turn on Custom Object Formatter in Firefox DevTools](https://fxdx.dev/firefox-devtools-custom-object-formatters/)
+The project requires:
 
-## Customize configuration
+- Node.js (`^22.18.0` or `>=24.12.0`)
+- npm
 
-See [Vite Configuration Reference](https://vite.dev/config/).
-
----
-# Prerequisites
-
-Before running the project, ensure you have the following installed:
-
-* Node.js (v18 or later recommended)
-* npm (comes with Node.js)
-
-Verify your installation:
+Verify the installed versions:
 
 ```bash
 node -v
 npm -v
 ```
 
----
+### Installation
 
-# Installation
-
-Clone the repository:
-
-```bash
-git clone https://github.com/Sumukh-Chowdhary/MAY2026-Team-034
-cd frontend
-```
-
-Install all dependencies:
+Open a terminal in the frontend project directory and install the required dependencies:
 
 ```bash
 npm install
 ```
 
----
+### Development
 
-# Running the Application
-
-Start the development server:
+Start the local development server:
 
 ```bash
 npm run dev
 ```
 
-After the server starts, open the URL displayed in the terminal:
+After the server starts, open the URL displayed in the terminal. By default, it is typically:
 
-```
+```text
 http://localhost:5173
 ```
 
----
+### Production Build
 
-# Building for Production
-
-Generate an optimized production build:
+Generate a production build:
 
 ```bash
 npm run build
 ```
+
+Preview the production build locally:
+
+```bash
+npm run preview
+```
+
+## Available Frontend Routes
+
+The frontend prototype includes public and role-based interfaces for Admin, Faculty Coordinator, and Student users.
+
+### Public Routes
+
+- `/` — Landing Page
+- `/login` — Login Page
+- `/register` — Registration Page
+- `/clubs` — Club Discovery Page
+
+### Admin Routes
+
+- `/admin` — Admin Dashboard
+- `/admin/users` — User Management
+- `/admin/clubs` — Club Management
+- `/admin/events` — Event Management
+- `/admin/requests` — Request Management
+
+### Faculty Coordinator Routes
+
+- `/faculty` — Faculty Dashboard
+- `/faculty/roles` — Faculty Role Management
+- `/faculty/clubs` — Faculty Club Interface
+- `/faculty/events` — Faculty Event Interface
+- `/faculty/requests` — Faculty Request Interface
+
+### Student Routes
+
+- `/student` — Student Dashboard
+- `/student/roles` — Student Role Management
+- `/student/clubs` — Student Club Interface
+- `/student/events` — Student Event Discovery Interface
+- `/student/requests` — Student Request and Ticket Management Interface
+
+## Accessing Role-Based Interfaces
+
+The current frontend prototype provides separate interfaces for Admin, Faculty Coordinator, and Student roles.
+
+After starting the development server, the main role-specific interfaces can be accessed directly through:
+
+```text
+http://localhost:5173/admin
+http://localhost:5173/faculty
+http://localhost:5173/student
+```
+
+The sidebar navigation within each role-specific interface can then be used to access the available pages for that role.
+
+## Project Structure
+
+```text
+frontend/
+├── public/                 # Public static assets
+├── src/
+│   ├── assets/             # CSS and other frontend assets
+│   ├── components/         # Reusable and role-specific UI components
+│   ├── data/               # Frontend prototype data
+│   ├── layouts/            # Role-specific page layouts
+│   ├── router/             # Vue Router configuration
+│   ├── views/              # Public, Admin, Faculty, and Student views
+│   ├── App.vue             # Root Vue component
+│   └── main.js             # Application entry point
+├── package.json            # Project dependencies and scripts
+├── package-lock.json       # Locked dependency versions
+└── vite.config.js          # Vite configuration
+```
+
+## Recommended IDE Setup
+
+- VS Code
+- Vue - Official extension (Volar)
+
+For development and debugging, Vue.js DevTools can also be used with a supported browser.
