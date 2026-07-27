@@ -1,9 +1,13 @@
 from app import create_app
 from app.models import (
     db, Role, Department, Permission, RolePermission,
-    User, StudentProfile, FacultyProfile
+    User, StudentProfile, FacultyProfile, Club
 )
-
+from .seed_data import (
+    ADMIN_DATA,
+    FACULTY_DATA,
+    STUDENT_DATA,
+)
 
 def seed_database():
     app = create_app()
@@ -32,6 +36,11 @@ def seed_database():
         db.session.add_all([dept_admin, dept_cs, dept_ece])
         db.session.flush()
 
+        department_map = {
+            dept.code: dept.id
+            for dept in [dept_admin, dept_cs, dept_ece]
+        }
+
         print("3. Seeding Permissions...")
         p_manage = Permission(
             name="MANAGE_USERS", description="Manage user accounts"
@@ -57,62 +66,94 @@ def seed_database():
             )
         ])
 
-        print("4. Seeding Core Users...")
+        print("4. Seeding Users...")
         user_admin = User(
-            email="admin@allclub.com",
+            email=ADMIN_DATA["email"],
             role_id=role_admin.id,
             account_status="ACTIVE"
         )
-        user_admin.set_password("admin123")
+        user_admin.set_password(ADMIN_DATA["password"])
 
-        user_faculty = User(
-            email="meena@allclub.com",
-            role_id=role_faculty.id,
-            account_status="ACTIVE"
-        )
-        user_faculty.set_password("faculty123")
+        faculty_users = []
 
-        user_student = User(
-            email="rahul@allclub.com",
-            role_id=role_student.id,
-            account_status="ACTIVE"
-        )
-        user_student.set_password("student123")
+        for faculty in FACULTY_DATA:
+            user = User(
+                email=faculty["email"],
+                role_id=role_faculty.id,
+                account_status="ACTIVE"
+            )
 
-        db.session.add_all([user_admin, user_faculty, user_student])
+            user.set_password(faculty["password"])
+            faculty_users.append(user)
+
+        student_users = []
+
+        for student in STUDENT_DATA:
+            user = User(
+                email=student["email"],
+                role_id=role_student.id,
+                account_status="ACTIVE"
+            )
+
+            user.set_password(student["password"])
+            student_users.append(user)
+
+        db.session.add_all([user_admin, *faculty_users, *student_users])
         db.session.flush()
 
         print("5. Seeding Profiles...")
-        prof_admin = StudentProfile(
+        admin_profile = StudentProfile(
             user_id=user_admin.id,
-            roll_no="ADM001",
-            full_name="Admin User",
-            phone_number="+91 90000 00001",
-            department_id=dept_admin.id,
-            bio="Platform administrator managing all clubs, events, and users."
+            roll_no=ADMIN_DATA["roll_no"],
+            full_name=ADMIN_DATA["full_name"],
+            phone_number=ADMIN_DATA["phone_number"],
+            year_of_study=ADMIN_DATA["year_of_study"],
+            department_id=department_map[ADMIN_DATA["department"]],
+            bio=ADMIN_DATA["bio"]
         )
-        prof_faculty = FacultyProfile(
-            user_id=user_faculty.id,
-            employee_id="FAC001",
-            full_name="Dr. Meena Rao",
-            phone_number="+91 90000 00002",
-            designation="Associate Professor",
-            department_id=dept_cs.id,
-            bio="Faculty advisor. Passionate about machine learning research."
-        )
-        prof_student = StudentProfile(
-            user_id=user_student.id,
-            roll_no="CB.SC.U4CSE22001",
-            full_name="Rahul Sharma",
-            phone_number="+91 98765 43210",
-            year_of_study="3rd Year",
-            department_id=dept_cs.id,
-            bio="3rd year CSE student interested in Web Development and AI."
-        )
-        db.session.add_all([prof_admin, prof_faculty, prof_student])
+        db.session.add(admin_profile)
+
+        for user, faculty in zip(faculty_users, FACULTY_DATA):
+
+            profile = FacultyProfile(
+                user_id=user.id,
+                employee_id=faculty["employee_id"],
+                full_name=faculty["full_name"],
+                phone_number=faculty["phone_number"],
+                designation=faculty["designation"],
+                department_id=department_map[faculty["department"]],
+                bio=faculty["bio"]
+            )
+            db.session.add(profile)
+
+        for user, student in zip(student_users, STUDENT_DATA):
+            profile = StudentProfile(
+                user_id=user.id,
+                roll_no=student["roll_no"],
+                full_name=student["full_name"],
+                phone_number=student["phone_number"],
+                year_of_study=student["year_of_study"],
+                department_id=department_map[student["department"]],
+                bio=student["bio"]
+            )
+            db.session.add(profile)
+
+        db.session.flush()
+
+        # print("6. Seeding Clubs...")
+
+        # club_ai = Club(...)
+        # club_music = Club(...)
+        # ...
+        # db.session.add_all([
+        #     club_ai,
+        #     club_music,
+        #     ...
+        # ])
+        # db.session.flush()
 
         db.session.commit()
-        print("Database successfully seeded for Module 1!")
+        print("Database successfully seeded!")
 
 
 if __name__ == '__main__':
