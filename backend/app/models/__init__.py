@@ -2,7 +2,7 @@ from flask_sqlalchemy import SQLAlchemy
 
 db = SQLAlchemy()
 
-from app.models.user import (  # noqa: E402
+from app.models.user import ( 
     Role, Department, Permission, RolePermission,
     User, StudentProfile, FacultyProfile, TokenBlocklist
 )

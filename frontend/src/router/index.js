@@ -1,78 +1,29 @@
 import { createRouter, createWebHistory } from 'vue-router'
 
-import Landing from '../views/Landing.vue'
-import Login from '../views/Login.vue'
-import Register from '../views/Register.vue'
-import ClubsPage from '../views/ClubsPage.vue'
-import Events from '@/views/admin/Events.vue'
-import EventDetails from '@/views/admin/EventDetails.vue'
-import Dashboard from '@/views/admin/Dashboard.vue'
-import Requests from '@/views/admin/Requests.vue'
-import Clubs from '@/views/admin/Clubs.vue'
-import Users from '@/views/admin/Users.vue'
-import UserDetails from '@/views/admin/UserDetails.vue'
-
-import FDashboard from '@/views/faculty/Dashboard.vue'
-import fRequests from '@/views/faculty/Requests.vue'
-import FClubs from '@/views/faculty/Clubs.vue'
-import FRoles from '@/views/faculty/Roles.vue'
-import FEvents from '@/views/faculty/Events.vue'
-import FEventDetails from '@/views/faculty/EventDetails.vue'
-
-import SDashboard from '@/views/student/Dashboard.vue'
-import SClubs from '@/views/student/Clubs.vue'
-import SRequests from '@/views/student/Requests.vue'
-import SRoles from '@/views/student/Roles.vue'
-import SEvents from '@/views/student/Events.vue'
-import SEventDetails from '@/views/student/EventDetails.vue'
-
 const routes = [
-  // Public Landing & Auth Routes
-  { path: '/', name: 'Landing', component: Landing },
-  { path: '/login', name: 'Login', component: Login },
-  { path: '/register', name: 'Register', component: Register },
-  { path: '/clubs', name: 'Clubs', component: ClubsPage },
-
-  // Strict Admin Routes (All starting with /admin)
-  { path: '/admin', name: 'AdminDashboard', component: Dashboard },
-  { path: '/admin/requests', name: 'AdminRequests', component: Requests },
-  { path: '/admin/clubs', name: 'AdminClubs', component: Clubs },
-  { path: '/admin/users', name: 'AdminUsers', component: Users },
-  { path: '/admin/users/:id', name: 'AdminUserDetails', component: UserDetails },
-  { path: '/admin/events', name: 'AdminEvents', component: Events },
-  { path: '/admin/events/:id', name: 'AdminEventDetail', component: EventDetails },
-
-  // Strict Faculty Routes (All starting with /faculty)
-  { path: '/faculty', name: 'FacultyDashboard', component: FDashboard },
-  { path: '/faculty/clubs', name: 'FacultyClubs', component: FClubs },
-  { path: '/faculty/requests', name: 'FacultyRequests', component: fRequests },
-  { path: '/faculty/roles', name: 'FacultyRoles', component: FRoles },
-  { path: '/faculty/events', name: 'FacultyEvents', component: Events },
-  { path: '/faculty/events/:id', name: 'FacultyEventDetail', component: EventDetails },
-
-  // Strict Student Routes (All starting with /student)
-  { path: '/student', name: 'StudentDashboard', component: SDashboard },
-  { path: '/student/clubs', name: 'StudentClubs', component: SClubs },
-  { path: '/student/requests', name: 'StudentRequests', component: SRequests },
-  { path: '/student/roles', name: 'StudentRoles', component: SRoles },
-  { path: '/student/events', name: 'StudentEvents', component: Events },
-  { path: '/student/events/:id', name: 'StudentEventDetail', component: EventDetails },
-  { path: '/admin/requests', name:'AdminRequests', component: Requests },
-  { path: '/admin/clubs', name:'AdminClubs', component: Clubs },
-  { path: '/admin/users', name:'AdminUsers', component: Users },
-  { path: '/admin/users/:id', name:'AdminUserDetails', component: UserDetails },
-  { path: '/admin/events', name:'AdminEvents', component: Events },
-  { path: '/admin/events/:id', name: 'EventDetail', component: EventDetails},
-  { path: '/faculty', name:'FacultyDashboard', component: FDashboard},
-  { path: '/faculty/clubs', name:'FacultyClubs', component: FClubs},
-  { path: '/faculty/requests', name:'FacultyRequests', component: fRequests},
-  { path: '/faculty/events', name:'FacultyEvents', component: FEvents},
-  { path: '/faculty/events/:id', name:'FacultyEventDetail', component: FEventDetails},
-  { path: '/student', name:'StudentDashboard', component: SDashboard},
-  { path: '/student/clubs', name:'StudentClubs', component: SClubs},
-  { path: '/student/requests', name:'StudentRequests', component: SRequests},
-  { path: '/student/events', name:'StudentEvents', component: SEvents},
-  { path: '/student/events/:id', name:'StudentEventDetail', component: SEventDetails},
+  { path: '/', name: 'Landing', component: () => import('@/views/Landing.vue') },
+  { path: '/login', name: 'Login', component: () => import('@/views/Login.vue') },
+  { path: '/register', name: 'Register', component: () => import('@/views/Register.vue') },
+  { path: '/clubs', name: 'Clubs', component: () => import('@/views/ClubsPage.vue') },
+  { path: '/admin', name: 'AdminDashboard', component: () => import('@/views/admin/Dashboard.vue') },
+  { path: '/admin/requests', name: 'AdminRequests', component: () => import('@/views/admin/Requests.vue') },
+  { path: '/admin/clubs', name: 'AdminClubs', component: () => import('@/views/admin/Clubs.vue') },
+  { path: '/admin/users', name: 'AdminUsers', component: () => import('@/views/admin/Users.vue') },
+  { path: '/admin/users/:id', name: 'AdminUserDetails', component: () => import('@/views/admin/UserDetails.vue') },
+  { path: '/admin/events', name: 'AdminEvents', component: () => import('@/views/admin/Events.vue') },
+  { path: '/admin/events/:id', name: 'AdminEventDetail', component: () => import('@/views/admin/EventDetails.vue') },
+  { path: '/faculty', name: 'FacultyDashboard', component: () => import('@/views/faculty/Dashboard.vue') },
+  { path: '/faculty/clubs', name: 'FacultyClubs', component: () => import('@/views/faculty/Clubs.vue') },
+  { path: '/faculty/requests', name: 'FacultyRequests', component: () => import('@/views/faculty/Requests.vue') },
+  { path: '/faculty/roles', name: 'FacultyRoles', component: () => import('@/views/faculty/Roles.vue') },
+  { path: '/faculty/events', name: 'FacultyEvents', component: () => import('@/views/faculty/Events.vue') },
+  { path: '/faculty/events/:id', name: 'FacultyEventDetail', component: () => import('@/views/faculty/EventDetails.vue') },
+  { path: '/student', name: 'StudentDashboard', component: () => import('@/views/student/Dashboard.vue') },
+  { path: '/student/clubs', name: 'StudentClubs', component: () => import('@/views/student/Clubs.vue') },
+  { path: '/student/requests', name: 'StudentRequests', component: () => import('@/views/student/Requests.vue') },
+  { path: '/student/roles', name: 'StudentRoles', component: () => import('@/views/student/Roles.vue') },
+  { path: '/student/events', name: 'StudentEvents', component: () => import('@/views/student/Events.vue') },
+  { path: '/student/events/:id', name: 'StudentEventDetail', component: () => import('@/views/student/EventDetails.vue') }
 ]
 
 const router = createRouter({

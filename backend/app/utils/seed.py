@@ -4,7 +4,6 @@ from app.models import (
     User, StudentProfile, FacultyProfile
 )
 
-
 def seed_database():
     app = create_app()
     with app.app_context():
