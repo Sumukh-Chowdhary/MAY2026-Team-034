@@ -6,36 +6,74 @@
       </button>
 
       <div class="top-section">
-        <div class="club-icon">{{ club.emoji }}</div>
+        <div class="club-icon">
+          <span class="material-symbols-rounded">{{ club.logo }}</span>
+        </div>
         <div class="club-info">
-          <h3 id="club-details-title">{{ club.name }}</h3>
-          <p class="club-category">{{ club.category }}</p>
+          <h2 id="club-details-title">{{ club.name }}</h2>
+          <div class="club-tags">
+            <span class="club-category">{{ club.category }}</span>
+            <span
+              class="club-status"
+              :class="club.status === 'ACTIVE' ? 'live' : 'inactive'"
+            >
+              <span class="status-dot"></span>
+              {{ club.status === 'ACTIVE' ? 'Live Club' : 'Inactive' }}
+            </span>
+          </div>
         </div>
       </div>
 
       <div class="body-section">
         <p class="club-description">{{ club.description }}</p>
-
+        <hr class="section-divider" />
         <div class="detail-grid">
           <div>
-            <span>Members</span>
-            <strong>{{ club.members }} {{ club.members === 1 ? 'Member' : 'Members' }}</strong>
+            <span>Total Members</span>
+            <strong>{{ club.totalMembers }}</strong>
           </div>
           <div>
-            <span>Status</span>
-            <strong>{{ club.status || 'Active' }}</strong>
+            <span>Active Members</span>
+            <strong>{{ club.activeMembers }}</strong>
+          </div>
+          <div>
+            <span>Club Status</span>
+            <strong>{{ club.status === 'ACTIVE' ? 'Live Club' : 'Legacy Club' }}</strong>
           </div>
           <div>
             <span>Coordinator</span>
-            <strong>{{ club.facultyCoordinator || 'TBD' }}</strong>
+            <strong>{{ club.faculty?.map(f => f.name).join(', ') || 'Not Assigned' }}</strong>
           </div>
         </div>
       </div>
 
       <div class="actions-row">
-        <button type="button" class="visit-btn" @click.stop="emit('visit')">
+        <button
+          type="button"
+          class="visit-btn"
+          @click.stop="emit('visit')"
+        >
           Visit Club Page
         </button>
+
+        <div class="admin-actions">
+          <button
+            type="button"
+            class="edit-btn"
+            @click.stop="emit('edit')"
+          >
+            Edit Club
+          </button>
+
+          <button
+            type="button"
+            class="delete-btn"
+            @click.stop="emit('delete')"
+          >
+            Delete Club
+          </button>
+        </div>
+
         <button
           v-if="!isAdmin && !isFaculty && isMember"
           type="button"
@@ -43,23 +81,6 @@
           @click.stop="emit('leave')"
         >
           Leave Club
-        </button>
-        <button
-          v-if="isAdmin || isFaculty"
-          type="button"
-          class="edit-btn"
-          @click.stop="emit('edit')"
-        >
-          Edit
-        </button>
-
-        <button
-          v-if="isAdmin || isFaculty"
-          type="button"
-          class="delete-btn"
-          @click.stop="emit('delete')"
-        >
-          Delete
         </button>
       </div>
     </div>
@@ -73,14 +94,6 @@ const props = defineProps({
     type: Object,
     required: true
   },
-  isAdmin: {
-    type: Boolean,
-    default: false
-  },
-  isFaculty: {
-    type: Boolean,
-    default: false
-  },
   isMember: {
     type: Boolean,
     default: false
@@ -91,6 +104,21 @@ const emit = defineEmits(['close', 'visit', 'edit', 'delete', 'leave'])
 </script>
 
 <style scoped>
+.admin-actions{
+    display:flex;
+    gap:12px;
+}
+
+.admin-actions button{
+    flex:1;
+}
+
+.section-divider{
+  border:none;
+  border-top:1px solid #e5e7eb;
+  margin:8px 0 4px;
+}
+
 .modal-overlay {
   position: fixed;
   inset: 0;
@@ -104,7 +132,7 @@ const emit = defineEmits(['close', 'visit', 'edit', 'delete', 'leave'])
 
 .modal-card {
   position: relative;
-  width: min(100%, 620px);
+  width: min(100%, 580px);
   background: #ffffff;
   border-radius: 24px;
   padding: 28px;
@@ -130,8 +158,8 @@ const emit = defineEmits(['close', 'visit', 'edit', 'delete', 'leave'])
 
 .top-section {
   display: flex;
-  align-items: center;
-  gap: 16px;
+  align-items: flex-start;
+  gap: 20px;
 }
 
 .club-icon {
@@ -142,6 +170,11 @@ const emit = defineEmits(['close', 'visit', 'edit', 'delete', 'leave'])
   place-items: center;
   background: #eef4ff;
   font-size: 2rem;
+}
+
+.club-icon .material-symbols-rounded{
+    font-size:42px;
+    color:#2563eb;
 }
 
 .club-info h3 {
@@ -172,14 +205,18 @@ const emit = defineEmits(['close', 'visit', 'edit', 'delete', 'leave'])
 
 .detail-grid {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 16px;
 }
 
 .detail-grid div {
   background: #f8fafc;
   border-radius: 16px;
-  padding: 16px;
+  padding: 18px;
+  min-height: 90px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
 }
 
 .detail-grid span {
@@ -194,24 +231,35 @@ const emit = defineEmits(['close', 'visit', 'edit', 'delete', 'leave'])
   font-size: 1rem;
 }
 
-.actions-row {
-  display: flex;
-  justify-content: flex-end;
-  gap: 12px;
-  flex-wrap: wrap;
+.actions-row{
+    display:flex;
+    flex-direction:column;
+    gap:14px;
+    margin-top:10px;
+}
+
+.admin-actions{
+    display:flex;
+    gap:12px;
+}
+
+.admin-actions button{
+    flex:1;
 }
 
 .visit-btn,
 .edit-btn,
-.delete-btn {
-  border: none;
-  border-radius: 14px;
-  padding: 12px 18px;
-  font-weight: 700;
-  cursor: pointer;
+.delete-btn,
+.leave-btn{
+    border:none;
+    border-radius:14px;
+    padding:13px 18px;
+    font-weight:700;
+    cursor:pointer;
 }
 
 .visit-btn {
+  width: 100%;
   background: #2563eb;
   color: #fff;
 }

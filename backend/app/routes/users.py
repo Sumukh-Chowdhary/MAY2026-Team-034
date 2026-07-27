@@ -4,7 +4,6 @@ from app.utils.auth_jwt import jwt_required, roles_required
 
 users_bp = Blueprint('users', __name__, url_prefix='/api/users')
 
-
 @users_bp.route('', methods=['GET'])
 def get_users():
     role_name = request.args.get('role')

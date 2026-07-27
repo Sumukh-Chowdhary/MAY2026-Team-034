@@ -6,7 +6,6 @@ from app.utils.auth_jwt import generate_jwt_token, jwt_required
 
 auth_bp = Blueprint('auth', __name__, url_prefix='/api/auth')
 
-
 @auth_bp.route('/login', methods=['POST'])
 def login():
     data = request.get_json() or {}

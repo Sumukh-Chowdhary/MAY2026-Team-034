@@ -1,8 +1,12 @@
 from app import create_app
-from app.models import (
-    db, Role, Department, Permission, RolePermission,
-    User, StudentProfile, FacultyProfile, Club
+from app.models.user import (
+    db, Role, Department,User, StudentProfile, FacultyProfile
 )
+
+from app.models.club import (
+    Club,ClubFaculty,ClubMembership,ClubOrganizer
+)
+
 from .seed_data import (
     ADMIN_DATA,
     FACULTY_DATA,
@@ -42,32 +46,7 @@ def seed_database():
             for dept in [dept_admin, dept_cs, dept_ece]
         }
 
-        print("3. Seeding Permissions...")
-        p_manage = Permission(
-            name="MANAGE_USERS", description="Manage user accounts"
-        )
-        p_clubs = Permission(
-            name="APPROVE_CLUBS", description="Review club requests"
-        )
-        p_events = Permission(
-            name="APPROVE_EVENTS", description="Review event requests"
-        )
-        db.session.add_all([p_manage, p_clubs, p_events])
-        db.session.flush()
-
-        db.session.add_all([
-            RolePermission(
-                role_id=role_admin.id, permission_id=p_manage.id
-            ),
-            RolePermission(
-                role_id=role_admin.id, permission_id=p_clubs.id
-            ),
-            RolePermission(
-                role_id=role_faculty.id, permission_id=p_events.id
-            )
-        ])
-
-        print("4. Seeding Users...")
+        print("3. Seeding Users...")
         user_admin = User(
             email=ADMIN_DATA["email"],
             role_id=role_admin.id,
@@ -102,7 +81,7 @@ def seed_database():
         db.session.add_all([user_admin, *faculty_users, *student_users])
         db.session.flush()
 
-        print("5. Seeding Profiles...")
+        print("4. Seeding Profiles...")
         admin_profile = StudentProfile(
             user_id=user_admin.id,
             roll_no=ADMIN_DATA["roll_no"],
@@ -141,9 +120,8 @@ def seed_database():
 
         db.session.flush()
 
-        print("6. Seeding Clubs...")
+        print("5. Seeding Clubs...")
 
-        # Builds lookup tables for resolving organizers and faculty advisors
         faculty_lookup = {
             faculty["employee_id"]: user
             for faculty, user in zip(FACULTY_DATA, faculty_users)
@@ -154,26 +132,55 @@ def seed_database():
             for student, user in zip(STUDENT_DATA, student_users)
         }
 
-        clubs = []
-
         for club in CLUB_DATA:
 
+            # Create Club
             new_club = Club(
                 club_name=club["name"],
                 club_description=club["description"],
                 club_category=club["category"],
                 club_logo=club["logo"],
-                organizer_id=student_lookup[club["organizer"]].id,
-                faculty_id=faculty_lookup[club["faculty"]].id,
+                club_status="ACTIVE",
+                total_members=1,
+                active_members=1
             )
-            clubs.append(new_club)
 
-        db.session.add_all(clubs)
-        db.session.flush()
+            db.session.add(new_club)
+            db.session.flush()
+
+            # Assign Faculty Coordinator
+            db.session.add(
+                ClubFaculty(
+                    club_id=new_club.id,
+                    faculty_id=faculty_lookup[club["faculty"]].id,
+                    faculty_role="FACULTY_COORDINATOR"
+                )
+            )
+
+            # Assign Student Organizer
+            organizer = student_lookup[club["organizer"]]
+
+            db.session.add(
+                ClubOrganizer(
+                    club_id=new_club.id,
+                    user_id=organizer.id,
+                    organizer_role="PRESIDENT"
+                )
+            )
+
+            # Organizer is also a club member
+            db.session.add(
+                ClubMembership(
+                    club_id=new_club.id,
+                    user_id=organizer.id,
+                    membership_role="MEMBER",
+                    membership_status="ACTIVE"
+                )
+            )
 
         db.session.commit()
-        print("Database successfully seeded!")
 
+        print("Database successfully seeded!")
 
 if __name__ == '__main__':
     seed_database()
