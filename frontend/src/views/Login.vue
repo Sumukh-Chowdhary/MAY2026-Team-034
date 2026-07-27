@@ -2,24 +2,38 @@
 import {ref} from 'vue'
 import {useRouter} from 'vue-router'
 import {login} from '../services/authService'
+import { useAuthStore } from '@/stores/auth'
+
+const auth = useAuthStore()
 
 const router=useRouter()
 
 const username=ref('')
 const password=ref('')
 
-function handleLogin(){
-    const user=login(username.value,password.value)
-    //console.log(username.value)
-    //console.log(password.value)
+async function handleLogin() {
+    try {
+        const user = await login(
+            username.value,
+            password.value
+        );
+        // Save logged-in user to Pinia
+        auth.setUser(
+            user,
+            localStorage.getItem("token")
+        );
 
-    if(!user){
-        alert('Invalid Credentials')
-        return
-    }
-
-    if(user.role==='ADMIN'){
-        router.push('/admin')
+        if (auth.isAdmin) {
+            router.push("/admin");
+        }
+        else if (auth.isFaculty) {
+            router.push("/faculty");
+        }
+        else {
+            router.push("/student");
+        }
+    } catch (err) {
+        alert(err.response?.data?.error || "Login Failed");
     }
 }
 </script>

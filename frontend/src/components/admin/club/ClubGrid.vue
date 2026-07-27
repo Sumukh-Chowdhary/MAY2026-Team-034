@@ -1,6 +1,5 @@
 <template>
   <section class="club-grid">
-
     <ClubCard
       v-for="club in clubs"
       :key="club.id"
@@ -11,7 +10,6 @@
       :isMember="myClubNames.includes(club.name)"
       @view="$emit('view', $event)"
     />
-
   </section>
 </template>
 
@@ -25,14 +23,6 @@ defineProps({
     required: true,
     default: () => []
   },
-  isAdmin: {
-    type: Boolean,
-    default: false
-  },
-  isFaculty: {
-    type: Boolean,
-    default: false
-  },
     section: {
         type: String,
         default: ""
@@ -44,57 +34,34 @@ defineProps({
 })
 
 const emit = defineEmits(['view'])
-
 </script>
 
 <style scoped>
-
 .club-grid{
-
     max-width:1240px;
-
     margin:0 auto;
-
     padding:0 12px;
-
     display:grid;
-
     grid-template-columns:repeat(3,minmax(360px,1fr));
-
     justify-content:center;
-
     gap:28px;
-
 }
 
 @media (max-width:1200px){
-
 .club-grid{
-
     grid-template-columns:repeat(2,minmax(320px,1fr));
-
 }
-
-}
-
-@media (max-width:768px){
-
-.club-grid{
-
-    grid-template-columns:1fr;
-
-}
-
 }
 
 @media (max-width:768px){
-
 .club-grid{
-
     grid-template-columns:1fr;
-
+}
 }
 
+@media (max-width:768px){
+.club-grid{
+    grid-template-columns:1fr;
 }
-
+}
 </style>

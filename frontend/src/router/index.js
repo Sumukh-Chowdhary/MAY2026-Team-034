@@ -1,34 +1,177 @@
-import { createRouter, createWebHistory } from 'vue-router'
+import { createRouter, createWebHistory } from 'vue-router';
+import { isLoggedIn, getCurrentUser } from '@/services/authService';
 
 const routes = [
-  { path: '/', name: 'Landing', component: () => import('@/views/Landing.vue') },
-  { path: '/login', name: 'Login', component: () => import('@/views/Login.vue') },
-  { path: '/register', name: 'Register', component: () => import('@/views/Register.vue') },
-  { path: '/clubs', name: 'Clubs', component: () => import('@/views/ClubsPage.vue') },
-  { path: '/admin', name: 'AdminDashboard', component: () => import('@/views/admin/Dashboard.vue') },
-  { path: '/admin/requests', name: 'AdminRequests', component: () => import('@/views/admin/Requests.vue') },
-  { path: '/admin/clubs', name: 'AdminClubs', component: () => import('@/views/admin/Clubs.vue') },
-  { path: '/admin/users', name: 'AdminUsers', component: () => import('@/views/admin/Users.vue') },
-  { path: '/admin/users/:id', name: 'AdminUserDetails', component: () => import('@/views/admin/UserDetails.vue') },
-  { path: '/admin/events', name: 'AdminEvents', component: () => import('@/views/admin/Events.vue') },
-  { path: '/admin/events/:id', name: 'AdminEventDetail', component: () => import('@/views/admin/EventDetails.vue') },
-  { path: '/faculty', name: 'FacultyDashboard', component: () => import('@/views/faculty/Dashboard.vue') },
-  { path: '/faculty/clubs', name: 'FacultyClubs', component: () => import('@/views/faculty/Clubs.vue') },
-  { path: '/faculty/requests', name: 'FacultyRequests', component: () => import('@/views/faculty/Requests.vue') },
-  { path: '/faculty/roles', name: 'FacultyRoles', component: () => import('@/views/faculty/Roles.vue') },
-  { path: '/faculty/events', name: 'FacultyEvents', component: () => import('@/views/faculty/Events.vue') },
-  { path: '/faculty/events/:id', name: 'FacultyEventDetail', component: () => import('@/views/faculty/EventDetails.vue') },
-  { path: '/student', name: 'StudentDashboard', component: () => import('@/views/student/Dashboard.vue') },
-  { path: '/student/clubs', name: 'StudentClubs', component: () => import('@/views/student/Clubs.vue') },
-  { path: '/student/requests', name: 'StudentRequests', component: () => import('@/views/student/Requests.vue') },
-  { path: '/student/roles', name: 'StudentRoles', component: () => import('@/views/student/Roles.vue') },
-  { path: '/student/events', name: 'StudentEvents', component: () => import('@/views/student/Events.vue') },
-  { path: '/student/events/:id', name: 'StudentEventDetail', component: () => import('@/views/student/EventDetails.vue') }
-]
+  // --- Public Routes ---
+  {
+    path: '/',
+    name: 'Landing',
+    component: () => import('@/views/Landing.vue')
+  },
+  {
+    path: '/login',
+    name: 'Login',
+    component: () => import('@/views/Login.vue')
+  },
+  {
+    path: '/register',
+    name: 'Register',
+    component: () => import('@/views/Register.vue')
+  },
+  {
+    path: '/clubs',
+    name: 'Clubs',
+    component: () => import('@/views/ClubsPage.vue')
+  },
+
+  // --- Admin Routes ---
+  {
+    path: '/admin',
+    name: 'AdminDashboard',
+    component: () => import('@/views/admin/Dashboard.vue'),
+    meta: { requiresAuth: true, role: 'ADMIN' }
+  },
+  {
+    path: '/admin/requests',
+    name: 'AdminRequests',
+    component: () => import('@/views/admin/Requests.vue'),
+    meta: { requiresAuth: true, role: 'ADMIN' }
+  },
+  {
+    path: '/admin/clubs',
+    name: 'AdminClubs',
+    component: () => import('@/views/admin/Clubs.vue'),
+    meta: { requiresAuth: true, role: 'ADMIN' }
+  },
+  {
+    path: '/admin/users',
+    name: 'AdminUsers',
+    component: () => import('@/views/admin/Users.vue'),
+    meta: { requiresAuth: true, role: 'ADMIN' }
+  },
+  {
+    path: '/admin/users/:id',
+    name: 'AdminUserDetails',
+    component: () => import('@/views/admin/UserDetails.vue'),
+    meta: { requiresAuth: true, role: 'ADMIN' }
+  },
+  {
+    path: '/admin/events',
+    name: 'AdminEvents',
+    component: () => import('@/views/admin/Events.vue'),
+    meta: { requiresAuth: true, role: 'ADMIN' }
+  },
+  {
+    path: '/admin/events/:id',
+    name: 'AdminEventDetail',
+    component: () => import('@/views/admin/EventDetails.vue'),
+    meta: { requiresAuth: true, role: 'ADMIN' }
+  },
+
+  // --- Faculty Routes ---
+  {
+    path: '/faculty',
+    name: 'FacultyDashboard',
+    component: () => import('@/views/faculty/Dashboard.vue'),
+    meta: { requiresAuth: true, role: 'FACULTY' }
+  },
+  {
+    path: '/faculty/clubs',
+    name: 'FacultyClubs',
+    component: () => import('@/views/faculty/Clubs.vue'),
+    meta: { requiresAuth: true, role: 'FACULTY' }
+  },
+  {
+    path: '/faculty/requests',
+    name: 'FacultyRequests',
+    component: () => import('@/views/faculty/Requests.vue'),
+    meta: { requiresAuth: true, role: 'FACULTY' }
+  },
+  {
+    path: '/faculty/roles',
+    name: 'FacultyRoles',
+    component: () => import('@/views/faculty/Roles.vue'),
+    meta: { requiresAuth: true, role: 'FACULTY' }
+  },
+  {
+    path: '/faculty/events',
+    name: 'FacultyEvents',
+    component: () => import('@/views/faculty/Events.vue'),
+    meta: { requiresAuth: true, role: 'FACULTY' }
+  },
+  {
+    path: '/faculty/events/:id',
+    name: 'FacultyEventDetail',
+    component: () => import('@/views/faculty/EventDetails.vue'),
+    meta: { requiresAuth: true, role: 'FACULTY' }
+  },
+
+  // --- Student Routes ---
+  {
+    path: '/student',
+    name: 'StudentDashboard',
+    component: () => import('@/views/student/Dashboard.vue'),
+    meta: { requiresAuth: true, role: 'STUDENT' }
+  },
+  {
+    path: '/student/clubs',
+    name: 'StudentClubs',
+    component: () => import('@/views/student/Clubs.vue'),
+    meta: { requiresAuth: true, role: 'STUDENT' }
+  },
+  {
+    path: '/student/requests',
+    name: 'StudentRequests',
+    component: () => import('@/views/student/Requests.vue'),
+    meta: { requiresAuth: true, role: 'STUDENT' }
+  },
+  {
+    path: '/student/roles',
+    name: 'StudentRoles',
+    component: () => import('@/views/student/Roles.vue'),
+    meta: { requiresAuth: true, role: 'STUDENT' }
+  },
+  {
+    path: '/student/events',
+    name: 'StudentEvents',
+    component: () => import('@/views/student/Events.vue'),
+    meta: { requiresAuth: true, role: 'STUDENT' }
+  },
+  {
+    path: '/student/events/:id',
+    name: 'StudentEventDetail',
+    component: () => import('@/views/student/EventDetails.vue'),
+    meta: { requiresAuth: true, role: 'STUDENT' }
+  },
+
+  {
+    path: '/:pathMatch(.*)*',
+    redirect: '/'
+  }
+];
 
 const router = createRouter({
   history: createWebHistory(),
   routes
-})
+});
 
-export default router
+
+router.beforeEach((to, from, next) => {
+  if (!to.meta.requiresAuth) {
+    return next();
+  }
+
+  if (!isLoggedIn()) {
+    return next('/login');
+  }
+
+  const user = getCurrentUser();
+
+  if (to.meta.role && user?.role !== to.meta.role) {
+    return next('/');
+  }
+
+  next();
+});
+
+export default router;

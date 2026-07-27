@@ -1,16 +1,30 @@
 <script setup>
-import {Modal} from 'bootstrap'
-import {useRouter} from 'vue-router'
+import { Modal } from 'bootstrap'
+import { useRouter } from 'vue-router'
+import { useAuthStore } from '@/stores/auth'
+import { logout as logoutService } from '@/services/authService'
 
-const router=useRouter()
+const router = useRouter()
+const auth = useAuthStore()
 
-function logout(){
-    const modalElement=document.getElementById('logoutModal')
-    const modal=Modal.getInstance(modalElement)
-    modal.hide()
-    setTimeout(()=>{
-        router.push('/login')
-    },200)
+async function logout() {
+
+    try {
+        await logoutService()
+    } catch (e) {
+        // Ignore if backend is unavailable
+    }
+
+    auth.logout()
+
+    const modalElement = document.getElementById('logoutModal')
+    const modal = Modal.getInstance(modalElement)
+
+    if (modal) {
+        modal.hide()
+    }
+
+    router.replace('/login')
 }
 </script>
 
