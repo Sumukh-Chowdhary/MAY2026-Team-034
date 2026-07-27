@@ -7,6 +7,7 @@ from .seed_data import (
     ADMIN_DATA,
     FACULTY_DATA,
     STUDENT_DATA,
+    CLUB_DATA
 )
 
 def seed_database():
@@ -140,17 +141,35 @@ def seed_database():
 
         db.session.flush()
 
-        # print("6. Seeding Clubs...")
+        print("6. Seeding Clubs...")
 
-        # club_ai = Club(...)
-        # club_music = Club(...)
-        # ...
-        # db.session.add_all([
-        #     club_ai,
-        #     club_music,
-        #     ...
-        # ])
-        # db.session.flush()
+        # Builds lookup tables for resolving organizers and faculty advisors
+        faculty_lookup = {
+            faculty["employee_id"]: user
+            for faculty, user in zip(FACULTY_DATA, faculty_users)
+        }
+
+        student_lookup = {
+            student["roll_no"]: user
+            for student, user in zip(STUDENT_DATA, student_users)
+        }
+
+        clubs = []
+
+        for club in CLUB_DATA:
+
+            new_club = Club(
+                club_name=club["name"],
+                club_description=club["description"],
+                club_category=club["category"],
+                club_logo=club["logo"],
+                organizer_id=student_lookup[club["organizer"]].id,
+                faculty_id=faculty_lookup[club["faculty"]].id,
+            )
+            clubs.append(new_club)
+
+        db.session.add_all(clubs)
+        db.session.flush()
 
         db.session.commit()
         print("Database successfully seeded!")

@@ -194,3 +194,54 @@ STUDENT_DATA = [
         "bio": "Science club member interested in innovation."
     }
 ]
+
+CLUB_DATA = [
+    {
+        "name": "AI Club",
+        "description": "Learn Artificial Intelligence and Machine Learning together.",
+        "category": "Technology",
+        "logo": "robot",
+        "faculty": "FAC001",
+        "organizer": "STU001",
+    },
+    {
+        "name": "Music Club",
+        "description": "Jam sessions, performances and music workshops.",
+        "category": "Arts",
+        "logo": "musical_note",
+        "faculty": "FAC003",
+        "organizer": "STU010"
+    },
+    {
+        "name": "Sports Club",
+        "description": "Football, Cricket, Basketball and many more activities.",
+        "category": "Sports",
+        "logo": "soccer_ball",
+        "faculty": "FAC002",
+        "organizer": "STU009"
+    },
+    {
+        "name": "Drama Club",
+        "description": "Theatre performances, acting practice and stage events.",
+        "category": "Cultural",
+        "logo": "theatre_mask",
+        "faculty": "FAC003",
+        "organizer": "STU014"
+    },
+    {
+        "name": "Photography Club",
+        "description": "Capture moments and learn photography together.",
+        "category": "Creative",
+        "logo": "camera",
+        "faculty": "FAC001",
+        "organizer": "STU006"
+    },
+    {
+        "name": "Science Club",
+        "description": "Science projects, exhibitions and research discussions.",
+        "category": "Academic",
+        "logo": "test_tube",
+        "faculty": "FAC002",
+        "organizer": "STU015"
+    }
+]
