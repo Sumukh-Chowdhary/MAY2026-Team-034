@@ -7,6 +7,8 @@ from app.models.user import (  # noqa: E402
     User, StudentProfile, FacultyProfile, TokenBlocklist
 )
 
+from app.models.club import Club
+
 __all__ = [
     'db',
     'Role',
@@ -16,5 +18,6 @@ __all__ = [
     'User',
     'StudentProfile',
     'FacultyProfile',
-    'TokenBlocklist'
+    'TokenBlocklist',
+    'Club'
 ]
