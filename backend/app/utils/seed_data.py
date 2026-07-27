@@ -200,7 +200,7 @@ CLUB_DATA = [
         "name": "AI Club",
         "description": "Learn Artificial Intelligence and Machine Learning together.",
         "category": "Technology",
-        "logo": "robot",
+        "logo": "smart_toy",
         "faculty": "FAC001",
         "organizer": "STU001",
     },
@@ -208,7 +208,7 @@ CLUB_DATA = [
         "name": "Music Club",
         "description": "Jam sessions, performances and music workshops.",
         "category": "Arts",
-        "logo": "musical_note",
+        "logo": "library_music",
         "faculty": "FAC003",
         "organizer": "STU010"
     },
@@ -216,7 +216,7 @@ CLUB_DATA = [
         "name": "Sports Club",
         "description": "Football, Cricket, Basketball and many more activities.",
         "category": "Sports",
-        "logo": "soccer_ball",
+        "logo": "sports_soccer",
         "faculty": "FAC002",
         "organizer": "STU009"
     },
@@ -224,7 +224,7 @@ CLUB_DATA = [
         "name": "Drama Club",
         "description": "Theatre performances, acting practice and stage events.",
         "category": "Cultural",
-        "logo": "theatre_mask",
+        "logo": "theater_comedy",
         "faculty": "FAC003",
         "organizer": "STU014"
     },
@@ -232,7 +232,7 @@ CLUB_DATA = [
         "name": "Photography Club",
         "description": "Capture moments and learn photography together.",
         "category": "Creative",
-        "logo": "camera",
+        "logo": "photo_camera",
         "faculty": "FAC001",
         "organizer": "STU006"
     },
@@ -240,7 +240,7 @@ CLUB_DATA = [
         "name": "Science Club",
         "description": "Science projects, exhibitions and research discussions.",
         "category": "Academic",
-        "logo": "test_tube",
+        "logo": "science",
         "faculty": "FAC002",
         "organizer": "STU015"
     }

@@ -1,5 +1,4 @@
 <script setup>
-import { ref, computed } from 'vue'
 import AdminLayout from '@/layouts/AdminLayout.vue'
 import ClubSearch from '@/components/admin/club/ClubSearch.vue'
 import ClubGrid from '@/components/admin/club/ClubGrid.vue'
@@ -7,15 +6,29 @@ import AddClubModal from '@/components/admin/club/AddClubModal.vue'
 import EditClubModal from '@/components/admin/club/EditClubModal.vue'
 import DeleteClubModal from '@/components/admin/club/DeleteClubModal.vue'
 import ClubDetailsModal from '@/components/admin/club/ClubDetailsModal.vue'
-import { clubs } from '@/data/clubs'
 
+import { ref, computed, onMounted } from 'vue'
+import { getClubs } from '@/api/clubs'
+
+const clubList = ref([])
 const search = ref('')
-const clubList = ref([...clubs])
 const selectedClub = ref(null)
 const showAddModal = ref(false)
 const showDetailsModal = ref(false)
 const showEditModal = ref(false)
 const showDeleteModal = ref(false)
+
+const fetchClubs = async () => {
+  try {
+    clubList.value = await getClubs()
+  } catch (error) {
+    console.error('Failed to fetch clubs:', error)
+  }
+}
+
+onMounted(() => {
+  fetchClubs()
+})
 
 const filteredClubs = computed(() => {
   const query = search.value.trim().toLowerCase()

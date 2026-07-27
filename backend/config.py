@@ -4,9 +4,7 @@ from dotenv import load_dotenv
 BASE_DIR = os.path.abspath(os.path.dirname(__file__))
 INSTANCE_DIR = os.path.join(BASE_DIR, 'instance')
 
-# Load environment variables from .env file
 load_dotenv(os.path.join(BASE_DIR, '.env'))
-
 
 class Config:
     SECRET_KEY = os.environ.get(
