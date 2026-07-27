@@ -10,6 +10,8 @@ from app.models.club import (
     Club,ClubFaculty,ClubMembership,ClubOrganizer
 )
 
+from app.models.club import Club
+
 __all__ = [
     'db',
     'Role',
