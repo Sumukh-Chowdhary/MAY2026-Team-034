@@ -4,8 +4,6 @@
       v-for="club in clubs"
       :key="club.id"
       :club="club"
-      :isAdmin="isAdmin"
-      :isFaculty="isFaculty"
       :section="section"
       :isMember="myClubNames.includes(club.name)"
       @view="$emit('view', $event)"
