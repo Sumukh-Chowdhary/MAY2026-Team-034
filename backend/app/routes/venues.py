@@ -1,0 +1,106 @@
+from flask import Blueprint, request, jsonify
+from app.models import db
+from app.models.events import Venue
+from app.utils.auth_jwt import jwt_required, roles_required
+
+
+venues_bp = Blueprint('venues', __name__, url_prefix='/api/venues')
+
+
+@venues_bp.route('', methods=['GET'])
+@jwt_required
+def get_venues():
+    search_q = request.args.get('search')
+    query = Venue.query
+
+    if search_q:
+        q = f"%{search_q.strip().lower()}%"
+        query = query.filter(
+            db.or_(
+                db.func.lower(Venue.venue_name).like(q),
+                db.func.lower(Venue.venue_location).like(q),
+                db.func.lower(Venue.venue_type).like(q)
+            )
+        )
+
+    venues = query.order_by(Venue.venue_name.asc()).all()
+    return jsonify([venue.to_dict() for venue in venues]), 200
+
+
+@venues_bp.route('/<int:venue_id>', methods=['GET'])
+@jwt_required
+def get_venue(venue_id):
+    venue = Venue.query.get_or_404(venue_id)
+    return jsonify(venue.to_dict()), 200
+
+
+@venues_bp.route('/create', methods=['POST'])
+@jwt_required
+@roles_required('ADMIN')
+def create_venue():
+    data = request.get_json() or {}
+    name = (data.get('name') or '').strip()
+    location = (data.get('location') or '').strip()
+    venue_type = data.get('type')
+    capacity = data.get('capacity')
+
+    if not name:
+        return jsonify({'error': 'Venue name is required.'}), 400
+    if not location:
+        return jsonify({'error': 'Venue location is required.'}), 400
+    if capacity is None:
+        return jsonify({'error': 'Venue capacity is required.'}), 400
+
+    if Venue.query.filter_by(venue_name=name).first():
+        return jsonify({'error': 'A venue with this name already exists.'}), 409
+
+    venue = Venue(
+        venue_name=name,
+        venue_location=location,
+        venue_type=venue_type,
+        capacity=capacity,
+        availability_status='AVAILABLE'
+    )
+    db.session.add(venue)
+    db.session.commit()
+    return jsonify(venue.to_dict()), 201
+
+
+@venues_bp.route('/<int:venue_id>/edit', methods=['PUT'])
+@jwt_required
+@roles_required('ADMIN')
+def update_venue(venue_id):
+    venue = Venue.query.get_or_404(venue_id)
+    data = request.get_json() or {}
+    name = data.get('name')
+    location = data.get('location')
+    venue_type = data.get('type')
+    capacity = data.get('capacity')
+
+    if name is not None:
+        venue.venue_name = name.strip()
+    if location is not None:
+        venue.venue_location = location
+    if venue_type is not None:
+        venue.venue_type = venue_type
+    if capacity is not None:
+        venue.capacity = capacity
+
+    db.session.commit()
+    return jsonify(venue.to_dict()), 200
+
+
+@venues_bp.route('/<int:venue_id>/status', methods=['PATCH'])
+@jwt_required
+@roles_required('ADMIN')
+def update_venue_status(venue_id):
+    venue = Venue.query.get_or_404(venue_id)
+    data = request.get_json() or {}
+    status = data.get('status')
+
+    if not status:
+        return jsonify({'error': 'status is required.'}), 400
+
+    venue.availability_status = status.upper()
+    db.session.commit()
+    return jsonify(venue.to_dict()), 200

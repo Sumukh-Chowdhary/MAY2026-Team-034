@@ -1,16 +1,35 @@
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 
-import { events } from '@/data/events'
 import StudentLayout from '@/layouts/StudentLayout.vue'
+import { getEvent } from '@/api/events'
 
 const route = useRoute()
 const activeTab = ref('schedule')
+const event = ref(null)
+const loading = ref(false)
 
-const event = computed(() =>
-  events.find((item) => item.id === Number(route.params.id))
-)
+onMounted(async () => {
+  loading.value = true
+  try {
+    const data = await getEvent(Number(route.params.id))
+    event.value = {
+      ...data,
+      emoji: data.emoji || '🎉',
+      status: data.status || 'Scheduled',
+      club: data.clubName || data.club || 'Unknown Club',
+      schedule: Array.isArray(data.schedule) ? data.schedule : [],
+      announcements: Array.isArray(data.announcements) ? data.announcements : [],
+      registrations: Array.isArray(data.registrations) ? data.registrations : [],
+      attendance: Array.isArray(data.attendance) ? data.attendance : []
+    }
+  } catch (error) {
+    console.error('Failed to load event', error)
+  } finally {
+    loading.value = false
+  }
+})
 
 const tabs = [
   { key: 'schedule', label: 'Schedule' },

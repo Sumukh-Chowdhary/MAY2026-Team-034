@@ -1,17 +1,30 @@
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 
-import { events } from '@/data/events'
 import AdminLayout from '@/layouts/AdminLayout.vue'
+import { getEvent } from '@/api/events'
 
 const route = useRoute()
 const router = useRouter()
 const activeTab = ref('schedule')
+const event = ref(null)
+const loading = ref(false)
 
-const event = computed(() =>
-  events.find((item) => String(item.id) === String(route.params.id))
-)
+onMounted(async () => {
+  try {
+    loading.value = true
+    const data = await getEvent(Number(route.params.id))
+    event.value = {
+      ...data,
+      club: data.clubName || data.club || 'Unknown Club'
+    }
+  } catch (error) {
+    console.error('Failed to load event', error)
+  } finally {
+    loading.value = false
+  }
+})
 
 const tabs = [
   { key: 'schedule', label: 'Schedule' },

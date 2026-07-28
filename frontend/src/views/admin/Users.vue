@@ -1,8 +1,8 @@
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import AdminLayout from '@/layouts/AdminLayout.vue'
-import usersData from '@/data/users.json'
+import { getUsers, updateUserStatus } from '@/api/users'
 import '@/assets/css/Users.css'
 
 const router = useRouter()
@@ -10,7 +10,20 @@ const router = useRouter()
 // ── State ──────────────────────────────────────────
 const search     = ref('')
 const activeTab  = ref('ALL')   // 'ALL' | 'STUDENT' | 'FACULTY'
-const userList   = ref([...usersData])
+const userList   = ref([])
+const loading    = ref(false)
+
+onMounted(async () => {
+  loading.value = true
+  try {
+    const users = await getUsers()
+    userList.value = users
+  } catch (error) {
+    console.error('Failed to load users', error)
+  } finally {
+    loading.value = false
+  }
+})
 
 const userToBlock  = ref(null)
 const showBlockModal = ref(false)
@@ -76,10 +89,17 @@ function closeBlockModal() {
 function confirmBlock() {
   if (!userToBlock.value) return
   const target = userList.value.find(u => u.id === userToBlock.value.id)
-  if (target) {
-    target.status = target.status === 'ACTIVE' ? 'INACTIVE' : 'ACTIVE'
-  }
-  closeBlockModal()
+  if (!target) return
+
+  const newStatus = target.status === 'ACTIVE' ? 'INACTIVE' : 'ACTIVE'
+  updateUserStatus(target.id, newStatus)
+    .then(() => {
+      target.status = newStatus
+      closeBlockModal()
+    })
+    .catch(() => {
+      alert('Failed to update user status. Please try again.')
+    })
 }
 
 const blockModalTitle = computed(() =>

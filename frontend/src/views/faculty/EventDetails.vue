@@ -1,35 +1,55 @@
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 
 import EventSearch from '@/components/faculty/events/EventSearch.vue'
 import EventStatusTabs from '@/components/faculty/events/EventStatusTabs.vue'
 import EventGrid from '@/components/faculty/events/EventGrid.vue'
-import { events } from '@/data/events'
 import FacultyLayout from '@/layouts/FacultyLayout.vue'
+import { getEvents } from '@/api/events'
 
 const search = ref('')
 const statusFilter = ref('all')
+const eventList = ref([])
+const loading = ref(false)
 
-const eventList = ref(events)
+onMounted(async () => {
+  loading.value = true
+  try {
+    const events = await getEvents()
+    eventList.value = events.map((event) => ({
+      ...event,
+      club: event.clubName || event.club || 'Unknown Club',
+      status: event.status || event.event_status || 'Scheduled'
+    }))
+  } catch (error) {
+    console.error('Failed to load events', error)
+  } finally {
+    loading.value = false
+  }
+})
 
 const counts = computed(() => ({
   all: eventList.value.length,
-  live: eventList.value.filter((event) => event.status === 'Live').length,
-  completed: eventList.value.filter((event) => event.status === 'Completed').length
+  live: eventList.value.filter((event) => event.status.toLowerCase() === 'live').length,
+  completed: eventList.value.filter((event) => event.status.toLowerCase() === 'completed').length
 }))
 
 const filteredEvents = computed(() => {
   const query = search.value.trim().toLowerCase()
 
   return eventList.value.filter((event) => {
+    const clubName = String(event.club || event.clubName || '')
+    const eventName = String(event.name || event.eventName || '')
+    const status = String(event.status || event.event_status || '')
+
     const matchesQuery =
       !query ||
-      event.name.toLowerCase().includes(query) ||
-      event.club.toLowerCase().includes(query)
+      eventName.toLowerCase().includes(query) ||
+      clubName.toLowerCase().includes(query)
 
     const matchesStatus =
       statusFilter.value === 'all' ||
-      event.status.toLowerCase() === statusFilter.value
+      status.toLowerCase() === statusFilter.value
 
     return matchesQuery && matchesStatus
   })
