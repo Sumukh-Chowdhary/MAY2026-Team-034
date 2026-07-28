@@ -1,3 +1,5 @@
+from datetime import datetime
+
 from flask import Blueprint, request, jsonify, g # type: ignore
 
 from app.models import db, User
@@ -107,3 +109,98 @@ def get_clubs():
         })
 
     return jsonify(response), 200
+
+@student_bp.route("/clubs/<int:club_id>/join", methods=["POST"])
+@jwt_required
+@roles_required("STUDENT")
+def join_club(club_id):
+    current_user = g.current_user
+
+    # Check if club exists
+    club = Club.query.get(club_id)
+    if not club:
+        return jsonify({"error": "Club not found"}), 404
+
+    # Check if club is active
+    if club.club_status != "ACTIVE":
+        return jsonify({"error": "Cannot join an archived or inactive club"}), 400
+
+    # Check for an existing membership
+    membership = ClubMembership.query.filter_by(
+        club_id=club.id,
+        user_id=current_user.id
+    ).first()
+
+    if membership:
+
+        # Already an active member
+        if membership.membership_status == "ACTIVE":
+            return jsonify({"message": "You are already a member of this club"}), 409
+
+        # Reactivate previous membership
+        membership.membership_status = "ACTIVE"
+        membership.joined_at = datetime.utcnow()
+
+        club.active_members += 1
+
+    else:
+        # Create a new membership
+        membership = ClubMembership(
+            club_id=club.id,
+            user_id=current_user.id,
+            membership_role="MEMBER",
+            membership_status="ACTIVE"
+        )
+
+        db.session.add(membership)
+
+        club.total_members += 1
+        club.active_members += 1
+
+    db.session.commit()
+
+    return jsonify({
+        "message": "Joined club successfully",
+        "membershipStatus": membership.membership_status,
+        "activeMembers": club.active_members,
+        "totalMembers": club.total_members
+    }), 200
+
+@student_bp.route("/clubs/<int:club_id>/leave", methods=["POST"])
+@jwt_required
+@roles_required("STUDENT")
+def leave_club(club_id):
+    current_user = g.current_user
+
+    # Check if club exists
+    club = Club.query.get(club_id)
+    if not club:
+        return jsonify({"error": "Club not found"}), 404
+
+    # Find membership
+    membership = ClubMembership.query.filter_by(
+        club_id=club.id,
+        user_id=current_user.id
+    ).first()
+
+    if not membership:
+        return jsonify({"message": "You are not a member of this club"}), 404
+
+    if membership.membership_status != "ACTIVE":
+        return jsonify({"message": "Membership is already inactive"}), 409
+
+    # Deactivate membership
+    membership.membership_status = "INACTIVE"
+
+    # Update club counts
+    club.active_members -= 1
+
+    db.session.commit()
+
+    return jsonify({
+        "message": "Left club successfully",
+        "clubId": club.id,
+        "membershipStatus": membership.membership_status,
+        "activeMembers": club.active_members,
+        "totalMembers": club.total_members
+    }), 200

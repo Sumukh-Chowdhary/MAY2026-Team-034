@@ -122,8 +122,6 @@ const closeDetailsModal = () => {
       <ClubDetailsModal
           v-if="showDetailsModal"
           :club="selectedClub"
-          :isAdmin="false"
-          :isFaculty="false"
           :isMember="myClubNames.includes(selectedClub?.name)"
           @close="closeDetailsModal"
       />

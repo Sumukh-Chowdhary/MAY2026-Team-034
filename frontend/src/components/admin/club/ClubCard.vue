@@ -19,19 +19,19 @@
         class="status-chip"
         :class="club.status === 'ACTIVE' ? 'live' : 'inactive'"
       >
-        <span class="status-dot"></span>
-        {{ club.status === 'ACTIVE' ? 'Live Club' : 'Inactive' }}
+        <span class="status-badge"></span>
+        {{ club.status === 'ACTIVE' ? 'Live Club' : 'Legacy' }}
       </span>
-      <span class="member-chip">
+      <!-- <span class="member-chip">
         {{ club.activeMembers }} Active Members
       </span>
       <span class="member-chip">
         {{ club.totalMembers }} Members
-      </span>
+      </span> -->
     </div>
 
     <div class="footer-actions">
-      <button type="button" class="view-btn"@click.stop="$emit('view', club)">
+      <button type="button" class="view-btn" @click.stop="$emit('view', club)">
         View Details
       </button>
 
@@ -157,9 +157,9 @@ const emit = defineEmits([
     color:#15803d;
 }
 
-.status-chip.legacy{
-    background:#fee2e2;
-    color:#dc2626;
+.status-chip.inactive{
+    background:#fef9c3;
+    color:#a16207;
 }
 
 .description{
