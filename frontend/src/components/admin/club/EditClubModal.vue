@@ -19,24 +19,60 @@
         </label>
 
         <label class="field">
-          <span>Emoji</span>
-          <input v-model="form.emoji" type="text" maxlength="2" placeholder="🤖" />
+          <span>Club Icon</span>
+
+          <button
+            type="button"
+            class="icon-picker-btn"
+            @click="showIconPicker = true"
+          >
+            <span class="material-symbols-rounded icon-preview">
+              {{ form.logo }}
+            </span>
+
+            <div class="icon-text">
+              <strong>{{ form.logo }}</strong>
+              <small>Choose another icon</small>
+            </div>
+          </button>
         </label>
 
+        <IconPickerModal
+            v-if="showIconPicker"
+            :model-value="form.logo"
+            @close="showIconPicker = false"
+            @select="selectIcon"
+        />
+
         <label class="field">
-          <span>Category</span>
-          <input v-model="form.category" type="text" placeholder="Technology" />
-        </label>
+        <span>Category</span>    
+        <select v-model="form.category">
+          <option disabled value="">
+              Select a category
+          </option>
+
+          <option>Technology</option>
+          <option>Academic</option>
+          <option>Arts</option>
+          <option>Sports</option>
+          <option>Cultural</option>
+          <option>Entrepreneurship</option>
+          <option>Social Service</option>
+          <option>General</option>
+      </select>
+      </label>
 
         <label class="field">
           <span>Description</span>
-          <textarea v-model="form.description" rows="3" placeholder="Update club description"></textarea>
+          <textarea v-model="form.description" rows="5" maxlength="500" placeholder="Update club description"></textarea>
         </label>
 
-        <label class="field">
-          <span>Faculty Coordinator</span>
-          <input v-model="form.facultyCoordinator" type="text" placeholder="Dr. Jane Smith" />
-        </label>
+        <div class="field">
+          <FacultyPicker
+              v-model="form.facultyCoordinatorIds"
+              :faculty="faculty"
+          />
+        </div>
       </div>
 
       <div class="modal-actions">
@@ -48,7 +84,13 @@
 </template>
 
 <script setup>
-import { reactive, watch } from 'vue'
+import { reactive, ref, watch, onMounted, onUnmounted } from 'vue'
+import IconPickerModal from './IconPickerModal.vue'
+import FacultyPicker from './FacultyPicker.vue'
+import { getFacultyDetails } from '@/api/clubs'
+
+const showIconPicker = ref(false)
+const faculty = ref([])
 
 const props = defineProps({
   club: {
@@ -60,12 +102,12 @@ const props = defineProps({
 const emit = defineEmits(['close', 'submit'])
 
 const form = reactive({
-  id: null,
-  name: '',
-  emoji: '',
-  category: '',
-  description: '',
-  facultyCoordinator: ''
+  id:null,
+  name:'',
+  logo:'groups',
+  category:'',
+  description:'',
+  facultyCoordinatorIds:[]
 })
 
 watch(
@@ -74,10 +116,10 @@ watch(
     if (club) {
       form.id = club.id
       form.name = club.name
-      form.emoji = club.emoji
+      form.logo = club.logo
       form.category = club.category
       form.description = club.description
-      form.facultyCoordinator = club.facultyCoordinator
+      form.facultyCoordinatorIds = club.faculty?.map(member => member.id) || []
     }
   },
   { immediate: true }
@@ -89,35 +131,66 @@ const submitForm = () => {
   emit('submit', {
     ...form,
     name: form.name.trim(),
-    category: form.category.trim() || 'General',
-    description: form.description.trim() || 'Updated club details.',
-    facultyCoordinator: form.facultyCoordinator.trim() || 'TBD'
+    description: form.description.trim()
   })
+
 }
+
+async function loadFaculty() {
+  try {
+    faculty.value = await getFacultyDetails()
+  } catch (error) {
+    console.error(error)
+  }
+}
+
+onMounted(loadFaculty)
+
+function selectIcon(icon) {
+  form.logo = icon
+  showIconPicker.value = false
+}
+
+onMounted(() => {
+  document.body.style.overflow = 'hidden'
+})
+
+onUnmounted(() => {
+  document.body.style.overflow = ''
+})
 </script>
 
 <style scoped>
-.modal-overlay {
-  position: fixed;
-  inset: 0;
-  background: rgba(15, 23, 42, 0.68);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 20px;
-  z-index: 1100;
+.modal-overlay{
+    position:fixed;
+    inset:0;
+    background:rgba(15,23,42,.68);
+    display:flex;
+    justify-content:center;
+    align-items:flex-start;
+    padding:40px 20px;
+    overflow-y:auto;
+    z-index:1100;
 }
 
-.modal-card {
-  position: relative;
-  width: min(100%, 620px);
-  background: #fff;
-  border-radius: 24px;
-  padding: 28px;
-  box-shadow: 0 20px 60px rgba(15, 23, 42, 0.28);
-  display: flex;
-  flex-direction: column;
-  gap: 18px;
+.modal-card{
+    position:relative;
+    width:min(100%,700px);
+    max-height:90vh;
+    background:#fff;
+    border-radius:24px;
+    padding:28px;
+    display:flex;
+    flex-direction:column;
+    gap:20px;
+    overflow-y:auto;
+    box-shadow:0 20px 60px rgba(15,23,42,.28);
+    scrollbar-width:none;
+    -ms-overflow-style:none;
+}
+
+.modal-card::-webkit-scrollbar{
+    display:none;
 }
 
 .modal-close-btn {
@@ -163,9 +236,9 @@ const submitForm = () => {
   font-weight: 600;
 }
 
-.modal-body {
-  display: grid;
-  gap: 12px;
+.modal-body{
+    display:grid;
+    gap:18px;
 }
 
 .field {
@@ -179,12 +252,21 @@ const submitForm = () => {
 
 .field input,
 .field textarea,
-.field select {
-  border: 1px solid #dce4ee;
-  border-radius: 10px;
-  padding: 10px 12px;
-  font-size: 0.95rem;
-  color: #0f172a;
+.field select{
+    border:1px solid #dce4ee;
+    border-radius:12px;
+    padding:12px 14px;
+    font-size:.95rem;
+    color:#0f172a;
+    transition:.2s;
+}
+
+.field input:focus,
+.field textarea:focus,
+.field select:focus{
+    outline:none;
+    border-color:#2563eb;
+    box-shadow:0 0 0 3px rgba(37,99,235,.12);
 }
 
 .field textarea {
@@ -215,5 +297,83 @@ const submitForm = () => {
 .save-btn {
   background: #2563eb;
   color: white;
+}
+
+.icon-picker-btn{
+    display:flex;
+    align-items:center;
+    gap:16px;
+    width:100%;
+    padding:14px 16px;
+    border:1px solid #dce4ee;
+    border-radius:12px;
+    background:white;
+    cursor:pointer;
+    transition:.2s;
+}
+
+.icon-picker-btn:hover{
+    border-color:#2563eb;
+    background:#f8fbff;
+}
+
+.icon-preview{
+    width:52px;
+    height:52px;
+    border-radius:14px;
+    background:#eef4ff;
+    display:grid;
+    place-items:center;
+    color:#2563eb;
+    font-size:30px;
+}
+
+.icon-text{
+    display:flex;
+    flex-direction:column;
+    align-items:flex-start;
+}
+
+.icon-text strong{
+    color:#1e293b;
+}
+
+.icon-text small{
+    color:#64748b;
+}
+
+.modal-actions{
+    display:flex;
+    justify-content:flex-end;
+    gap:12px;
+    margin-top:8px;
+}
+
+.cancel-btn,
+.save-btn{
+    border:none;
+    border-radius:12px;
+    padding:12px 20px;
+    font-weight:600;
+    cursor:pointer;
+    transition:.2s;
+}
+
+.cancel-btn{
+    background:#f3f4f6;
+    color:#475569;
+}
+
+.cancel-btn:hover{
+    background:#e5e7eb;
+}
+
+.save-btn{
+    background:#2563eb;
+    color:white;
+}
+
+.save-btn:hover{
+    background:#1d4ed8;
 }
 </style>

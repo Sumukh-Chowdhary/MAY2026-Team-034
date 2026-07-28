@@ -5,23 +5,27 @@ export const getClubs = async () => {
   return response.data
 }
 
-/*
-export const getClub = async (id) => {
-  const response = await api.get(`/admin/clubs/${id}`)
+export const updateClubStatus = async (id, status) => {
+  const response = await api.patch(`/admin/clubs/${id}/status`, {
+    status
+  })
   return response.data
 }
 
-export const createClub = async (club) => {
-  const response = await api.post('/admin/clubs', club)
+export const getFacultyDetails = async () => {
+  const response = await api.get('/admin/clubs/faculty-details')
   return response.data
 }
 
-export const updateClub = async (id, club) => {
-  const response = await api.put(`/admin/clubs/${id}`, club)
+export const createClub = async (clubData) => {
+  const response = await api.post('/admin/clubs/create', clubData)
   return response.data
 }
 
-export const deleteClub = async (id) => {
-  const response = await api.delete(`/admin/clubs/${id}`)
-  return response.data
-}*/
+export const updateClub = async (id, clubData) => {
+    const response = await api.put(
+        `/admin/clubs/${id}/edit`,
+        clubData
+    )
+    return response.data
+}

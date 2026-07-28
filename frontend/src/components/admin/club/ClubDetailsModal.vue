@@ -1,16 +1,32 @@
 <template>
-  <div class="modal-overlay" @click.self="emit('close')">
-    <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="club-details-title" @click.stop>
-      <button type="button" class="modal-close-btn" @click.stop="emit('close')" aria-label="Close details">
+  <div 
+    class="modal-overlay" 
+    @click.self="emit('close')"
+  >
+    <div 
+      class="modal-card" 
+      role="dialog" 
+      aria-modal="true" 
+      aria-labelledby="club-details-title" 
+      @click.stop
+    >
+      <button 
+        type="button" 
+        class="modal-close-btn" 
+        aria-label="Close details"
+        @click.stop="emit('close')" 
+      >
         ×
       </button>
 
       <div class="top-section">
         <div class="club-icon">
-          <span class="material-symbols-rounded">{{ club.logo }}</span>
+          <span class="material-symbols-rounded">
+            {{ club.logo }}
+          </span>
         </div>
         <div class="club-info">
-          <h2 id="club-details-title">{{ club.name }}</h2>
+          <h3 id="club-details-title">{{ club.name }}</h3>
           <div class="club-tags">
             <span class="club-category">{{ club.category }}</span>
             <span
@@ -26,68 +42,114 @@
 
       <div class="body-section">
         <p class="club-description">{{ club.description }}</p>
+        
         <hr class="section-divider" />
+        
         <div class="detail-grid">
           <div>
             <span>Total Members</span>
             <strong>{{ club.totalMembers }}</strong>
           </div>
+          
           <div>
             <span>Active Members</span>
             <strong>{{ club.activeMembers }}</strong>
           </div>
+          
           <div>
             <span>Club Status</span>
-            <strong>{{ club.status === 'ACTIVE' ? 'Live Club' : 'Legacy Club' }}</strong>
+            <strong>
+              {{ club.status === 'ACTIVE' ? 'Live Club' : 'Legacy Club' }}
+            </strong>
           </div>
+
           <div>
-            <span>Coordinator</span>
-            <strong>{{ club.faculty?.map(f => f.name).join(', ') || 'Not Assigned' }}</strong>
+            <span>Created On</span>
+            <strong>{{ formatDate(club.createdAt) }}</strong>
+          </div>
+
+          <div class="faculty-card">
+            <span>Faculty Coordinators</span>
+
+            <div
+              v-if="club.faculty?.length"
+              class="faculty-list"
+            >
+              <div
+                v-for="advisor in club.faculty"
+                :key="advisor.id"
+                class="faculty-chip"
+              >
+                {{ advisor.name }}
+              </div>
+            </div>
+
+            <strong v-else>
+              Not Assigned
+            </strong>
           </div>
         </div>
-      </div>
 
-      <div class="actions-row">
-        <button
-          type="button"
-          class="visit-btn"
-          @click.stop="emit('visit')"
-        >
-          Visit Club Page
-        </button>
-
-        <div class="admin-actions">
+        <div class="actions-row">
           <button
             type="button"
-            class="edit-btn"
-            @click.stop="emit('edit')"
+            class="visit-btn"
+            @click.stop="emit('visit')"
           >
-            Edit Club
+            Visit Club Page
           </button>
 
+          <div class="admin-actions">
+            <button
+              type="button"
+              class="edit-btn"
+              @click.stop="emit('edit')"
+            >
+              Edit Club
+            </button>
+
+            <button
+              v-if="club.status === 'ACTIVE'"
+              type="button"
+              class="archive-btn"
+              @click.stop="emit('archive')"
+            >
+              Archive Club
+            </button>
+
+            <button
+              v-else
+              type="button"
+              class="restore-btn"
+              @click.stop="emit('restore')"
+            >
+              Restore Club
+            </button>
+          </div>
+
           <button
+            v-if="!isAdmin && !isFaculty && isMember"
             type="button"
-            class="delete-btn"
-            @click.stop="emit('delete')"
+            class="leave-btn"
+            @click.stop="emit('leave')"
           >
-            Delete Club
+            Leave Club
           </button>
         </div>
-
-        <button
-          v-if="!isAdmin && !isFaculty && isMember"
-          type="button"
-          class="leave-btn"
-          @click.stop="emit('leave')"
-        >
-          Leave Club
-        </button>
       </div>
     </div>
   </div>
 </template>
 
 <script setup>
+function formatDate(date) {
+  if (!date) return '-'
+  return new Date(date).toLocaleDateString('en-IN', {
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric'
+  })
+}
 
 const props = defineProps({
   club: {
@@ -97,28 +159,28 @@ const props = defineProps({
   isMember: {
     type: Boolean,
     default: false
+  },
+  isAdmin: {
+    type: Boolean,
+    default: false
+  },
+  isFaculty: {
+    type: Boolean,
+    default: false
   }
 })
 
-const emit = defineEmits(['close', 'visit', 'edit', 'delete', 'leave'])
+const emit = defineEmits([
+  'close',
+  'visit',
+  'edit',
+  'archive',
+  'restore',
+  'leave'
+])
 </script>
 
 <style scoped>
-.admin-actions{
-    display:flex;
-    gap:12px;
-}
-
-.admin-actions button{
-    flex:1;
-}
-
-.section-divider{
-  border:none;
-  border-top:1px solid #e5e7eb;
-  margin:8px 0 4px;
-}
-
 .modal-overlay {
   position: fixed;
   inset: 0;
@@ -172,9 +234,9 @@ const emit = defineEmits(['close', 'visit', 'edit', 'delete', 'leave'])
   font-size: 2rem;
 }
 
-.club-icon .material-symbols-rounded{
-    font-size:42px;
-    color:#2563eb;
+.club-icon .material-symbols-rounded {
+  font-size: 42px;
+  color: #2563eb;
 }
 
 .club-info h3 {
@@ -194,6 +256,27 @@ const emit = defineEmits(['close', 'visit', 'edit', 'delete', 'leave'])
   font-weight: 600;
 }
 
+.club-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  border-radius: 999px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  margin-left: 8px;
+}
+
+.club-status.live {
+  background: #dcfce7;
+  color: #15803d;
+}
+
+.club-status.inactive {
+  background: #fef9c3;
+  color: #a16207;
+}
+
 .body-section {
   color: #475569;
   line-height: 1.8;
@@ -203,13 +286,19 @@ const emit = defineEmits(['close', 'visit', 'edit', 'delete', 'leave'])
   margin: 0 0 20px;
 }
 
+.section-divider {
+  border: none;
+  border-top: 1px solid #e5e7eb;
+  margin: 8px 0 20px;
+}
+
 .detail-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 16px;
 }
 
-.detail-grid div {
+.detail-grid > div:not(.faculty-card) {
   background: #f8fafc;
   border-radius: 16px;
   padding: 18px;
@@ -231,31 +320,60 @@ const emit = defineEmits(['close', 'visit', 'edit', 'delete', 'leave'])
   font-size: 1rem;
 }
 
-.actions-row{
-    display:flex;
-    flex-direction:column;
-    gap:14px;
-    margin-top:10px;
+.faculty-card {
+  grid-column: 1 / -1;
+  background: #f8fafc;
+  border-radius: 18px;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
 }
 
-.admin-actions{
-    display:flex;
-    gap:12px;
+.faculty-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  width: 100%;
 }
 
-.admin-actions button{
-    flex:1;
+.faculty-chip {
+  background: #eef4ff;
+  color: #2563eb;
+  border-radius: 999px;
+  padding: 8px 14px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  line-height: 1;
+}
+
+.actions-row {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  margin-top: 24px;
+}
+
+.admin-actions {
+  display: flex;
+  gap: 12px;
+}
+
+.admin-actions button {
+  flex: 1;
 }
 
 .visit-btn,
 .edit-btn,
-.delete-btn,
-.leave-btn{
-    border:none;
-    border-radius:14px;
-    padding:13px 18px;
-    font-weight:700;
-    cursor:pointer;
+.archive-btn,
+.restore-btn,
+.leave-btn {
+  border: none;
+  border-radius: 14px;
+  padding: 13px 18px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
 }
 
 .visit-btn {
@@ -264,41 +382,44 @@ const emit = defineEmits(['close', 'visit', 'edit', 'delete', 'leave'])
   color: #fff;
 }
 
+.visit-btn:hover {
+  background: #1d4ed8;
+}
+
 .edit-btn {
   background: #e2e8f0;
   color: #0f172a;
-}
-
-.delete-btn {
-  background: #dc2626;
-  color: #fff;
-}
-
-.leave-btn{
-    background:#dc2626;
-    color:#fff;
-    border:none;
-    border-radius:10px;
-    padding:10px 18px;
-    font-weight:600;
-    cursor:pointer;
-    transition:.2s;
-}
-
-.visit-btn:hover {
-  background: #1d4ed8;
 }
 
 .edit-btn:hover {
   background: #cbd5e1;
 }
 
-.delete-btn:hover {
+.archive-btn {
+  background: #dc2626;
+  color: white;
+}
+
+.archive-btn:hover {
   background: #b91c1c;
 }
 
-.leave-btn:hover{
-    background:#b91c1c;
+.restore-btn {
+  background: #16a34a;
+  color: white;
+}
+
+.restore-btn:hover {
+  background: #15803d;
+}
+
+.leave-btn {
+  background: #dc2626;
+  color: #fff;
+}
+
+.leave-btn:hover {
+  background: #b91c1c;
 }
 
 @media (max-width: 640px) {
