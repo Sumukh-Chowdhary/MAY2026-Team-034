@@ -161,6 +161,7 @@ def join_club(club_id):
 
     return jsonify({
         "message": "Joined club successfully",
+        "clubId": club.id,
         "membershipStatus": membership.membership_status,
         "activeMembers": club.active_members,
         "totalMembers": club.total_members

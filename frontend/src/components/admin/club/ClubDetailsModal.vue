@@ -130,7 +130,7 @@
           </div>
 
           <button
-            v-if="!isAdmin && !isFaculty && isMember"
+            v-if="isMember"
             type="button"
             class="leave-btn"
             @click.stop="emit('leave')"
@@ -162,14 +162,6 @@ const props = defineProps({
     type: Boolean,
     default: false
   },
-  isAdmin: {
-    type: Boolean,
-    default: false
-  },
-  isFaculty: {
-    type: Boolean,
-    default: false
-  }
 })
 
 const emit = defineEmits([

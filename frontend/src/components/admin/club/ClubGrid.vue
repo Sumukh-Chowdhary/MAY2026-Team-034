@@ -7,6 +7,7 @@
       :section="section"
       :isMember="myClubNames.includes(club.name)"
       @view="$emit('view', $event)"
+      @join="$emit('join', $event)"
     />
   </section>
 </template>
@@ -31,7 +32,7 @@ defineProps({
   }
 })
 
-const emit = defineEmits(['view'])
+const emit = defineEmits(['view', 'join'])
 </script>
 
 <style scoped>

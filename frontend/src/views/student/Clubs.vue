@@ -4,7 +4,7 @@ import StudentLayout from '@/layouts/StudentLayout.vue'
 import ClubSearch from '@/components/admin/club/ClubSearch.vue'
 import ClubGrid from '@/components/admin/club/ClubGrid.vue'
 import ClubDetailsModal from '@/components/admin/club/ClubDetailsModal.vue'
-import { getStudentClubs, getMyClubs } from '@/api/clubs'
+import { getStudentClubs, getMyClubs, joinClub, leaveClub } from '@/api/clubs'
 
 const search = ref('')
 const clubList = ref([])
@@ -70,6 +70,48 @@ const closeDetailsModal = () => {
   selectedClub.value = null
 }
 
+const handleJoinClub = async (club) => {
+    try {
+        const response = await joinClub(club.id)
+
+        console.log(response)
+        console.log(clubList.value)
+        const joinedClub = clubList.value.find(c => c.id === response.clubId)
+
+        joinedClub.activeMembers = response.activeMembers
+        joinedClub.totalMembers = response.totalMembers
+
+        myClubs.value.push(joinedClub)
+        console.log(myClubs.value)
+
+        if (selectedClub.value?.id === joinedClub.id) {
+            selectedClub.value = { ...joinedClub }
+        }
+
+    } catch (error) {
+        console.error(error)
+    }
+}
+
+const handleLeaveClub = async () => {
+    try {
+        const response = await leaveClub(selectedClub.value.id)
+
+        const club = clubList.value.find(c => c.id === response.clubId)
+
+        club.activeMembers = response.activeMembers
+
+        myClubs.value = myClubs.value.filter(
+            c => c.id !== response.clubId
+        )
+
+        closeDetailsModal()
+
+    } catch (error) {
+        console.error(error)
+    }
+}
+
 
 </script>
 
@@ -97,8 +139,6 @@ const closeDetailsModal = () => {
         <ClubGrid
           :clubs="filteredMyClubs"
           :myClubNames="myClubNames"
-          :isAdmin="false"
-          :isFaculty="false"
           section="my-clubs"
           @view="openDetailsModal"
         />
@@ -107,10 +147,9 @@ const closeDetailsModal = () => {
         <ClubGrid
           :clubs="filteredAllClubs"
           :myClubNames="myClubNames"
-          :isAdmin="false"
-          :isFaculty="false"
           section="all-clubs"
           @view="openDetailsModal"
+          @join="handleJoinClub"
         />
       </div>
 
@@ -122,8 +161,9 @@ const closeDetailsModal = () => {
       <ClubDetailsModal
           v-if="showDetailsModal"
           :club="selectedClub"
-          :isMember="myClubNames.includes(selectedClub?.name)"
+          :isMember="myClubs.some(c => c.id === selectedClub?.id)"
           @close="closeDetailsModal"
+          @leave="handleLeaveClub"
       />
 
     </section>
