@@ -1,34 +1,50 @@
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import StudentLayout from '@/layouts/StudentLayout.vue'
 import ClubSearch from '@/components/admin/club/ClubSearch.vue'
 import ClubGrid from '@/components/admin/club/ClubGrid.vue'
 import ClubDetailsModal from '@/components/admin/club/ClubDetailsModal.vue'
-import { clubs } from '@/data/clubs'
-import users from '@/data/users.json'
+import { getStudentClubs, getMyClubs } from '@/api/clubs'
 
 const search = ref('')
-const clubList = ref([...clubs])
+const clubList = ref([])
+const myClubs = ref([])
 const selectedClub = ref(null)
 const showDetailsModal = ref(false)
 
-const currentUser = users.find(user => user.id === 2)
-const myClubNames = computed(() => currentUser?.clubs ?? [])
+onMounted(async () => {
+  console.log("Clubs page mounted")
+
+  try {
+    console.log("Fetching clubs...")
+
+    clubList.value = await getStudentClubs()
+
+    console.log("Fetched all clubs")
+
+    myClubs.value = await getMyClubs()
+
+    console.log("Fetched my clubs")
+
+  } catch (error) {
+    console.error(error)
+  }
+})
+
+const myClubNames = computed(() =>
+  myClubs.value.map(club => club.name)
+)
 
 const filteredMyClubs = computed(() => {
-    const query = search.value.trim().toLowerCase()
+  const query = search.value.trim().toLowerCase()
 
-    return clubList.value.filter(club => {
-        const matchesSearch =
-            !query ||
-            club.name.toLowerCase().includes(query) ||
-            club.category.toLowerCase().includes(query)
-
-        return (
-            myClubNames.value.includes(club.name) &&
-            matchesSearch
-        )
-    })
+  return myClubs.value.filter(club => {
+    return (
+      !query ||
+      club.name.toLowerCase().includes(query) ||
+      club.category.toLowerCase().includes(query)
+    )
+  })
 })
 
 const filteredAllClubs = computed(() => {
