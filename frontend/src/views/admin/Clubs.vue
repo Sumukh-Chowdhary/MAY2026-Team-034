@@ -4,11 +4,11 @@ import ClubSearch from '@/components/admin/club/ClubSearch.vue'
 import ClubGrid from '@/components/admin/club/ClubGrid.vue'
 import AddClubModal from '@/components/admin/club/AddClubModal.vue'
 import EditClubModal from '@/components/admin/club/EditClubModal.vue'
-import DeleteClubModal from '@/components/admin/club/DeleteClubModal.vue'
+import ArchiveClubModal from '@/components/admin/club/ArchiveClubModal.vue'
 import ClubDetailsModal from '@/components/admin/club/ClubDetailsModal.vue'
 
 import { ref, computed, onMounted, watch, nextTick } from 'vue'
-import { getClubs } from '@/api/clubs'
+import { getClubs, updateClubStatus, createClub, updateClub } from '@/api/clubs'
 
 const clubList = ref([])
 const selectedStatus = ref("ALL")
@@ -17,7 +17,7 @@ const selectedClub = ref(null)
 const showAddModal = ref(false)
 const showDetailsModal = ref(false)
 const showEditModal = ref(false)
-const showDeleteModal = ref(false)
+const showArchiveModal = ref(false)
 const currentPage = ref(1)
 const itemsPerPage = 3
 const editingPage = ref(false)
@@ -28,7 +28,7 @@ const fetchClubs = async () => {
   try {
     clubList.value = await getClubs()
   } catch (error) {
-    console.error('Failed to fetch clubs:', error)
+    console.error(error)
   }
 }
 
@@ -37,24 +37,24 @@ onMounted(() => {
 })
 
 const filteredClubs = computed(() => {
-    let filtered = clubList.value
+  let filtered = clubList.value
 
-    if (search.value.trim()) {
-        const keyword = search.value.toLowerCase()
+  if (search.value.trim()) {
+    const keyword = search.value.toLowerCase()
 
-        filtered = filtered.filter(club =>
-            club.name.toLowerCase().includes(keyword) ||
-            club.category.toLowerCase().includes(keyword)
-        )
-    }
+    filtered = filtered.filter(club =>
+      club.name.toLowerCase().includes(keyword) ||
+      club.category.toLowerCase().includes(keyword)
+    )
+  }
 
-    if (selectedStatus.value !== "ALL") {
-        filtered = filtered.filter(
-            club => club.status === selectedStatus.value
-        )
-    }
+  if (selectedStatus.value !== "ALL") {
+    filtered = filtered.filter(
+      club => club.status === selectedStatus.value
+    )
+  }
 
-    return filtered
+  return filtered
 })
 
 const openAddModal = () => {
@@ -65,9 +65,15 @@ const closeAddModal = () => {
   showAddModal.value = false
 }
 
-const addClub = (club) => {
-  clubList.value = [club, ...clubList.value]
-  closeAddModal()
+const addClub = async (clubData) => {
+  try {
+    await createClub(clubData)
+    await fetchClubs()
+    closeAddModal()
+  } catch (error) {
+    console.error(error)
+    alert('Failed to create club.')
+  }
 }
 
 const openDetailsModal = (club) => {
@@ -91,19 +97,25 @@ const closeEditModal = () => {
   selectedClub.value = null
 }
 
-const saveEdit = (updatedClub) => {
-  clubList.value = clubList.value.map((club) => (club.id === updatedClub.id ? updatedClub : club))
-  closeEditModal()
+const saveEdit = async (clubData) => {
+    try {
+        await updateClub(clubData.id, clubData)
+        await fetchClubs()
+        closeEditModal()
+    } catch (error) {
+        console.error(error)
+        alert("Failed to update club.")
+    }
 }
 
-const openDeleteModal = (club) => {
+const openArchiveModal = (club) => {
   if (!club) return
   selectedClub.value = { ...club }
-  showDeleteModal.value = true
+  showArchiveModal.value = true
 }
 
-const closeDeleteModal = () => {
-  showDeleteModal.value = false
+const closeArchiveModal = () => {
+  showArchiveModal.value = false
   selectedClub.value = null
 }
 
@@ -113,79 +125,107 @@ const handleEditFromDetails = () => {
   openEditModal(clubToEdit)
 }
 
-const handleDeleteFromDetails = () => {
-  const clubToDelete = selectedClub.value
+const handleArchiveFromDetails = () => {
+  const club = selectedClub.value
   closeDetailsModal()
-  openDeleteModal(clubToDelete)
+  openArchiveModal(club)
 }
 
-const confirmDelete = () => {
+const handleRestoreFromDetails = async () => {
   if (!selectedClub.value) return
-  clubList.value = clubList.value.filter((club) => club.id !== selectedClub.value.id)
-  closeDeleteModal()
+
+  try {
+    await updateClubStatus(selectedClub.value.id, 'ACTIVE')
+    await fetchClubs()
+    closeDetailsModal()
+  } catch (error) {
+    console.error(error)
+    alert('Failed to restore club.')
+  }
+}
+
+const confirmArchive = async () => {
+  if (!selectedClub.value) return
+
+  try {
+    await updateClubStatus(selectedClub.value.id, 'INACTIVE')
+    await fetchClubs()
+    closeArchiveModal()
+  } catch (error) {
+    console.error(error)
+    alert('Failed to archive club.')
+  }
+}
+
+const restoreClub = (clubId) => {
+  clubList.value = clubList.value.map(club => {
+    if (club.id === clubId) {
+      return { ...club, status: "ACTIVE" }
+    }
+    return club
+  })
 }
 
 const activeCount = computed(() =>
-    clubList.value.filter(c => c.status === "ACTIVE").length
+  clubList.value.filter(c => c.status === "ACTIVE").length
 )
 
 const legacyCount = computed(() =>
-    clubList.value.filter(c => c.status === "INACTIVE").length
+  clubList.value.filter(c => c.status === "INACTIVE").length
 )
 
 watch([search, selectedStatus], () => {
-    currentPage.value = 1
+  currentPage.value = 1
 })
 
 const paginatedClubs = computed(() => {
-    const start = (currentPage.value - 1) * itemsPerPage
-
-    return filteredClubs.value.slice(
-        start,
-        start + itemsPerPage
-    )
+  const start = (currentPage.value - 1) * itemsPerPage
+  return filteredClubs.value.slice(
+    start,
+    start + itemsPerPage
+  )
 })
 
 const totalPages = computed(() =>
-    Math.max(
-        1,
-        Math.ceil(filteredClubs.value.length / itemsPerPage)
-    )
+  Math.max(
+    1,
+    Math.ceil(filteredClubs.value.length / itemsPerPage)
+  )
 )
 
 function previousPage() {
-    if (currentPage.value > 1) {
-        currentPage.value--
-    }
+  if (currentPage.value > 1) {
+    currentPage.value--
+  }
 }
 
 function nextPage() {
-    if (currentPage.value < totalPages.value) {
-        currentPage.value++
-    }
+  if (currentPage.value < totalPages.value) {
+    currentPage.value++
+  }
 }
 
 function savePage() {
-    let page = Number(pageInput.value)
-    if (isNaN(page)) {
-        page = currentPage.value
-    }
+  let page = Number(pageInput.value)
+  if (isNaN(page)) {
+    page = currentPage.value
+  }
 
-    page = Math.max(1, Math.min(page, totalPages.value))
-    currentPage.value = page
-    editingPage.value = false
+  page = Math.max(1, Math.min(page, totalPages.value))
+  currentPage.value = page
+  editingPage.value = false
 }
 
 function cancelEditingPage() {
-    editingPage.value = false
+  editingPage.value = false
 }
 
 async function startEditingPage() {
-    editingPage.value = true
-    pageInput.value = currentPage.value
-    await nextTick()
-    pageInputRef.value.focus()
-    pageInputRef.value.select()
+  editingPage.value = true
+  pageInput.value = currentPage.value
+  await nextTick()
+  pageInputRef.value.focus()
+  pageInputRef.value.select()
 }
 </script>
 
@@ -253,7 +293,7 @@ async function startEditingPage() {
               @blur="savePage"
           />
         </div>
-        <button @click="nextPage":disabled="currentPage === totalPages">Next →</button>
+        <button @click="nextPage" :disabled="currentPage === totalPages">Next →</button>
       </div>
 
       <div v-if="filteredClubs.length === 0" class="empty-state">
@@ -268,10 +308,11 @@ async function startEditingPage() {
         @close="closeDetailsModal"
         @visit="closeDetailsModal"
         @edit="handleEditFromDetails"
-        @delete="handleDeleteFromDetails"
+        @archive="handleArchiveFromDetails"
+        @restore="handleRestoreFromDetails"
       />
       <EditClubModal v-if="showEditModal && selectedClub" :club="selectedClub" @close="closeEditModal" @submit="saveEdit" />
-      <DeleteClubModal v-if="showDeleteModal && selectedClub" :club="selectedClub" @close="closeDeleteModal" @confirm="confirmDelete" />
+      <ArchiveClubModal v-if="showArchiveModal && selectedClub" :club="selectedClub" @close="closeArchiveModal" @confirm="confirmArchive" />
     </section>
   </AdminLayout>
 </template>
@@ -423,43 +464,6 @@ async function startEditingPage() {
 }
 
 .page-indicator{
-    width:56px;
-    height:56px;
-    display:grid;
-    place-items:center;
-    border-radius:16px;
-    background:#2563eb;
-    color:white;
-    font-size:18px;
-    font-weight:700;
-}
-
-@media (max-width: 768px) {
-  .page-top {
-    flex-direction: column;
-    align-items: stretch;
-  }
-
-  .add-btn {
-    width: 100%;
-  }
-}
-
-@media (max-width:900px){
-    .toolbar{
-        grid-template-columns:1fr;
-    }
-
-    .search-wrap{
-        max-width:100%;
-    }
-
-    .status-tabs{
-        justify-self:start;
-    }
-}
-
-.page-indicator{
     width:64px;
     height:56px;
     display:flex;
@@ -499,5 +503,30 @@ async function startEditingPage() {
 .page-input{
     appearance:textfield;
     -moz-appearance:textfield;
+}
+
+@media (max-width: 768px) {
+  .page-top {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .add-btn {
+    width: 100%;
+  }
+}
+
+@media (max-width:900px){
+    .toolbar{
+        grid-template-columns:1fr;
+    }
+
+    .search-wrap{
+        max-width:100%;
+    }
+
+    .status-tabs{
+        justify-self:start;
+    }
 }
 </style>

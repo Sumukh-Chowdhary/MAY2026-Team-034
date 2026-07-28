@@ -7,8 +7,8 @@
 
       <div class="modal-header">
         <div class="modal-title-block">
-          <span class="category">Delete Club</span>
-          <h3 id="delete-club-title">Remove this club?</h3>
+          <span class="category">Archive Club</span>
+          <h3 id="delete-club-title">Makes this club as Legacy?</h3>
         </div>
       </div>
 
@@ -16,13 +16,12 @@
         <p>
           Are you sure you want to delete
           <strong>{{ club?.name }}</strong>?
-          This action cannot be undone.
         </p>
       </div>
 
       <div class="modal-actions">
         <button type="button" class="cancel-btn" @click.stop="emit('close')">Cancel</button>
-        <button type="button" class="delete-btn" @click.stop="emit('confirm')">Delete</button>
+        <button type="button" class="delete-btn" @click.stop="emit('confirm')">Archive</button>
       </div>
     </div>
   </div>
