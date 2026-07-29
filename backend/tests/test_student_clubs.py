@@ -156,7 +156,7 @@ def test_faculty_cannot_join_club(client, faculty_headers):
 
 def test_unauthenticated_request(client):
     response = client.post(
-        f"/api/student/clubs/{INVALID_CLUB}/join"
+        f"/api/student/clubs/{MUSIC_CLUB}/join"
     )
 
     assert response.status_code == 401
@@ -165,9 +165,9 @@ def test_unauthenticated_request(client):
 
     assert data["error"] == "Authorization header is missing"
 
-def test_unauthenticated_request(client):
+def test_invalid_token(client):
     response = client.post(
-        f"/api/student/clubs/{INVALID_CLUB}/join",
+        f"/api/student/clubs/{MUSIC_CLUB}/join",
         headers={
             "Authorization": "Bearer invalid_token"
         }
