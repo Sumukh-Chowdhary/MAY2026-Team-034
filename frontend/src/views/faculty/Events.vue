@@ -1,16 +1,31 @@
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 
 import EventSearch from '@/components/faculty/events/EventSearch.vue'
 import EventStatusTabs from '@/components/faculty/events/EventStatusTabs.vue'
 import EventGrid from '@/components/faculty/events/EventGrid.vue'
-import { events } from '@/data/events'
 import FacultyLayout from '@/layouts/FacultyLayout.vue'
+import { getEvents } from '@/api/events'
 
 const search = ref('')
 const statusFilter = ref('all')
+const eventList = ref([])
+const loading = ref(false)
 
-const eventList = ref(events)
+onMounted(async () => {
+  loading.value = true
+  try {
+    const events = await getEvents()
+    eventList.value = events.map((event) => ({
+      ...event,
+      club: event.clubName || event.club || 'Unknown Club'
+    }))
+  } catch (error) {
+    console.error('Failed to load events', error)
+  } finally {
+    loading.value = false
+  }
+})
 
 const counts = computed(() => ({
   all: eventList.value.length,

@@ -2,7 +2,6 @@
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import FacultyLayout from '@/layouts/FacultyLayout.vue'
-import { events } from '@/data/events'
 
 const router = useRouter()
 
@@ -145,7 +144,7 @@ function navigateToEventDetails(eventId) {
 function submitFacultyCreateEvent() {
   if (!newEventForm.value.name.trim()) return alert('Please enter Event Name.')
 
-  const newId = events.length ? Math.max(...events.map(e => e.id)) + 1 : 101
+  const newId = activeRoleView.value.events.length ? Math.max(...activeRoleView.value.events.map(e => e.id)) + 1 : 101
   const created = {
     id: newId,
     emoji: '🎉',
@@ -171,7 +170,6 @@ function submitFacultyCreateEvent() {
     description: created.description
   })
 
-  events.unshift(created)
   alert(`Event "${created.name}" created successfully!`)
   showCreateEventModal.value = false
   newEventForm.value = { name: '', startDate: '', endDate: '', description: '' }

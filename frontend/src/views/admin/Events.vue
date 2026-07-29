@@ -1,15 +1,31 @@
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 
 import EventSearch from '@/components/admin/events/EventSearch.vue'
 import EventStatusTabs from '@/components/admin/events/EventStatusTabs.vue'
 import EventGrid from '@/components/admin/events/EventGrid.vue'
-import { events } from '@/data/events'
 import AdminLayout from '@/layouts/AdminLayout.vue'
+import { getEvents, createEvent } from '@/api/events'
 
 const search = ref('')
 const statusFilter = ref('all')
-const eventList = ref(events)
+const eventList = ref([])
+const loading = ref(false)
+
+onMounted(async () => {
+  loading.value = true
+  try {
+    const events = await getEvents()
+    eventList.value = events.map((event) => ({
+      ...event,
+      club: event.clubName || event.club || 'Unknown Club'
+    }))
+  } catch (error) {
+    console.error('Failed to load events', error)
+  } finally {
+    loading.value = false
+  }
+})
 
 const showCreateEventModal = ref(false)
 const newEventForm = ref({
@@ -27,28 +43,28 @@ function submitCreateEvent() {
     return
   }
 
-  const newId = eventList.value.length ? Math.max(...eventList.value.map(e => e.id)) + 1 : 1
-  const createdEvent = {
-    id: newId,
-    emoji: newEventForm.value.emoji || '🎉',
+  const payload = {
     name: newEventForm.value.name,
-    club: newEventForm.value.club,
-    status: 'Live',
-    startDate: newEventForm.value.startDate || '25 Jul 2026',
-    endDate: newEventForm.value.endDate || '25 Jul 2026',
-    description: newEventForm.value.description || 'New campus event.',
-    schedule: [],
-    announcements: [],
-    registrations: [],
-    attendance: []
+    description: newEventForm.value.description,
+    status: 'SCHEDULED',
+    startDate: newEventForm.value.startDate,
+    endDate: newEventForm.value.endDate,
+    capacity: 0
   }
 
-  eventList.value.unshift(createdEvent)
-  events.unshift(createdEvent)
-  alert(`Event "${createdEvent.name}" created successfully!`)
-
-  showCreateEventModal.value = false
-  newEventForm.value = { name: '', club: '', emoji: '🎉', startDate: '', endDate: '', description: '' }
+  createEvent(payload)
+    .then((createdEvent) => {
+      eventList.value.unshift({
+        ...createdEvent,
+        club: createdEvent.clubName || createdEvent.club || 'Unknown Club'
+      })
+      alert(`Event "${createdEvent.name}" created successfully!`)
+      showCreateEventModal.value = false
+      newEventForm.value = { name: '', club: '', emoji: '🎉', startDate: '', endDate: '', description: '' }
+    })
+    .catch(() => {
+      alert('Failed to create event. Please try again.')
+    })
 }
 
 const counts = computed(() => ({
@@ -61,14 +77,18 @@ const filteredEvents = computed(() => {
   const query = search.value.trim().toLowerCase()
 
   return eventList.value.filter((event) => {
+    const clubName = String(event.club || event.clubName || '')
+    const eventName = String(event.name || event.eventName || '')
+    const status = String(event.status || event.event_status || '')
+
     const matchesQuery =
       !query ||
-      event.name.toLowerCase().includes(query) ||
-      event.club.toLowerCase().includes(query)
+      eventName.toLowerCase().includes(query) ||
+      clubName.toLowerCase().includes(query)
 
     const matchesStatus =
       statusFilter.value === 'all' ||
-      event.status.toLowerCase() === statusFilter.value
+      status.toLowerCase() === statusFilter.value
 
     return matchesQuery && matchesStatus
   })

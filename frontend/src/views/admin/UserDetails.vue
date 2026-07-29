@@ -1,8 +1,8 @@
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import AdminLayout from '@/layouts/AdminLayout.vue'
-import usersData from '@/data/users.json'
+import { getUser, updateUser } from '@/api/users'
 import '@/assets/css/UserDetails.css'
 
 const route  = useRoute()
@@ -10,7 +10,19 @@ const router = useRouter()
 
 // ── Load User ─────────────────────────────────────
 const userId = Number(route.params.id)
-const user   = ref(usersData.find(u => u.id === userId) ? { ...usersData.find(u => u.id === userId) } : null)
+const user   = ref(null)
+const loading = ref(false)
+
+onMounted(async () => {
+  loading.value = true
+  try {
+    user.value = await getUser(userId)
+  } catch (error) {
+    console.error('Failed to load user', error)
+  } finally {
+    loading.value = false
+  }
+})
 
 // ── Club emoji map (matches clubs.js data) ────────
 const clubEmojiMap = {
@@ -51,7 +63,14 @@ function formatDate(dateStr) {
 // ── Toggle Status ──────────────────────────────────
 function toggleStatus() {
   if (!user.value) return
-  user.value.status = user.value.status === 'ACTIVE' ? 'INACTIVE' : 'ACTIVE'
+  const newStatus = user.value.status === 'ACTIVE' ? 'INACTIVE' : 'ACTIVE'
+  updateUser(user.value.id, { accountStatus: newStatus })
+    .then((updated) => {
+      user.value = updated
+    })
+    .catch(() => {
+      alert('Failed to update status. Please try again.')
+    })
 }
 
 // ── Edit Modal ─────────────────────────────────────
@@ -68,8 +87,14 @@ function closeEditModal() {
 }
 
 function saveEdit() {
-  user.value = { ...editForm.value }
-  closeEditModal()
+  updateUser(user.value.id, editForm.value)
+    .then((updated) => {
+      user.value = updated
+      closeEditModal()
+    })
+    .catch(() => {
+      alert('Failed to save profile. Please try again.')
+    })
 }
 
 // ── Activity Timeline (derived) ────────────────────
