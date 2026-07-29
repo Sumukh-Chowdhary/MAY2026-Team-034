@@ -71,7 +71,7 @@ def create_event():
     club = Club.query.get_or_404(club_id)
     venue = None
     if venue_id:
-        venue = db.session.get(Venue, venue_id)
+        venue = Venue.query.get(venue_id)
         if not venue:
             return jsonify({'error': 'Venue not found.'}), 404
 
@@ -139,7 +139,7 @@ def update_event(event_id):
     if description is not None:
         event.event_description = description
     if venue_id is not None:
-        venue = db.session.get(Venue, venue_id)
+        venue = Venue.query.get(venue_id)
         if not venue:
             return jsonify({'error': 'Venue not found.'}), 404
         event.venue_id = venue.id

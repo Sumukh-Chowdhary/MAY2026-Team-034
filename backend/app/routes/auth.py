@@ -80,7 +80,7 @@ def register():
     # Match Department
     department = None
     if department_id:
-        department = db.session.get(Department, department_id)
+        department = Department.query.get(department_id)
 
     dept_id = department.id if department else None
 
