@@ -29,13 +29,13 @@
           <h3 id="club-details-title">{{ club.name }}</h3>
           <div class="club-tags">
             <span class="club-category">{{ club.category }}</span>
-            <span
+            <!-- <span
               class="club-status"
               :class="club.status === 'ACTIVE' ? 'live' : 'inactive'"
             >
               <span class="status-dot"></span>
               {{ club.status === 'ACTIVE' ? 'Live Club' : 'Inactive' }}
-            </span>
+            </span> -->
           </div>
         </div>
       </div>
@@ -101,34 +101,36 @@
 
           <div class="admin-actions">
             <button
+              v-if="!isMember"
               type="button"
               class="edit-btn"
               @click.stop="emit('edit')"
             >
               Edit Club
             </button>
+            <div v-if="!isMember">
+              <button
+                v-if="club.status === 'ACTIVE'"
+                type="button"
+                class="archive-btn"
+                @click.stop="emit('archive')"
+              >
+                Archive Club
+              </button>
 
-            <button
-              v-if="club.status === 'ACTIVE'"
-              type="button"
-              class="archive-btn"
-              @click.stop="emit('archive')"
-            >
-              Archive Club
-            </button>
-
-            <button
-              v-else
-              type="button"
-              class="restore-btn"
-              @click.stop="emit('restore')"
-            >
-              Restore Club
-            </button>
+              <button
+                v-else
+                type="button"
+                class="restore-btn"
+                @click.stop="emit('restore')"
+              >
+                Restore Club
+              </button>
+            </div>
           </div>
 
           <button
-            v-if="!isAdmin && !isFaculty && isMember"
+            v-if="isMember"
             type="button"
             class="leave-btn"
             @click.stop="emit('leave')"
@@ -160,14 +162,6 @@ const props = defineProps({
     type: Boolean,
     default: false
   },
-  isAdmin: {
-    type: Boolean,
-    default: false
-  },
-  isFaculty: {
-    type: Boolean,
-    default: false
-  }
 })
 
 const emit = defineEmits([
