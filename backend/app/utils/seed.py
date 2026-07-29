@@ -14,8 +14,7 @@ from .seed_data import (
     CLUB_DATA
 )
 
-def seed_database():
-    app = create_app()
+def seed_database(app):
     with app.app_context():
         print("Re-creating all tables...")
         db.drop_all()
@@ -183,4 +182,5 @@ def seed_database():
         print("Database successfully seeded!")
 
 if __name__ == '__main__':
-    seed_database()
+    app = create_app()
+    seed_database(app)
