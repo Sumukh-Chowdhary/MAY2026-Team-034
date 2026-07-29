@@ -27,6 +27,7 @@ def app():
     with app.app_context():
         db.session.remove()
         db.drop_all()
+        db.engine.dispose()
 
     os.close(db_fd)
     os.unlink(db_path)

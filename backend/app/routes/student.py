@@ -117,7 +117,7 @@ def join_club(club_id):
     current_user = g.current_user
 
     # Check if club exists
-    club = Club.query.get(club_id)
+    club = db.session.get(Club, club_id)
     if not club:
         return jsonify({"error": "Club not found"}), 404
 
@@ -174,7 +174,7 @@ def leave_club(club_id):
     current_user = g.current_user
 
     # Check if club exists
-    club = Club.query.get(club_id)
+    club = db.session.get(Club, club_id)
     if not club:
         return jsonify({"error": "Club not found"}), 404
 

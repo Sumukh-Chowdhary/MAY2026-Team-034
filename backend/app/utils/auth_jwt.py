@@ -3,7 +3,7 @@ from datetime import datetime, timedelta
 from functools import wraps
 import jwt
 from flask import request, jsonify, current_app, g
-from app.models import User, TokenBlocklist
+from app.models import db, User, TokenBlocklist
 
 
 def generate_jwt_token(user):
@@ -64,7 +64,7 @@ def jwt_required(f):
         token = parts[1]
         try:
             payload = decode_jwt_token(token)
-            user = User.query.get(payload['user_id'])
+            user = db.session.get(User, payload['user_id'])
             if not user or user.account_status != 'ACTIVE':
                 return jsonify({
                     'error': 'User account is inactive or disabled'
