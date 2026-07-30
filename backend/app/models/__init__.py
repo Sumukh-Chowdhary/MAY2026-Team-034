@@ -2,15 +2,19 @@ from flask_sqlalchemy import SQLAlchemy
 
 db = SQLAlchemy()
 
-from app.models.user import ( 
+from app.models.user import (
     Role, Department, User, StudentProfile, FacultyProfile, TokenBlocklist
 )
 
 from app.models.club import (
-    Club,ClubFaculty,ClubMembership,ClubOrganizer
+    Club, ClubFaculty, ClubMembership, ClubOrganizer
 )
 
-from app.models.club import Club
+from app.models.events import (
+    Venue, Event,
+    EventScheduleItem, EventAnnouncement, EventRegistration,
+    EventAttendance, EventPrize, EventOrganizer, EventVolunteer
+)
 
 __all__ = [
     'db',
@@ -20,9 +24,17 @@ __all__ = [
     'StudentProfile',
     'FacultyProfile',
     'TokenBlocklist',
-
     'Club',
     'ClubFaculty',
     'ClubMembership',
-    'ClubOrganizer'
+    'ClubOrganizer',
+    'Venue',
+    'Event',
+    'EventScheduleItem',
+    'EventAnnouncement',
+    'EventRegistration',
+    'EventAttendance',
+    'EventPrize',
+    'EventOrganizer',
+    'EventVolunteer',
 ]
