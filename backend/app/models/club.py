@@ -46,7 +46,7 @@ class ClubMembership(db.Model):
     membership_status = db.Column(db.String(20),nullable=False,default="ACTIVE")
     joined_at = db.Column(db.DateTime,default=datetime.utcnow)
 
-    user = db.relationship("User", lazy=True)
+    user = db.relationship("User", back_populates="club_memberships", lazy=True)
 
     __table_args__ = (db.UniqueConstraint("club_id","user_id",name="uq_club_member"),)
 
