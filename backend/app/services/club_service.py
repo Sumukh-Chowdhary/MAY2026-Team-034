@@ -361,3 +361,16 @@ def get_club_events(club_id):
 
     return [serialize_event(event) for event in events]
 
+def verify_faculty_access(club_id, faculty_id):
+    assignment = ClubFaculty.query.filter_by(
+        club_id=club_id,
+        faculty_id=faculty_id
+    ).first()
+
+    if assignment is None:
+        raise PermissionError(
+            "You are not assigned to this club."
+        )
+
+    return assignment
+
