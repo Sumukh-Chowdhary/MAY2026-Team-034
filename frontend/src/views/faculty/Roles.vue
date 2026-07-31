@@ -231,30 +231,7 @@ async function confirmRejectRequest() {
             </div>
           </div>
 
-          <!-- Incoming Student Requests Review Queue -->
-          <div class="card p-4 shadow-sm border-0 rounded-4">
-            <h4 class="fw-bold mb-3">Incoming Student Requests</h4>
-            <p class="text-secondary text-sm mb-4">Review club join applications, event proposals, and volunteer requests.</p>
 
-            <div v-if="incomingRequests.length === 0" class="text-center py-4 text-secondary">
-              No pending incoming requests.
-            </div>
-
-            <div v-else class="row g-3">
-              <div v-for="req in incomingRequests" :key="req.id" class="col-12 col-md-4">
-                <div class="p-3 border rounded-3 bg-white shadow-sm d-flex flex-column h-100">
-                  <span class="badge bg-primary-subtle text-primary border mb-2 align-self-start">{{ req.requestType || req.ticketType || 'REQUEST' }}</span>
-                  <h6 class="fw-bold m-0">{{ req.title || req.subject }}</h6>
-                  <small class="text-secondary">Requester: {{ req.requesterName || req.requester?.name || 'Student' }}</small>
-                  <p class="text-sm mt-2 text-dark flex-grow-1">{{ req.description || 'No additional details provided.' }}</p>
-                  <div class="d-flex gap-2 mt-3">
-                    <button class="btn btn-sm btn-success flex-fill rounded-pill" @click="handleApproveRequest(req.id)">Approve</button>
-                    <button class="btn btn-sm btn-outline-danger flex-fill rounded-pill" @click="triggerRejectRequest(req)">Reject</button>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
         </div>
 
       </div>

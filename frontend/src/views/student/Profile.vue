@@ -2,8 +2,10 @@
 import { ref, onMounted } from 'vue'
 import StudentLayout from '@/layouts/StudentLayout.vue'
 import { getUser, updateUser } from '@/api/users'
+import { getMyClubs } from '@/api/student'
 
 const userProfile = ref(null)
+const myClubs = ref([])
 const loading = ref(true)
 const saving = ref(false)
 
@@ -31,6 +33,9 @@ async function loadProfile() {
       u = await getUser(storedUser.id).catch(() => storedUser)
     }
     userProfile.value = u
+
+    const clubs = await getMyClubs().catch(() => [])
+    myClubs.value = Array.isArray(clubs) ? clubs : []
     form.value = {
       fullName: u.fullName || u.name || '',
       phone: u.phone || u.phoneNumber || '',
@@ -118,6 +123,35 @@ async function handleSaveProfile() {
               <div class="d-flex justify-content-between">
                 <span class="text-muted text-sm">Roll / Register No</span>
                 <strong class="text-dark text-sm">{{ form.registerNumber }}</strong>
+              </div>
+            </div>
+          </div>
+
+          <!-- My Active Clubs Card -->
+          <div class="card p-4 border-0 rounded-4 shadow-sm mt-4 text-start">
+            <h5 class="fw-bold text-dark mb-3">
+              <i class="bi bi-collection-fill text-primary me-2"></i>My Active Clubs
+            </h5>
+
+            <div v-if="myClubs.length === 0" class="text-muted text-sm text-center py-3">
+              No active club memberships found.
+            </div>
+
+            <div v-else class="list-group list-group-flush">
+              <div
+                v-for="c in myClubs"
+                :key="c.id"
+                class="list-group-item px-0 py-2 border-bottom border-light d-flex justify-content-between align-items-center"
+              >
+                <div>
+                  <RouterLink to="/student/clubs" class="fw-bold text-primary text-decoration-none">
+                    {{ c.clubName || c.name }} <i class="bi bi-box-arrow-up-right text-xs ms-1"></i>
+                  </RouterLink>
+                  <small class="d-block text-muted text-xs">{{ c.membershipRole || 'MEMBER' }}</small>
+                </div>
+                <span class="badge bg-success-subtle text-success border text-xs px-2 py-1">
+                  {{ c.status || 'ACTIVE' }}
+                </span>
               </div>
             </div>
           </div>

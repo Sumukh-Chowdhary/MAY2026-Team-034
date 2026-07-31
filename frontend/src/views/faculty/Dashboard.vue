@@ -122,9 +122,6 @@ function navigateToRequests() {
           <button class="request-btn" @click="openEditProfile">
             <i class="bi bi-person-gear me-1"></i> View / Edit Profile
           </button>
-          <button class="notification-btn" @click="navigateToRequests">
-            <i class="bi bi-inbox-fill me-1"></i> Requests Queue
-          </button>
         </div>
       </div>
 
@@ -214,37 +211,7 @@ function navigateToRequests() {
           </div>
         </div>
 
-        <!-- Pending Requests Card -->
-        <div class="col-12 col-lg-6">
-          <div class="dashboard-card">
-            <div class="card-header d-flex justify-content-between align-items-center">
-              <div>
-                <h5>Pending Requests</h5>
-                <p>Incoming student requests requiring your review.</p>
-              </div>
-              <button class="btn btn-sm btn-link text-decoration-none fw-semibold" @click="navigateToRequests">Review Queue →</button>
-            </div>
 
-            <div class="card-content">
-              <div v-if="pendingRequests.length === 0" class="py-4 text-center text-muted">
-                No pending student requests.
-              </div>
-
-              <div
-                v-for="request in pendingRequests"
-                :key="request.id"
-                class="request-item"
-              >
-                <div>
-                  <h6>{{ request.title || request.subject }}</h6>
-                  <span>Requester: {{ request.requesterName || request.requester?.name || 'Student' }} · {{ request.requestType || 'REQUEST' }}</span>
-                </div>
-
-                <button class="review-btn" @click="navigateToRequests">Review</button>
-              </div>
-            </div>
-          </div>
-        </div>
 
         <!-- Profile & Summary Card (Sprint 1 Feature) -->
         <div class="col-12 col-lg-6">
