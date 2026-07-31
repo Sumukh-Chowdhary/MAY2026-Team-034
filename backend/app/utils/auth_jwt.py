@@ -1,8 +1,10 @@
 import uuid
 from datetime import datetime, timedelta
 from functools import wraps
+from backend.app.services.club_service import verify_faculty_access
 import jwt
 from flask import request, jsonify, current_app, g
+from flask_jwt_extended import get_jwt_identity
 from app.models import User, TokenBlocklist
 
 
@@ -111,3 +113,23 @@ def roles_required(*roles):
             return f(*args, **kwargs)
         return decorated
     return decorator
+
+def faculty_club_access_required(func):
+    @wraps(func)
+    def wrapper(*args, **kwargs):
+
+        club_id = kwargs.get("club_id")
+
+        if club_id is None and args:
+            club_id = args[0]
+
+        faculty_id = get_jwt_identity()
+
+        verify_faculty_access(
+            club_id,
+            faculty_id
+        )
+
+        return func(*args, **kwargs)
+
+    return wrapper

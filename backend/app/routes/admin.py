@@ -1,9 +1,7 @@
 from app.services.club_service import archive_club, deactivate_club_member, get_all_clubs, get_club_events, get_club_member, get_club_members, update_club_status, get_faculty_details
+from backend.app.models import db
 from flask import Blueprint, request, jsonify
-from app.models import db, User, Role, Department, FacultyProfile
-from app.models.club import Club,ClubFaculty,ClubOrganizer,ClubMembership
 from app.utils.auth_jwt import jwt_required, roles_required
-from sqlalchemy import case
 
 admin_bp = Blueprint('admin', __name__, url_prefix='/api/admin')
 
@@ -140,7 +138,7 @@ def get_club_members(club_id):
 @jwt_required
 @roles_required("ADMIN")
 @admin_bp.get("/clubs/<int:club_id>/members/<int:user_id>")
-def get_club_member_route(club_id, user_id):
+def get_club_member(club_id, user_id):
     return jsonify(
         get_club_member(
             club_id,
@@ -151,7 +149,7 @@ def get_club_member_route(club_id, user_id):
 @jwt_required
 @roles_required("ADMIN")
 @admin_bp.patch("/clubs/<int:club_id>/members/<int:user_id>/deactivate")
-def deactivate_club_member_route(club_id, user_id):
+def deactivate_club_member(club_id, user_id):
 
     try:
 
@@ -180,7 +178,7 @@ def deactivate_club_member_route(club_id, user_id):
 @jwt_required
 @roles_required("ADMIN")
 @admin_bp.get("/clubs/<int:club_id>/events")
-def get_club_events_route(club_id):
+def get_club_events(club_id):
     return jsonify(
         get_club_events(club_id)
     ), 200
