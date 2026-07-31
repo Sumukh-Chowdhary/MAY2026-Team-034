@@ -1,5 +1,6 @@
 from datetime import datetime
 
+from app.services.club_service import get_all_clubs
 from flask import Blueprint, request, jsonify, g # type: ignore
 
 from app.models import db, User
@@ -70,45 +71,7 @@ def get_my_clubs():
 @jwt_required
 @roles_required("STUDENT")
 def get_clubs():
-    clubs = Club.query.order_by(Club.club_name).all()
-
-    response = []
-
-    for club in clubs:
-
-        organizers = [
-            {
-                "id": organizer.user.id,
-                "name":
-                    organizer.user.student_profile.full_name
-                    if organizer.user.student_profile
-                    else organizer.user.faculty_profile.full_name
-            }
-            for organizer in club.organizers
-        ]
-
-        faculty = [
-            {
-                "id": advisor.faculty.id,
-                "name": advisor.faculty.faculty_profile.full_name
-            }
-            for advisor in club.faculty_coordinators
-        ]
-
-        response.append({
-            "id": club.id,
-            "name": club.club_name,
-            "description": club.club_description,
-            "category": club.club_category,
-            "logo": club.club_logo,
-            "status": club.club_status,
-            "totalMembers": club.total_members,
-            "activeMembers": club.active_members,
-            "organizers": organizers,
-            "faculty": faculty,
-        })
-
-    return jsonify(response), 200
+    return jsonify(get_all_clubs()), 200
 
 @student_bp.route("/clubs/<int:club_id>/join", methods=["POST"])
 @jwt_required
