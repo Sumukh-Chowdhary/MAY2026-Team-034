@@ -11,6 +11,16 @@ ADMIN_DATA = {
 
 FACULTY_DATA = [
     {
+        "email": "principal@allclub.com",
+        "password": "principal123",
+        "employee_id": "PRIN001",
+        "full_name": "Dr. K. S. Murthy (Principal)",
+        "phone_number": "+91 90000 00000",
+        "department": "ADM",
+        "designation": "PRINCIPAL",
+        "bio": "Principal of the institution overseeing overall academic and extra-curricular administration."
+    },
+    {
         "email": "meena@allclub.com",
         "password": "faculty123",
         "employee_id": "FAC001",
@@ -101,147 +111,33 @@ STUDENT_DATA = [
         "phone_number": "+91 90000 00010",
         "year_of_study": "2nd Year",
         "department": "CSE",
-        "bio": "Photography and design enthusiast."
-    },
-    {
-        "email": "rohan@allclub.com",
-        "password": "student123",
-        "roll_no": "STU007",
-        "full_name": "Rohan Patel",
-        "phone_number": "+91 90000 00011",
-        "year_of_study": "4th Year",
-        "department": "ECE",
-        "bio": "Enjoys organizing technical workshops."
-    },
-    {
-        "email": "ishita@allclub.com",
-        "password": "student123",
-        "roll_no": "STU008",
-        "full_name": "Ishita Kapoor",
-        "phone_number": "+91 90000 00012",
-        "year_of_study": "1st Year",
-        "department": "CSE",
-        "bio": "Interested in science exhibitions."
-    },
-    {
-        "email": "aman@allclub.com",
-        "password": "student123",
-        "roll_no": "STU009",
-        "full_name": "Aman Verma",
-        "phone_number": "+91 90000 00013",
-        "year_of_study": "2nd Year",
-        "department": "ECE",
-        "bio": "Sports lover and basketball player."
-    },
-    {
-        "email": "pooja@allclub.com",
-        "password": "student123",
-        "roll_no": "STU010",
-        "full_name": "Pooja Menon",
-        "phone_number": "+91 90000 00014",
-        "year_of_study": "3rd Year",
-        "department": "CSE",
-        "bio": "Music club member and pianist."
-    },
-    {
-        "email": "aditya@allclub.com",
-        "password": "student123",
-        "roll_no": "STU011",
-        "full_name": "Aditya Joshi",
-        "phone_number": "+91 90000 00015",
-        "year_of_study": "4th Year",
-        "department": "CSE",
-        "bio": "AI and machine learning enthusiast."
-    },
-    {
-        "email": "nisha@allclub.com",
-        "password": "student123",
-        "roll_no": "STU012",
-        "full_name": "Nisha Reddy",
-        "phone_number": "+91 90000 00016",
-        "year_of_study": "2nd Year",
-        "department": "ECE",
-        "bio": "Volunteer for cultural events."
-    },
-    {
-        "email": "harsh@allclub.com",
-        "password": "student123",
-        "roll_no": "STU013",
-        "full_name": "Harsh Agarwal",
-        "phone_number": "+91 90000 00017",
-        "year_of_study": "1st Year",
-        "department": "CSE",
-        "bio": "Interested in programming competitions."
-    },
-    {
-        "email": "kavya@allclub.com",
-        "password": "student123",
-        "roll_no": "STU014",
-        "full_name": "Kavya Iyer",
-        "phone_number": "+91 90000 00018",
-        "year_of_study": "3rd Year",
-        "department": "CSE",
-        "bio": "Drama club performer and event organizer."
-    },
-    {
-        "email": "neeraj@allclub.com",
-        "password": "student123",
-        "roll_no": "STU015",
-        "full_name": "Neeraj Kumar",
-        "phone_number": "+91 90000 00019",
-        "year_of_study": "4th Year",
-        "department": "ECE",
-        "bio": "Science club member interested in innovation."
+        "bio": "Aspirant software developer."
     }
 ]
 
 CLUB_DATA = [
     {
-        "name": "AI Club",
-        "description": "Learn Artificial Intelligence and Machine Learning together.",
-        "category": "Technology",
-        "logo": "smart_toy",
+        "name": "Coding Club",
+        "description": "Fostering programming, algorithmic thinking, and open source development across campus.",
+        "category": "TECHNICAL",
+        "logo": "terminal",
         "faculty": "FAC001",
-        "organizer": "STU001",
+        "organizer": "STU001"
     },
     {
-        "name": "Music Club",
-        "description": "Jam sessions, performances and music workshops.",
-        "category": "Arts",
-        "logo": "library_music",
-        "faculty": "FAC003",
-        "organizer": "STU010"
-    },
-    {
-        "name": "Sports Club",
-        "description": "Football, Cricket, Basketball and many more activities.",
-        "category": "Sports",
-        "logo": "sports_soccer",
+        "name": "Robotics Club",
+        "description": "Building autonomous bots, IoT systems, and competing in national hardware hackathons.",
+        "category": "TECHNICAL",
+        "logo": "smart_toy",
         "faculty": "FAC002",
-        "organizer": "STU009"
-    },
-    {
-        "name": "Drama Club",
-        "description": "Theatre performances, acting practice and stage events.",
-        "category": "Cultural",
-        "logo": "theater_comedy",
-        "faculty": "FAC003",
-        "organizer": "STU014"
+        "organizer": "STU003"
     },
     {
         "name": "Photography Club",
-        "description": "Capture moments and learn photography together.",
-        "category": "Creative",
+        "description": "Capturing moments, exploring visual storytelling, and conducting photography exhibitions.",
+        "category": "CULTURAL",
         "logo": "photo_camera",
-        "faculty": "FAC001",
-        "organizer": "STU006"
-    },
-    {
-        "name": "Science Club",
-        "description": "Science projects, exhibitions and research discussions.",
-        "category": "Academic",
-        "logo": "science",
-        "faculty": "FAC002",
-        "organizer": "STU015"
+        "faculty": "FAC003",
+        "organizer": "STU002"
     }
 ]

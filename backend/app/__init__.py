@@ -34,11 +34,19 @@ def create_app(config_class=Config):
     from app.routes.users import users_bp
     from app.routes.admin import admin_bp
     from app.routes.student import student_bp
+    from app.routes.requests import requests_bp
+    from app.routes.action_tickets import action_tickets_bp
+    from app.routes.assignment_tickets import assignments_bp
+    from app.routes.request_views import request_views_bp
 
     app.register_blueprint(auth_bp)
     app.register_blueprint(users_bp)
     app.register_blueprint(admin_bp)
     app.register_blueprint(student_bp)
+    app.register_blueprint(requests_bp)
+    app.register_blueprint(action_tickets_bp)
+    app.register_blueprint(assignments_bp)
+    app.register_blueprint(request_views_bp)
 
     @app.route('/health', methods=['GET'])
     def health_check():

@@ -10,6 +10,11 @@ from app.models.club import (
     Club,ClubFaculty,ClubMembership,ClubOrganizer
 )
 
+from app.models.tickets import (
+    Request, RequestApproval, AssignmentTicket,
+    ActionTicket, ActionTicketApproval, TicketAudit
+)
+
 from app.models.club import Club
 
 __all__ = [
@@ -24,5 +29,12 @@ __all__ = [
     'Club',
     'ClubFaculty',
     'ClubMembership',
-    'ClubOrganizer'
+    'ClubOrganizer',
+
+    'Request',
+    'RequestApproval',
+    'AssignmentTicket',
+    'ActionTicket',
+    'ActionTicketApproval',
+    'TicketAudit'
 ]

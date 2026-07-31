@@ -269,3 +269,13 @@ def update_club(club_id):
             "error": "Failed to update club.",
             "details": str(error)
         }), 500
+
+@admin_bp.post('/seed')
+def seed_db():
+    """Trigger re-seeding of database with rich test data including Principal, Requests, and Tickets."""
+    try:
+        from app.utils.seed import seed_database
+        seed_database()
+        return jsonify({"success": True, "message": "Database re-seeded successfully with robust test data!"}), 200
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
