@@ -1,5 +1,5 @@
 from app.services.club_service import archive_club, deactivate_club_member, get_all_clubs, get_club_events, get_club_member, get_club_members, update_club_status, get_faculty_details
-from backend.app.models import db
+from app.models import db
 from flask import Blueprint, request, jsonify
 from app.utils.auth_jwt import jwt_required, roles_required
 

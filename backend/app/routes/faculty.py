@@ -1,5 +1,5 @@
 from app.services.club_service import deactivate_club_member, get_club_by_id, get_club_events, get_club_member, get_club_members
-from backend.app.models import db
+from app.models import db
 from flask import Blueprint, request, jsonify
 from app.utils.auth_jwt import jwt_required, roles_required
 from app.utils.auth_jwt import faculty_club_access_required

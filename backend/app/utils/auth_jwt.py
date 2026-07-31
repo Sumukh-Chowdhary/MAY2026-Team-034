@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime, timedelta
 from functools import wraps
-from backend.app.services.club_service import verify_faculty_access
+from app.services.club_service import verify_faculty_access
 import jwt
 from flask import request, jsonify, current_app, g
 from flask_jwt_extended import get_jwt_identity
