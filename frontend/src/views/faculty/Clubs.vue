@@ -4,7 +4,7 @@ import FacultyLayout from '@/layouts/FacultyLayout.vue'
 import ClubSearch from '@/components/admin/club/ClubSearch.vue'
 import ClubGrid from '@/components/admin/club/ClubGrid.vue'
 import EditClubModal from '@/components/admin/club/EditClubModal.vue'
-import DeleteClubModal from '@/components/admin/club/DeleteClubModal.vue'
+import DeleteClubModal from '@/components/admin/club/ArchiveClubModal.vue'
 import ClubDetailsModal from '@/components/admin/club/ClubDetailsModal.vue'
 import { clubs } from '@/data/clubs'
 

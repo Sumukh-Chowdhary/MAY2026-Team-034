@@ -10,6 +10,22 @@ from app.models.club import (
     Club, ClubFaculty, ClubMembership, ClubOrganizer
 )
 
+from app.models.tickets import (
+    Request, RequestApproval, AssignmentTicket,
+    ActionTicket, ActionTicketApproval, TicketAudit
+)
+
+from app.models.events import (
+    Venue, Event,
+    EventScheduleItem, EventAnnouncement, EventRegistration,
+    EventAttendance, EventPrize, EventOrganizer, EventVolunteer
+)
+
+from app.models.tickets import (
+    Request, RequestApproval, AssignmentTicket,
+    ActionTicket, ActionTicketApproval, TicketAudit
+)
+
 from app.models.events import (
     Venue, Event,
     EventScheduleItem, EventAnnouncement, EventRegistration,
@@ -37,4 +53,12 @@ __all__ = [
     'EventPrize',
     'EventOrganizer',
     'EventVolunteer',
+    'ClubOrganizer',
+
+    'Request',
+    'RequestApproval',
+    'AssignmentTicket',
+    'ActionTicket',
+    'ActionTicketApproval',
+    'TicketAudit'
 ]

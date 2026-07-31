@@ -1,3 +1,4 @@
+from datetime import datetime, timedelta
 import os
 import sys
 from datetime import datetime
@@ -10,9 +11,14 @@ from app import create_app
 from app.models.user import (
     db, Role, Department, User, StudentProfile, FacultyProfile
 )
-
 from app.models.club import (
-    Club,ClubFaculty,ClubMembership,ClubOrganizer
+    Club, ClubFaculty, ClubMembership, ClubOrganizer
+)
+from app.models.tickets import (
+    Request, RequestApproval, RequestType,
+    ActionTicket, ActionTicketApproval, ActionTicketType,
+    AssignmentTicket, AssignmentRole, AssignmentDuration, AssignmentStatus,
+    ApprovalStatus, TaskStatus
 )
 
 from app.models.events import (
@@ -36,15 +42,9 @@ def seed_database(app):
         db.create_all()
 
         print("1. Seeding Roles...")
-        role_admin = Role(
-            name="ADMIN", description="Platform Administrator"
-        )
-        role_faculty = Role(
-            name="FACULTY", description="Faculty Advisor & Reviewer"
-        )
-        role_student = Role(
-            name="STUDENT", description="Student Member / Lead"
-        )
+        role_admin = Role(name="ADMIN", description="Platform Administrator")
+        role_faculty = Role(name="FACULTY", description="Faculty Advisor & Reviewer")
+        role_student = Role(name="STUDENT", description="Student Member / Lead")
         db.session.add_all([role_admin, role_faculty, role_student])
         db.session.flush()
 
@@ -69,6 +69,7 @@ def seed_database(app):
         user_admin.set_password(ADMIN_DATA["password"])
 
         faculty_users = []
+        principal_user = None
 
         for faculty in FACULTY_DATA:
             user = User(
@@ -76,19 +77,18 @@ def seed_database(app):
                 role_id=role_faculty.id,
                 account_status="ACTIVE"
             )
-
             user.set_password(faculty["password"])
             faculty_users.append(user)
+            if faculty.get("designation") == "PRINCIPAL":
+                principal_user = user
 
         student_users = []
-
         for student in STUDENT_DATA:
             user = User(
                 email=student["email"],
                 role_id=role_student.id,
                 account_status="ACTIVE"
             )
-
             user.set_password(student["password"])
             student_users.append(user)
 
@@ -108,7 +108,6 @@ def seed_database(app):
         db.session.add(admin_profile)
 
         for user, faculty in zip(faculty_users, FACULTY_DATA):
-
             profile = FacultyProfile(
                 user_id=user.id,
                 employee_id=faculty["employee_id"],
@@ -135,7 +134,6 @@ def seed_database(app):
         db.session.flush()
 
         print("5. Seeding Clubs...")
-
         faculty_lookup = {
             faculty["employee_id"]: user
             for faculty, user in zip(FACULTY_DATA, faculty_users)
@@ -148,6 +146,9 @@ def seed_database(app):
 
         club_lookup = {}
 
+        club_lookup = {}
+
+        created_clubs = []
         for club in CLUB_DATA:
             new_club = Club(
                 club_name=club["name"],
@@ -158,7 +159,6 @@ def seed_database(app):
                 total_members=1,
                 active_members=1
             )
-
             db.session.add(new_club)
             db.session.flush()
             club_lookup[new_club.club_name] = new_club
@@ -166,13 +166,12 @@ def seed_database(app):
             db.session.add(
                 ClubFaculty(
                     club_id=new_club.id,
-                    faculty_id=faculty_lookup[club["faculty"]].id,
+                    faculty_id=fac_user.id,
                     faculty_role="FACULTY_COORDINATOR"
                 )
             )
 
             organizer = student_lookup[club["organizer"]]
-
             db.session.add(
                 ClubOrganizer(
                     club_id=new_club.id,
@@ -296,7 +295,7 @@ def seed_database(app):
 
         db.session.commit()
 
-        print("Database successfully seeded!")
+        print("Database successfully seeded with ALL request, ticket, and assignment possibilities!")
 
 if __name__ == '__main__':
     app = create_app()
