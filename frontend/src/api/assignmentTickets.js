@@ -20,3 +20,8 @@ export const getUserAssignments = async (targetUserId) => {
     const response = await api.get(`/assignment-tickets/user/${targetUserId}`)
     return response.data
 }
+
+export const leaveAssignmentTicket = async (ticketId) => {
+    const response = await api.post(`/assignment-tickets/${ticketId}/leave`)
+    return response.data
+}

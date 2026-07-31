@@ -1,31 +1,29 @@
-import { defineStore } from 'pinia'
+import { reactive } from 'vue'
 
-export const useAuthStore = defineStore('auth', {
-    state: () => ({
-        user: JSON.parse(localStorage.getItem('user')) || null,
-        token: localStorage.getItem('token')
-    }),
+const state = reactive({
+    user: JSON.parse(localStorage.getItem('user')) || null,
+    token: localStorage.getItem('token') || null
+})
 
-    getters: {
-        isLoggedIn: state => !!state.token,
-        isAdmin: state => state.user?.role === 'ADMIN',
-        isFaculty: state => state.user?.role === 'FACULTY',
-        isStudent: state => state.user?.role === 'STUDENT'
-    },
-
-    actions: {
-        setUser(user, token){
-            this.user = user
-            this.token = token
+export function useAuthStore() {
+    return {
+        get user() { return state.user },
+        get token() { return state.token },
+        get isLoggedIn() { return !!state.token },
+        get isAdmin() { return state.user?.role === 'ADMIN' },
+        get isFaculty() { return state.user?.role === 'FACULTY' },
+        get isStudent() { return state.user?.role === 'STUDENT' },
+        setUser(user, token) {
+            state.user = user
+            state.token = token
             localStorage.setItem("user", JSON.stringify(user))
             localStorage.setItem("token", token)
         },
-
-        logout(){
-            this.user = null
-            this.token = null
+        logout() {
+            state.user = null
+            state.token = null
             localStorage.removeItem("user")
             localStorage.removeItem("token")
         }
     }
-})
+}

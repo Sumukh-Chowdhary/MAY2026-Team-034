@@ -1,7 +1,9 @@
 <script setup>
 import {ref,onMounted,onBeforeUnmount} from 'vue'
+import {useRouter} from 'vue-router'
 import {Modal} from 'bootstrap'
 
+const router=useRouter()
 const collapsed=ref(false)
 const showProfileMenu=ref(false)
 const emit=defineEmits(['toggle'])
@@ -13,6 +15,11 @@ function toggleSidebar(){
 
 function toggleProfileMenu(){
     showProfileMenu.value=!showProfileMenu.value
+}
+
+function goToProfile(){
+    showProfileMenu.value=false
+    router.push('/faculty/profile')
 }
 
 function openLogoutModal(){
@@ -103,7 +110,7 @@ onBeforeUnmount(()=>{
             </div>
             <Transition name="dropdown">
             <div v-if="showProfileMenu" class="profile-menu">
-                <button class="menu-item"><i class="bi bi-person-circle"></i>Profile</button>
+                <button class="menu-item" @click="goToProfile"><i class="bi bi-person-circle"></i>Profile</button>
                 <button
                 class="menu-item logout"
                 @click="openLogoutModal">
