@@ -1,7 +1,18 @@
-from app.services.club_service import archive_club, deactivate_club_member, get_all_clubs, get_club_events, get_club_member, get_club_members, update_club_status, get_faculty_details
-from app.models import db
+from app.services.club_service import (
+    archive_club as archive_club_service,
+    create_club as create_club_service,
+    deactivate_club_member as deactivate_club_member_service,
+    get_all_clubs,
+    get_club_events as get_club_events_service,
+    get_club_member as get_club_member_service,
+    get_club_members as get_club_members_service,
+    get_faculty_details as get_faculty_details_service,
+    update_club as update_club_service,
+    update_club_status as update_club_status_service,
+)
 from flask import Blueprint, request, jsonify
 from app.utils.auth_jwt import jwt_required, roles_required
+from app import db 
 
 admin_bp = Blueprint('admin', __name__, url_prefix='/api/admin')
 
@@ -18,7 +29,7 @@ def update_club_status(club_id):
     data = request.get_json() or {}
 
     try:
-        club = update_club_status(
+        club = update_club_status_service(
             club_id,
             data.get("status")
         )
@@ -33,7 +44,7 @@ def update_club_status(club_id):
 @roles_required("ADMIN")
 @admin_bp.get("/clubs/faculty-details")
 def get_faculty_details():
-    return jsonify(get_faculty_details()), 200
+    return jsonify(get_faculty_details_service()), 200
 
 @jwt_required
 @roles_required("ADMIN")
@@ -42,8 +53,7 @@ def create_club():
     data = request.get_json() or {}
 
     try:
-
-        club = create_club(
+        club = create_club_service(
             name=(data.get("name") or "").strip(),
             category=(data.get("category") or "").strip(),
             description=(data.get("description") or "").strip(),
@@ -54,15 +64,12 @@ def create_club():
         return jsonify(club), 201
 
     except ValueError as e:
-
         return jsonify({
             "error": str(e)
         }), 400
 
     except Exception as e:
-
         db.session.rollback()
-
         return jsonify({
             "error": "Failed to create club.",
             "details": str(e)
@@ -72,12 +79,10 @@ def create_club():
 @roles_required("ADMIN")
 @admin_bp.put("/clubs/<int:club_id>/edit")
 def update_club(club_id):
-
     data = request.get_json() or {}
 
     try:
-
-        club = update_club(
+        club = update_club_service(
             club_id=club_id,
             name=(data.get("name") or "").strip(),
             category=(data.get("category") or "").strip(),
@@ -89,15 +94,12 @@ def update_club(club_id):
         return jsonify(club), 200
 
     except ValueError as e:
-
         return jsonify({
             "error": str(e)
         }), 400
 
     except Exception as e:
-
         db.session.rollback()
-
         return jsonify({
             "error": "Failed to update club.",
             "details": str(e)
@@ -107,9 +109,8 @@ def update_club(club_id):
 @roles_required("ADMIN")
 @admin_bp.delete("/clubs/<int:club_id>")
 def archive_club(club_id):
-
     try:
-        club = archive_club(club_id)
+        club = archive_club_service(club_id)
         return jsonify(club), 200
 
     except ValueError as e:
@@ -129,7 +130,7 @@ def archive_club(club_id):
 @admin_bp.get("/clubs/<int:club_id>/members")
 def get_club_members(club_id):
     return jsonify(
-        get_club_members(
+        get_club_members_service(
             club_id,
             include_inactive=True
         )
@@ -140,7 +141,7 @@ def get_club_members(club_id):
 @admin_bp.get("/clubs/<int:club_id>/members/<int:user_id>")
 def get_club_member(club_id, user_id):
     return jsonify(
-        get_club_member(
+        get_club_member_service(
             club_id,
             user_id
         )
@@ -150,10 +151,8 @@ def get_club_member(club_id, user_id):
 @roles_required("ADMIN")
 @admin_bp.patch("/clubs/<int:club_id>/members/<int:user_id>/deactivate")
 def deactivate_club_member(club_id, user_id):
-
     try:
-
-        member = deactivate_club_member(
+        member = deactivate_club_member_service(
             club_id,
             user_id
         )
@@ -161,15 +160,12 @@ def deactivate_club_member(club_id, user_id):
         return jsonify(member), 200
 
     except ValueError as e:
-
         return jsonify({
             "error": str(e)
         }), 400
 
     except Exception as e:
-
         db.session.rollback()
-
         return jsonify({
             "error": "Failed to deactivate member.",
             "details": str(e)
@@ -180,6 +176,5 @@ def deactivate_club_member(club_id, user_id):
 @admin_bp.get("/clubs/<int:club_id>/events")
 def get_club_events(club_id):
     return jsonify(
-        get_club_events(club_id)
+        get_club_events_service(club_id)
     ), 200
-

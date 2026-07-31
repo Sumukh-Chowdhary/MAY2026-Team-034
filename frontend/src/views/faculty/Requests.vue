@@ -1,285 +1,396 @@
 <script setup>
-import { ref, computed } from 'vue'
-
+import { ref, computed, onMounted } from 'vue'
 import FacultyLayout from '@/layouts/FacultyLayout.vue'
-
-import RequestsToggle from '@/components/faculty/RequestsToggle.vue'
-import TicketCard from '@/components/faculty/TicketCard.vue'
-import TicketTable from '@/components/faculty/TicketTable.vue'
-import IncomingRequestCard from '@/components/faculty/IncomingRequestCard.vue'
-import TicketDetailsModal from '@/components/faculty/TicketDetailsModal.vue'
+import GlassRequestDetailsModal from '@/components/common/GlassRequestDetailsModal.vue'
 import NewTicketModal from '@/components/faculty/NewTicketModal.vue'
 
-const activeTab = ref('tickets')
+import { getFacultyRequestsDashboard } from '@/api/requests'
+import { useRealtimeTickets } from '@/composables/useRealtimeTickets'
+
+const activeTab = ref('my-tickets') // 'my-tickets' | 'incoming'
+const filter = ref('open') // 'open' | 'closed' | 'all'
 const search = ref('')
-const filter = ref('open')
+
+const myTickets = ref([])
+const incomingRequests = ref([])
+const loading = ref(false)
+const isInitialLoad = ref(true)
 
 const selectedTicket = ref(null)
 const showTicketModal = ref(false)
-const showNewTicket = ref(false)
+const showNewTicketModal = ref(false)
+const currentUserId = ref(null)
+const userDesignation = ref('')
+
+onMounted(async () => {
+  try {
+    const userStr = localStorage.getItem('user')
+    if (userStr) {
+      const user = JSON.parse(userStr)
+      currentUserId.value = user.id
+      userDesignation.value = user.designation || ''
+    }
+  } catch (e) {
+    console.error(e)
+  }
+  await fetchFacultyData(false)
+})
+
+async function fetchFacultyData(isSilent = false) {
+  if (!isSilent && isInitialLoad.value) {
+    loading.value = true
+  }
+  try {
+    const res = await getFacultyRequestsDashboard()
+    if (res.success && res.data) {
+      myTickets.value = res.data.myTickets || []
+      incomingRequests.value = res.data.incomingRequests || []
+    }
+  } catch (err) {
+    console.error('Failed to fetch faculty requests dashboard', err)
+  } finally {
+    loading.value = false
+    isInitialLoad.value = false
+  }
+}
+
+// Enable silent background polling simulation (every 10s)
+useRealtimeTickets(() => fetchFacultyData(true), 10000)
 
 function openTicket(ticket) {
-    selectedTicket.value = ticket
-    showTicketModal.value = true
+  selectedTicket.value = ticket
+  showTicketModal.value = true
 }
 
-function addTicket(ticket) {
-    openTickets.value.unshift(ticket)
+// Filtered Lists
+const filteredMyTickets = computed(() => {
+  return myTickets.value.filter(ticket => {
+    const title = (ticket.title || ticket.subject || '').toLowerCase()
+    const query = search.value.toLowerCase()
+    const matchesSearch = !query || title.includes(query)
+
+    const status = ticket.workflowStatus || ticket.approvalStatus || ticket.status || 'PENDING'
+    const isLive = ['PENDING', 'OPEN', 'IN_PROGRESS', 'CHANGES_REQUESTED'].includes(status)
+
+    const matchesFilter = filter.value === 'all' ||
+                          (filter.value === 'open' && isLive) ||
+                          (filter.value === 'closed' && !isLive)
+
+    return matchesSearch && matchesFilter
+  })
+})
+
+const filteredIncoming = computed(() => {
+  return incomingRequests.value.filter(req => {
+    const title = (req.title || req.subject || '').toLowerCase()
+    const query = search.value.toLowerCase()
+    const matchesSearch = !query || title.includes(query)
+
+    const status = req.workflowStatus || req.approvalStatus || req.status || 'PENDING'
+    const isLive = ['PENDING', 'OPEN', 'IN_PROGRESS', 'CHANGES_REQUESTED'].includes(status)
+
+    const matchesFilter = filter.value === 'all' ||
+                          (filter.value === 'open' && isLive) ||
+                          (filter.value === 'closed' && !isLive)
+
+    return matchesSearch && matchesFilter
+  })
+})
+
+function badgeClass(status) {
+  switch (status) {
+    case 'APPROVED': case 'COMPLETED': return 'bg-success'
+    case 'REJECTED': return 'bg-danger'
+    case 'IN_PROGRESS': case 'CHANGES_REQUESTED': return 'bg-warning text-dark'
+    case 'PENDING': case 'OPEN': return 'bg-primary'
+    default: return 'bg-secondary'
+  }
 }
-
-const openTickets = ref([
-    {
-        id: 1,
-        subject: 'Budget Approval',
-        club: 'Photography Club',
-        status: 'Pending',
-        date: '20 Jul 2026',
-        description: 'Requesting budget approval for the annual photography exhibition.'
-    },
-    {
-        id: 2,
-        subject: 'Venue Booking',
-        club: 'Chess Club',
-        status: 'Pending',
-        date: '18 Jul 2026',
-        description: 'Need the seminar hall for the inter-college chess tournament.'
-    },
-    {
-        id: 3,
-        subject: 'Workshop Equipment',
-        club: 'Robotics Club',
-        status: 'Pending',
-        date: '16 Jul 2026',
-        description: 'Require robotics kits and projectors for the workshop.'
-    }
-])
-
-const closedTickets = ref([
-    {
-        id: 4,
-        subject: 'Guest Speaker Approval',
-        status: 'Approved',
-        closed: '12 Jul 2026'
-    },
-    {
-        id: 5,
-        subject: 'Funding Request',
-        status: 'Rejected',
-        closed: '09 Jul 2026'
-    }
-])
-
-const incomingRequests = ref([
-    {
-        id: 1,
-        name: 'Rahul Sharma',
-        subject: 'Join Photography Club',
-        club: 'Photography Club',
-        date: '20 Jul 2026',
-        status: 'Pending'
-    },
-    {
-        id: 2,
-        name: 'Priya Nair',
-        subject: 'Join Chess Club',
-        club: 'Chess Club',
-        date: '18 Jul 2026',
-        status: 'Pending'
-    }
-])
-
-const filteredOpenTickets = computed(() =>
-    openTickets.value.filter(ticket =>
-        ticket.subject.toLowerCase().includes(search.value.toLowerCase())
-    )
-)
-
-const filteredClosedTickets = computed(() =>
-    closedTickets.value.filter(ticket =>
-        ticket.subject.toLowerCase().includes(search.value.toLowerCase())
-    )
-)
-
-const filteredIncoming = computed(() =>
-    incomingRequests.value.filter(request =>
-        request.subject.toLowerCase().includes(search.value.toLowerCase())
-    )
-)
 </script>
 
 <template>
-    <FacultyLayout>
+  <FacultyLayout>
+    <section class="requests-page">
+      
+      <!-- Page Header -->
+      <div class="page-header d-flex justify-content-between align-items-center flex-wrap gap-3">
+        <div>
+          <h1 class="fw-bold mb-1">
+            Faculty Requests & Tagged Approvals
+            <span v-if="userDesignation === 'PRINCIPAL'" class="badge bg-amber text-dark ms-2 font-normal text-xs rounded-pill">
+              <i class="bi bi-shield-check me-1"></i> Principal Approvals View
+            </span>
+          </h1>
+          <p class="text-secondary mb-0">Review incoming tagged requests and track your submitted tickets.</p>
+        </div>
 
-        <section class="requests-page">
+        <button class="btn btn-warning fw-semibold px-4 rounded-pill shadow-sm" @click="showNewTicketModal = true">
+          <i class="bi bi-plus-lg me-1"></i> New Request / Ticket
+        </button>
+      </div>
 
-            <div class="page-header">
-                <div>
-                    <h1>Requests</h1>
-                    <p>Manage communication with administrators and students.</p>
-                </div>
+      <!-- Main Tabs Toggle -->
+      <div class="tab-toggle-bar">
+        <button 
+          class="toggle-btn" 
+          :class="{ active: activeTab === 'my-tickets' }"
+          @click="activeTab = 'my-tickets'"
+        >
+          <i class="bi bi-person-fill me-2"></i> My Raised Tickets
+          <span class="count-badge">{{ myTickets.length }}</span>
+        </button>
+
+        <button 
+          class="toggle-btn" 
+          :class="{ active: activeTab === 'incoming' }"
+          @click="activeTab = 'incoming'"
+        >
+          <i class="bi bi-inbox-fill me-2"></i> Tagged Incoming Approvals
+          <span class="count-badge highlight-badge">{{ incomingRequests.length }}</span>
+        </button>
+      </div>
+
+      <!-- Search & Filters Toolbar -->
+      <div class="toolbar d-flex justify-content-between align-items-center gap-3 flex-wrap">
+        <div class="search-box">
+          <div class="input-group">
+            <span class="input-group-text bg-white border-end-0"><i class="bi bi-search text-muted"></i></span>
+            <input 
+              v-model="search" 
+              type="text" 
+              class="form-control border-start-0 ps-0" 
+              placeholder="Search by title or subject..."
+            />
+          </div>
+        </div>
+
+        <div class="actions d-flex align-items-center gap-2">
+          <label class="form-label text-sm fw-medium mb-0 me-1 text-muted">Status:</label>
+          <select v-model="filter" class="form-select form-select-sm w-auto">
+            <option value="open">Live / Open</option>
+            <option value="closed">Closed</option>
+            <option value="all">All</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Loading State (Initial mount only) -->
+      <div v-if="loading && isInitialLoad" class="text-center py-5">
+        <div class="spinner-border text-primary" role="status"></div>
+        <p class="text-muted mt-2">Loading requests...</p>
+      </div>
+
+      <!-- TAB 1: MY RAISED TICKETS -->
+      <div v-else-if="activeTab === 'my-tickets'">
+        <div class="cards-grid" v-if="filteredMyTickets.length > 0">
+          <div 
+            v-for="ticket in filteredMyTickets" 
+            :key="ticket.id" 
+            class="card shadow-sm border-0 ticket-card h-100"
+          >
+            <div class="card-body d-flex flex-column">
+              <div class="d-flex justify-content-between align-items-start mb-2">
+                <span class="badge bg-light text-dark border">
+                  {{ ticket.requestType || ticket.ticketType || 'TICKET' }}
+                  <span class="ms-1 text-muted">v{{ ticket.version || 1 }}</span>
+                </span>
+                <span class="badge" :class="badgeClass(ticket.workflowStatus || ticket.approvalStatus || ticket.status)">
+                  {{ ticket.workflowStatus || ticket.approvalStatus || ticket.status }}
+                </span>
+              </div>
+
+              <h5 class="fw-bold text-dark mb-2">{{ ticket.title || ticket.subject }}</h5>
+              <p class="text-secondary text-sm mb-3" v-if="ticket.description">
+                {{ ticket.description.length > 90 ? ticket.description.substring(0, 90) + '...' : ticket.description }}
+              </p>
+
+              <div class="mt-auto pt-3 border-top d-flex justify-content-between align-items-center">
+                <small class="text-muted">
+                  <i class="bi bi-calendar3 me-1"></i>
+                  {{ new Date(ticket.createdAt || ticket.date || Date.now()).toLocaleDateString() }}
+                </small>
+
+                <button class="btn btn-sm btn-primary rounded-pill px-3" @click="openTicket(ticket)">
+                  View Request
+                </button>
+              </div>
             </div>
+          </div>
+        </div>
 
-            <div class="toggle-wrapper"><RequestsToggle v-model="activeTab" /></div>
+        <div v-else class="empty-state">
+          <i class="bi bi-folder2-open display-3 text-muted"></i>
+          <h4 class="mt-3">No Raised Tickets Found</h4>
+          <p class="text-secondary">You haven't raised any tickets matching the current filter.</p>
+        </div>
+      </div>
 
-            <div class="toolbar">
+      <!-- TAB 2: TAGGED INCOMING REQUESTS -->
+      <div v-else-if="activeTab === 'incoming'">
+        <div class="cards-grid" v-if="filteredIncoming.length > 0">
+          <div 
+            v-for="req in filteredIncoming" 
+            :key="req.id" 
+            class="card shadow-sm border-0 ticket-card incoming-card-accent h-100"
+          >
+            <div class="card-body d-flex flex-column">
+              <div class="d-flex justify-content-between align-items-start mb-2">
+                <span class="badge bg-amber text-dark">
+                  <i class="bi bi-tag-fill me-1"></i> Tagged Approver
+                </span>
+                <span class="badge" :class="badgeClass(req.workflowStatus || req.approvalStatus || req.status)">
+                  {{ req.workflowStatus || req.approvalStatus || req.status }}
+                </span>
+              </div>
 
-                <input
-                    v-model="search"
-                    type="text"
-                    class="form-control"
-                    placeholder="Search..."
-                >
+              <h5 class="fw-bold text-dark mb-1">{{ req.title || req.subject }}</h5>
+              <p class="text-sm text-primary font-medium mb-2">
+                <i class="bi bi-person-fill me-1"></i>
+                Requester: {{ req.requester?.name || req.raisedBy?.name || 'Student/Faculty' }}
+              </p>
 
-                <div class="actions">
+              <div class="mt-auto pt-3 border-top d-flex justify-content-between align-items-center">
+                <small class="text-muted">
+                  Ref: <strong>{{ req.referenceName || req.club || 'General' }}</strong>
+                </small>
 
-                    <button
-                        v-if="activeTab === 'tickets'"
-                        class="btn btn-warning"
-                        @click="showNewTicket = true"
-                    >
-                        + New Ticket
-                    </button>
-
-                    <select
-                        v-if="activeTab === 'tickets'"
-                        v-model="filter"
-                        class="form-select"
-                    >
-                        <option value="open">Open</option>
-                        <option value="closed">Closed</option>
-                        <option value="all">All</option>
-                    </select>
-
-                </div>
-
+                <button class="btn btn-sm btn-warning font-semibold rounded-pill px-3" @click="openTicket(req)">
+                  Review & Action
+                </button>
+              </div>
             </div>
+          </div>
+        </div>
 
-            <!-- MY TICKETS -->
+        <div v-else class="empty-state">
+          <i class="bi bi-check-all display-3 text-muted"></i>
+          <h4 class="mt-3">No Pending Incoming Approvals</h4>
+          <p class="text-secondary">You have no tagged incoming requests awaiting your decision.</p>
+        </div>
+      </div>
 
-            <template v-if="activeTab === 'tickets'">
+    </section>
 
-                <div
-                    v-if="filter === 'open' || filter === 'all'"
-                    class="cards-grid"
-                >
-                    <TicketCard
-                        v-for="ticket in filteredOpenTickets"
-                        :key="ticket.id"
-                        :ticket="ticket"
-                        @view="openTicket"
-                    />
-                </div>
+    <!-- Glass Request Details Pop-up Modal -->
+    <GlassRequestDetailsModal 
+      :show="showTicketModal"
+      :item="selectedTicket"
+      currentUserRole="FACULTY"
+      :currentUserId="currentUserId"
+      @close="showTicketModal = false"
+      @updated="() => fetchFacultyData(true)"
+    />
 
-                <TicketTable
-    v-if="filter === 'closed' || filter === 'all'"
-    :tickets="filteredClosedTickets"
-    @view="openTicket"
-/>
+    <!-- New Ticket Modal -->
+    <NewTicketModal 
+      :show="showNewTicketModal"
+      @close="showNewTicketModal = false"
+      @submit="() => fetchFacultyData(true)"
+    />
 
-            </template>
-
-            <!-- INCOMING REQUESTS -->
-
-            <div
-                v-else
-                class="cards-grid"
-            >
-                <IncomingRequestCard
-                    v-for="request in filteredIncoming"
-                    :key="request.id"
-                    :request="request"
-                />
-            </div>
-
-        </section>
-
-        <!-- Ticket Details -->
-
-        <TicketDetailsModal
-            :show="showTicketModal"
-            :ticket="selectedTicket"
-            @close="showTicketModal = false"
-        />
-
-        <!-- New Ticket -->
-
-        <NewTicketModal
-            :show="showNewTicket"
-            @close="showNewTicket = false"
-            @submit="addTicket"
-        />
-
-    </FacultyLayout>
+  </FacultyLayout>
 </template>
 
 <style scoped>
-.toggle-wrapper{
-    display:flex;
-    justify-content:flex-start;
+.requests-page {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
 }
 
-.requests-page{
-    display:flex;
-    flex-direction:column;
-    gap:24px;
+.page-header h1 {
+  font-size: 2rem;
+  color: #0f172a;
 }
 
-.page-header h1{
-    font-size:2.25rem;
-    font-weight:700;
-    margin-bottom:.35rem;
+.tab-toggle-bar {
+  display: inline-flex;
+  background: white;
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+  padding: 6px;
+  gap: 6px;
+  align-self: flex-start;
 }
 
-.page-header p{
-    color:#6b7280;
-    margin:0;
+.toggle-btn {
+  border: none;
+  background: transparent;
+  padding: 10px 20px;
+  border-radius: 12px;
+  font-weight: 600;
+  color: #64748b;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  transition: all 0.25s ease;
+  cursor: pointer;
 }
 
-.toolbar{
-    display:flex;
-    justify-content:space-between;
-    align-items:center;
-    gap:20px;
-    flex-wrap:wrap;
+.toggle-btn.active {
+  background: #f59e0b;
+  color: white;
 }
 
-.toolbar .form-control{
-    flex:1;
-    min-width:260px;
-    max-width:700px;
+.count-badge {
+  background: #f1f5f9;
+  color: #334155;
+  font-size: 0.75rem;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 12px;
 }
 
-.actions{
-    display:flex;
-    align-items:center;
-    gap:12px;
+.toggle-btn.active .count-badge {
+  background: rgba(255, 255, 255, 0.3);
+  color: white;
 }
 
-.actions .form-select{
-    width:150px;
+.highlight-badge {
+  background: #3b82f6;
+  color: white;
 }
 
-.cards-grid{
-    display:grid;
-    grid-template-columns:repeat(auto-fill,minmax(340px,1fr));
-    gap:24px;
+.toolbar {
+  background: white;
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+  padding: 12px 16px;
 }
 
-@media (max-width:768px){
-
-    .toolbar{
-        flex-direction:column;
-        align-items:stretch;
-    }
-
-    .toolbar .form-control{
-        max-width:100%;
-    }
-
-    .actions{
-        justify-content:space-between;
-    }
-
+.search-box {
+  flex: 1;
+  max-width: 500px;
 }
 
+.cards-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 24px;
+}
+
+.ticket-card {
+  border-radius: 18px;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.ticket-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 12px 24px rgba(0, 0, 0, 0.08) !important;
+}
+
+.incoming-card-accent {
+  border-left: 4px solid #f59e0b !important;
+}
+
+.empty-state {
+  padding: 80px 0;
+  text-align: center;
+  color: #94a3b8;
+  background: white;
+  border-radius: 20px;
+  border: 1px dashed #cbd5e1;
+}
+
+.bg-amber { background: #fef3c7; }
 </style>

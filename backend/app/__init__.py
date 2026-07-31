@@ -33,6 +33,10 @@ def create_app(config_class=Config):
     from app.routes.events import events_bp
     from app.routes.venues import venues_bp
     from app.routes.student import student_bp
+    from app.routes.requests import requests_bp
+    from app.routes.action_tickets import action_tickets_bp
+    from app.routes.assignment_tickets import assignments_bp
+    from app.routes.request_views import request_views_bp
 
     app.register_blueprint(auth_bp)
     app.register_blueprint(users_bp)
@@ -40,6 +44,10 @@ def create_app(config_class=Config):
     app.register_blueprint(events_bp)
     app.register_blueprint(venues_bp)
     app.register_blueprint(student_bp)
+    app.register_blueprint(requests_bp)
+    app.register_blueprint(action_tickets_bp)
+    app.register_blueprint(assignments_bp)
+    app.register_blueprint(request_views_bp)
 
     @app.route('/health', methods=['GET'])
     def health_check():
