@@ -245,3 +245,119 @@ CLUB_DATA = [
         "organizer": "STU015"
     }
 ]
+
+VENUE_DATA = [
+    {
+        "name": "Main Auditorium",
+        "location": "Block A, 2nd Floor",
+        "type": "Auditorium",
+        "capacity": 250,
+        "availabilityStatus": "AVAILABLE"
+    },
+    {
+        "name": "Innovation Lab",
+        "location": "Block C, Lab 3",
+        "type": "Lab",
+        "capacity": 80,
+        "availabilityStatus": "AVAILABLE"
+    },
+    {
+        "name": "Open Air Ground",
+        "location": "North Campus",
+        "type": "Ground",
+        "capacity": 400,
+        "availabilityStatus": "AVAILABLE"
+    },
+    {
+        "name": "Studio Hall",
+        "location": "Arts Block",
+        "type": "Hall",
+        "capacity": 120,
+        "availabilityStatus": "AVAILABLE"
+    }
+]
+
+EVENT_DATA = [
+    {
+        "clubName": "AI Club",
+        "createdByEmail": "meena@allclub.com",
+        "name": "AI Hack Sprint",
+        "description": "A full-day coding sprint focused on AI prototypes and demos.",
+        "status": "LIVE",
+        "startDate": "2026-08-10",
+        "endDate": "2026-08-10",
+        "startTime": "09:00:00",
+        "endTime": "17:00:00",
+        "capacity": 120,
+        "venueName": "Innovation Lab",
+        "schedule": [
+            {"time": "09:00", "activity": "Registration and setup"},
+            {"time": "10:00", "activity": "Opening keynote"},
+            {"time": "13:00", "activity": "Hackathon round 1"}
+        ],
+        "announcements": [
+            {"title": "Bring your laptop", "message": "Please carry your laptop and charger for the sprint."}
+        ],
+        "registrations": ["rahul@allclub.com", "ananya@allclub.com", "aditya@allclub.com"],
+        "attendance": ["rahul@allclub.com", "ananya@allclub.com"],
+        "prizes": [
+            {"title": "Best Innovation", "winnerEmail": "aditya@allclub.com", "description": "Most practical AI prototype"}
+        ],
+        "organizers": ["rahul@allclub.com"],
+        "volunteers": ["sneha@allclub.com", "karthik@allclub.com"]
+    },
+    {
+        "clubName": "Drama Club",
+        "createdByEmail": "priya@allclub.com",
+        "name": "Stagecraft Workshop",
+        "description": "An interactive workshop covering stage direction, acting, and audience engagement.",
+        "status": "SCHEDULED",
+        "startDate": "2026-08-20",
+        "endDate": "2026-08-20",
+        "startTime": "14:00:00",
+        "endTime": "18:00:00",
+        "capacity": 80,
+        "venueName": "Studio Hall",
+        "schedule": [
+            {"time": "14:00", "activity": "Welcome and icebreaker"},
+            {"time": "15:30", "activity": "Scene rehearsal"},
+            {"time": "17:00", "activity": "Feedback session"}
+        ],
+        "announcements": [
+            {"title": "Workshop reminder", "message": "Participants should arrive 15 minutes early."}
+        ],
+        "registrations": ["kavya@allclub.com", "nisha@allclub.com"],
+        "attendance": ["kavya@allclub.com"],
+        "prizes": [],
+        "organizers": ["kavya@allclub.com"],
+        "volunteers": ["neeraj@allclub.com"]
+    },
+    {
+        "clubName": "Sports Club",
+        "createdByEmail": "arjun@allclub.com",
+        "name": "Inter-Club Sports Day",
+        "description": "A fun-filled sports event featuring football, basketball, and relay competitions.",
+        "status": "SCHEDULED",
+        "startDate": "2026-09-05",
+        "endDate": "2026-09-06",
+        "startTime": "08:00:00",
+        "endTime": "18:00:00",
+        "capacity": 300,
+        "venueName": "Open Air Ground",
+        "schedule": [
+            {"time": "08:00", "activity": "Opening ceremony"},
+            {"time": "10:00", "activity": "Football matches"},
+            {"time": "15:00", "activity": "Awards and closing"}
+        ],
+        "announcements": [
+            {"title": "Team registration", "message": "Team captains should confirm their roster by Friday."}
+        ],
+        "registrations": ["aman@allclub.com", "rohan@allclub.com", "vikram@allclub.com"],
+        "attendance": ["aman@allclub.com"],
+        "prizes": [
+            {"title": "Best Team Spirit", "winnerEmail": "rohan@allclub.com", "description": "Recognized for teamwork and sportsmanship"}
+        ],
+        "organizers": ["aman@allclub.com"],
+        "volunteers": ["vikram@allclub.com", "ishita@allclub.com"]
+    }
+]

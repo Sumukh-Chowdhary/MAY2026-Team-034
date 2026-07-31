@@ -1,17 +1,32 @@
+import os
+import sys
+from datetime import datetime
+
+BACKEND_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
+if BACKEND_ROOT not in sys.path:
+    sys.path.insert(0, BACKEND_ROOT)
+
 from app import create_app
 from app.models.user import (
-    db, Role, Department,User, StudentProfile, FacultyProfile
+    db, Role, Department, User, StudentProfile, FacultyProfile
 )
 
 from app.models.club import (
     Club,ClubFaculty,ClubMembership,ClubOrganizer
 )
 
-from .seed_data import (
+from app.models.events import (
+    Venue, Event, EventScheduleItem, EventAnnouncement,
+    EventRegistration, EventAttendance, EventPrize, EventOrganizer, EventVolunteer
+)
+
+from app.utils.seed_data import (
     ADMIN_DATA,
     FACULTY_DATA,
     STUDENT_DATA,
-    CLUB_DATA
+    CLUB_DATA,
+    VENUE_DATA,
+    EVENT_DATA
 )
 
 def seed_database(app):
@@ -131,9 +146,9 @@ def seed_database(app):
             for student, user in zip(STUDENT_DATA, student_users)
         }
 
-        for club in CLUB_DATA:
+        club_lookup = {}
 
-            # Create Club
+        for club in CLUB_DATA:
             new_club = Club(
                 club_name=club["name"],
                 club_description=club["description"],
@@ -146,8 +161,8 @@ def seed_database(app):
 
             db.session.add(new_club)
             db.session.flush()
+            club_lookup[new_club.club_name] = new_club
 
-            # Assign Faculty Coordinator
             db.session.add(
                 ClubFaculty(
                     club_id=new_club.id,
@@ -156,7 +171,6 @@ def seed_database(app):
                 )
             )
 
-            # Assign Student Organizer
             organizer = student_lookup[club["organizer"]]
 
             db.session.add(
@@ -167,7 +181,6 @@ def seed_database(app):
                 )
             )
 
-            # Organizer is also a club member
             db.session.add(
                 ClubMembership(
                     club_id=new_club.id,
@@ -176,6 +189,110 @@ def seed_database(app):
                     membership_status="ACTIVE"
                 )
             )
+
+        print("6. Seeding Venues...")
+        venue_lookup = {}
+
+        for venue_data in VENUE_DATA:
+            venue = Venue(
+                venue_name=venue_data["name"],
+                venue_location=venue_data["location"],
+                venue_type=venue_data["type"],
+                capacity=venue_data["capacity"],
+                availability_status=venue_data["availabilityStatus"]
+            )
+            db.session.add(venue)
+            db.session.flush()
+            venue_lookup[venue.venue_name] = venue
+
+        print("7. Seeding Events...")
+        user_lookup = {
+            user.email: user
+            for user in [user_admin, *faculty_users, *student_users]
+        }
+
+        for event_data in EVENT_DATA:
+            club = club_lookup.get(event_data["clubName"])
+            creator = user_lookup.get(event_data["createdByEmail"])
+            venue = venue_lookup.get(event_data["venueName"])
+
+            if not club or not creator:
+                continue
+
+            event = Event(
+                club_id=club.id,
+                created_by=creator.id,
+                venue_id=venue.id if venue else None,
+                event_name=event_data["name"],
+                event_description=event_data["description"],
+                event_status=event_data["status"],
+                start_date=datetime.strptime(event_data["startDate"], "%Y-%m-%d").date(),
+                end_date=datetime.strptime(event_data["endDate"], "%Y-%m-%d").date(),
+                start_time=datetime.strptime(event_data["startTime"], "%H:%M:%S").time(),
+                end_time=datetime.strptime(event_data["endTime"], "%H:%M:%S").time(),
+                capacity=event_data["capacity"]
+            )
+            db.session.add(event)
+            db.session.flush()
+
+            for item in event_data.get("schedule", []):
+                db.session.add(EventScheduleItem(
+                    event_id=event.id,
+                    schedule_time=item["time"],
+                    activity=item["activity"]
+                ))
+
+            for item in event_data.get("announcements", []):
+                db.session.add(EventAnnouncement(
+                    event_id=event.id,
+                    title=item["title"],
+                    message=item["message"]
+                ))
+
+            for email in event_data.get("registrations", []):
+                user = user_lookup.get(email)
+                if user:
+                    db.session.add(EventRegistration(
+                        event_id=event.id,
+                        user_id=user.id,
+                        registration_status="REGISTERED"
+                    ))
+
+            for email in event_data.get("attendance", []):
+                user = user_lookup.get(email)
+                if user:
+                    db.session.add(EventAttendance(
+                        event_id=event.id,
+                        user_id=user.id,
+                        attendance_status="PRESENT"
+                    ))
+
+            for prize in event_data.get("prizes", []):
+                winner = user_lookup.get(prize.get("winnerEmail"))
+                db.session.add(EventPrize(
+                    event_id=event.id,
+                    title=prize["title"],
+                    winner_name=winner.student_profile.full_name if winner and winner.student_profile else None,
+                    description=prize.get("description")
+                ))
+
+            for email in event_data.get("organizers", []):
+                user = user_lookup.get(email)
+                if user:
+                    db.session.add(EventOrganizer(
+                        event_id=event.id,
+                        user_id=user.id,
+                        organizer_role="ORGANIZER"
+                    ))
+
+            for email in event_data.get("volunteers", []):
+                user = user_lookup.get(email)
+                if user:
+                    db.session.add(EventVolunteer(
+                        event_id=event.id,
+                        user_id=user.id,
+                        volunteer_status="PENDING"
+                    ))
 
         db.session.commit()
 
