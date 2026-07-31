@@ -13,15 +13,25 @@ const eventList = ref([])
 const loading = ref(false)
 
 onMounted(async () => {
+  console.log('Mounted')
+
   loading.value = true
+
   try {
+    console.log('Calling getEvents()')
+
     const events = await getEvents()
+
+    console.log('API Response:', events)
+
     eventList.value = events.map((event) => ({
       ...event,
       club: event.clubName || event.club || 'Unknown Club'
     }))
+
+    console.log('Mapped Events:', eventList.value)
   } catch (error) {
-    console.error('Failed to load events', error)
+    console.error('Failed to load events:', error)
   } finally {
     loading.value = false
   }
@@ -71,6 +81,8 @@ const filteredEvents = computed(() => {
     </div>
   </FacultyLayout>
 </template>
+
+
 <style scoped>
 
 .hero{

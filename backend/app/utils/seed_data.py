@@ -245,3 +245,154 @@ CLUB_DATA = [
         "organizer": "STU015"
     }
 ]
+
+
+# Module7
+VENUE_DATA = [
+    {
+        "name": "Main Auditorium",
+        "location": "Academic Block A",
+        "type": "Auditorium",
+        "capacity": 500
+    },
+    {
+        "name": "Seminar Hall 1",
+        "location": "Computer Science Block",
+        "type": "Seminar Hall",
+        "capacity": 120
+    },
+    {
+        "name": "Innovation Lab",
+        "location": "Research Block",
+        "type": "Laboratory",
+        "capacity": 60
+    }
+]
+
+
+EVENT_DATA = [
+    {
+        "club": "AI Club",
+        "venue": "Seminar Hall 1",
+        "created_by": "FAC001",
+        "name": "AI Workshop",
+        "description": "Introduction to Machine Learning.",
+        "status": "LIVE",
+        "start_date": "2026-07-20",
+        "end_date": "2026-07-20",
+        "capacity": 100
+    },
+    {
+        "club": "Music Club",
+        "venue": "Main Auditorium",
+        "created_by": "FAC003",
+        "name": "Music Fest",
+        "description": "Annual music festival.",
+        "status": "SCHEDULED",
+        "start_date": "2026-08-10",
+        "end_date": "2026-08-10",
+        "capacity": 300
+    }
+]
+
+# Module7
+
+SCHEDULE_DATA = [
+    {
+        "event": "AI Workshop",
+        "time": "09:00 AM",
+        "activity": "Registration"
+    },
+    {
+        "event": "AI Workshop",
+        "time": "09:30 AM",
+        "activity": "Opening Ceremony"
+    },
+    {
+        "event": "AI Workshop",
+        "time": "10:00 AM",
+        "activity": "Machine Learning Session"
+    },
+    {
+        "event": "Music Fest",
+        "time": "05:00 PM",
+        "activity": "Opening Performance"
+    },
+    {
+        "event": "Music Fest",
+        "time": "06:00 PM",
+        "activity": "Band Competition"
+    }
+]
+
+
+ANNOUNCEMENT_DATA = [
+    {
+        "event": "AI Workshop",
+        "title": "Bring Your Laptop",
+        "message": "Participants should bring their own laptops."
+    },
+    {
+        "event": "AI Workshop",
+        "title": "Reporting Time",
+        "message": "Please report 30 minutes before the event."
+    },
+    {
+        "event": "Music Fest",
+        "title": "Dress Code",
+        "message": "Participants should wear club T-shirts."
+    }
+]
+
+
+REGISTRATION_DATA = [
+    {
+        "event": "AI Workshop",
+        "student": "STU002"
+    },
+    {
+        "event": "AI Workshop",
+        "student": "STU011"
+    },
+    {
+        "event": "AI Workshop",
+        "student": "STU013"
+    },
+    {
+        "event": "Music Fest",
+        "student": "STU006"
+    },
+    {
+        "event": "Music Fest",
+        "student": "STU010"
+    }
+]
+
+
+ATTENDANCE_DATA = [
+    {
+        "event": "AI Workshop",
+        "student": "STU002",
+        "status": "Present"
+    },
+    {
+        "event": "AI Workshop",
+        "student": "STU011",
+        "status": "Absent"
+    },
+    {
+        "event": "AI Workshop",
+        "student": "STU013",
+        "status": "Present"
+    },
+    {
+        "event": "Music Fest",
+        "student": "STU006",
+        "status": "Present"
+    },
+    {
+        "event": "Music Fest",
+        "student": "STU010",
+        "status": "Present"
+    }
+]

@@ -49,7 +49,39 @@ class Event(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
-    creator = db.relationship('User', lazy=True, foreign_keys=[created_by])
+    creator = db.relationship(
+    'User',
+    lazy=True,
+    foreign_keys=[created_by]
+    )
+
+    schedules = db.relationship(
+        "EventSchedule",
+        backref="event",
+        lazy=True,
+        cascade="all, delete-orphan"
+    )
+
+    announcements = db.relationship(
+        "Announcement",
+        backref="event",
+        lazy=True,
+        cascade="all, delete-orphan"
+    )
+
+    registrations = db.relationship(
+        "EventRegistration",
+        backref="event",
+        lazy=True,
+        cascade="all, delete-orphan"
+    )
+
+    attendance = db.relationship(
+        "Attendance",
+        backref="event",
+        lazy=True,
+        cascade="all, delete-orphan"
+    )
 
     def to_dict(self):
         return {
@@ -73,3 +105,5 @@ class Event(db.Model):
             'createdAt': self.created_at.isoformat() if self.created_at else None,
             'updatedAt': self.updated_at.isoformat() if self.updated_at else None
         }
+
+

@@ -4,7 +4,7 @@ import FacultyLayout from '@/layouts/FacultyLayout.vue'
 import ClubSearch from '@/components/admin/club/ClubSearch.vue'
 import ClubGrid from '@/components/admin/club/ClubGrid.vue'
 import EditClubModal from '@/components/admin/club/EditClubModal.vue'
-import DeleteClubModal from '@/components/admin/club/DeleteClubModal.vue'
+// import DeleteClubModal from '@/components/admin/club/DeleteClubModal.vue'
 import ClubDetailsModal from '@/components/admin/club/ClubDetailsModal.vue'
 import { clubs } from '@/data/clubs'
 
@@ -13,7 +13,7 @@ const clubList = ref([...clubs])
 const selectedClub = ref(null)
 const showDetailsModal = ref(false)
 const showEditModal = ref(false)
-const showDeleteModal = ref(false)
+// const showDeleteModal = ref(false)
 
 const filteredClubs = computed(() => {
   const query = search.value.trim().toLowerCase()
@@ -52,6 +52,7 @@ const saveEdit = (updatedClub) => {
   closeEditModal()
 }
 
+/*
 const openDeleteModal = (club) => {
   if (!club) return
   selectedClub.value = { ...club }
@@ -62,6 +63,7 @@ const closeDeleteModal = () => {
   showDeleteModal.value = false
   selectedClub.value = null
 }
+*/
 
 const handleEditFromDetails = () => {
   const clubToEdit = selectedClub.value
@@ -69,17 +71,23 @@ const handleEditFromDetails = () => {
   openEditModal(clubToEdit)
 }
 
+
+/*
 const handleDeleteFromDetails = () => {
   const clubToDelete = selectedClub.value
   closeDetailsModal()
   openDeleteModal(clubToDelete)
 }
+*/
 
+
+/*
 const confirmDelete = () => {
   if (!selectedClub.value) return
   clubList.value = clubList.value.filter((club) => club.id !== selectedClub.value.id)
   closeDeleteModal()
 }
+*/
 </script>
 
 <template>
@@ -123,10 +131,10 @@ const confirmDelete = () => {
         @close="closeDetailsModal"
         @visit="closeDetailsModal"
         @edit="handleEditFromDetails"
-        @delete="handleDeleteFromDetails"
+   <!-- @delete="handleDeleteFromDetails" -->
       />
       <EditClubModal v-if="showEditModal && selectedClub" :club="selectedClub" @close="closeEditModal" @submit="saveEdit" />
-      <DeleteClubModal v-if="showDeleteModal && selectedClub" :club="selectedClub" @close="closeDeleteModal" @confirm="confirmDelete" />
+    <!--  <DeleteClubModal v-if="showDeleteModal && selectedClub" :club="selectedClub" @close="closeDeleteModal" @confirm="confirmDelete" /> -->
     </section>
   </FacultyLayout>
 </template>

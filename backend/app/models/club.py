@@ -18,7 +18,7 @@ class Club(db.Model):
     memberships = db.relationship("ClubMembership",backref="club",lazy=True,cascade="all, delete-orphan")
     organizers = db.relationship("ClubOrganizer",backref="club",lazy=True,cascade="all, delete-orphan")
     faculty_coordinators = db.relationship("ClubFaculty",backref="club",lazy=True,cascade="all, delete-orphan")
-    #events = db.relationship("Event",backref="club",lazy=True,cascade="all, delete-orphan")
+    events = db.relationship("Event",backref="club",lazy=True,cascade="all, delete-orphan")
 
     def to_dict(self):
         return {

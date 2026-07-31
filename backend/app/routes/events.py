@@ -4,6 +4,12 @@ from app.models import db
 from app.models.club import Club
 from app.models.events import Event, Venue
 from app.utils.auth_jwt import jwt_required, roles_required
+from app.models.event_details import (
+    EventSchedule,
+    Announcement,
+    EventRegistration,
+    Attendance,
+)
 
 
 events_bp = Blueprint('events', __name__, url_prefix='/api/events')
@@ -42,7 +48,26 @@ def get_events():
 @jwt_required
 def get_event(event_id):
     event = Event.query.get_or_404(event_id)
-    return jsonify(event.to_dict()), 200
+
+    event_data = event.to_dict()
+
+    event_data["schedule"] = [
+        item.to_dict() for item in event.schedules
+    ]
+
+    event_data["announcements"] = [
+        item.to_dict() for item in event.announcements
+    ]
+
+    event_data["registrations"] = [
+        item.to_dict() for item in event.registrations
+    ]
+
+    event_data["attendance"] = [
+        item.to_dict() for item in event.attendance
+    ]
+
+    return jsonify(event_data), 200
 
 
 @events_bp.route('/create', methods=['POST'])
@@ -171,10 +196,7 @@ def update_event(event_id):
                 event.end_time = time.fromisoformat(end_time)
             except Exception:
                 return jsonify({'error': 'endTime must be ISO format HH:MM or HH:MM:SS.'}), 400
-    if start_time is not None:
-        event.start_time = start_time
-    if end_time is not None:
-        event.end_time = end_time
+    
     if capacity is not None:
         event.capacity = capacity
 
@@ -195,3 +217,88 @@ def update_event_status(event_id):
     event.event_status = status.upper()
     db.session.commit()
     return jsonify(event.to_dict()), 200
+
+
+# Module 7
+@events_bp.route('/<int:event_id>/schedule', methods=['POST'])
+@jwt_required
+@roles_required('ADMIN', 'FACULTY')
+def add_schedule(event_id):
+    event = Event.query.get_or_404(event_id)
+    data = request.get_json() or {}
+
+    activity = (data.get("activity") or "").strip()
+    schedule_time = (data.get("time") or "").strip()
+
+    if not activity:
+        return jsonify({"error": "Activity is required."}), 400
+
+    schedule = EventSchedule(
+        event_id=event.id,
+        time=schedule_time or "10:00 AM",
+        activity=activity,
+    )
+
+    db.session.add(schedule)
+    db.session.commit()
+
+    return jsonify(schedule.to_dict()), 201
+
+
+@events_bp.route('/<int:event_id>/announcements', methods=['POST'])
+@jwt_required
+@roles_required('ADMIN', 'FACULTY')
+def add_announcement(event_id):
+    event = Event.query.get_or_404(event_id)
+    data = request.get_json() or {}
+
+    title = (data.get("title") or "").strip()
+    message = (data.get("message") or "").strip()
+
+    if not title:
+        return jsonify({"error": "Title is required."}), 400
+
+    announcement = Announcement(
+        event_id=event.id,
+        title=title,
+        message=message,
+    )
+
+    db.session.add(announcement)
+    db.session.commit()
+
+    return jsonify(announcement.to_dict()), 201
+
+
+@events_bp.route('/<int:event_id>/attendance', methods=['POST'])
+@jwt_required
+@roles_required('ADMIN', 'FACULTY')
+def post_attendance(event_id):
+    Event.query.get_or_404(event_id)
+
+    data = request.get_json() or {}
+
+    student_id = data.get("studentId")
+    status = (data.get("status") or "Present").strip()
+
+    if not student_id:
+        return jsonify({"error": "studentId is required."}), 400
+
+    attendance = Attendance.query.filter_by(
+        event_id=event_id,
+        student_id=student_id,
+    ).first()
+
+    if attendance:
+        attendance.status = status
+    else:
+        attendance = Attendance(
+            event_id=event_id,
+            student_id=student_id,
+            status=status,
+        )
+        db.session.add(attendance)
+
+    db.session.commit()
+
+    return jsonify(attendance.to_dict()), 200
