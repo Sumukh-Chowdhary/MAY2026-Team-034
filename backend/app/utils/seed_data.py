@@ -138,7 +138,7 @@ CLUB_DATA = [
         "category": "CULTURAL",
         "logo": "photo_camera",
         "faculty": "FAC003",
-        "organizer": "STU010"
+        "organizer": "STU004"
     },
     {
         "name": "Sports Club",
@@ -147,60 +147,6 @@ CLUB_DATA = [
         "logo": "sports_soccer",
         "faculty": "FAC002",
         "organizer": "STU003"
-    },
-    {
-        "clubName": "Drama Club",
-        "createdByEmail": "priya@allclub.com",
-        "name": "Stagecraft Workshop",
-        "description": "An interactive workshop covering stage direction, acting, and audience engagement.",
-        "status": "SCHEDULED",
-        "startDate": "2026-08-20",
-        "endDate": "2026-08-20",
-        "startTime": "14:00:00",
-        "endTime": "18:00:00",
-        "capacity": 80,
-        "venueName": "Studio Hall",
-        "schedule": [
-            {"time": "14:00", "activity": "Welcome and icebreaker"},
-            {"time": "15:30", "activity": "Scene rehearsal"},
-            {"time": "17:00", "activity": "Feedback session"}
-        ],
-        "announcements": [
-            {"title": "Workshop reminder", "message": "Participants should arrive 15 minutes early."}
-        ],
-        "registrations": ["kavya@allclub.com", "nisha@allclub.com"],
-        "attendance": ["kavya@allclub.com"],
-        "prizes": [],
-        "organizers": ["kavya@allclub.com"],
-        "volunteers": ["neeraj@allclub.com"]
-    },
-    {
-        "clubName": "Sports Club",
-        "createdByEmail": "arjun@allclub.com",
-        "name": "Inter-Club Sports Day",
-        "description": "A fun-filled sports event featuring football, basketball, and relay competitions.",
-        "status": "SCHEDULED",
-        "startDate": "2026-09-05",
-        "endDate": "2026-09-06",
-        "startTime": "08:00:00",
-        "endTime": "18:00:00",
-        "capacity": 300,
-        "venueName": "Open Air Ground",
-        "schedule": [
-            {"time": "08:00", "activity": "Opening ceremony"},
-            {"time": "10:00", "activity": "Football matches"},
-            {"time": "15:00", "activity": "Awards and closing"}
-        ],
-        "announcements": [
-            {"title": "Team registration", "message": "Team captains should confirm their roster by Friday."}
-        ],
-        "registrations": ["aman@allclub.com", "rohan@allclub.com", "vikram@allclub.com"],
-        "attendance": ["aman@allclub.com"],
-        "prizes": [
-            {"title": "Best Team Spirit", "winnerEmail": "rohan@allclub.com", "description": "Recognized for teamwork and sportsmanship"}
-        ],
-        "organizers": ["aman@allclub.com"],
-        "volunteers": ["vikram@allclub.com", "ishita@allclub.com"]
     }
 ]
 
