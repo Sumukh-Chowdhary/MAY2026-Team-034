@@ -1,5 +1,45 @@
+<script setup>
+
+import { getCurrentUser } from "@/services/authService"
+
+function viewClub() {
+    emit("view", club)
+}
+
+const {
+    club,
+    section,
+    isMember
+} = defineProps({
+    club: {
+        type: Object,
+        required: true
+    },
+    section: {
+        type: String,
+        default: ""
+    },
+    isMember: {
+        type: Boolean,
+        default: false
+    }
+})
+
+const emit = defineEmits([
+    "view",
+    "join",
+    "leave"
+])
+
+const user = getCurrentUser()
+
+const isStudent =
+    user?.role === "STUDENT"
+
+</script>
+
 <template>
-  <article class="club-card" @click="$emit('view', club)">
+  <article class="club-card">
     <div class="club-header">
       <div class="club-image">
         <span class="material-symbols-rounded">
@@ -22,48 +62,19 @@
         <span class="status-badge"></span>
         {{ club.status === 'ACTIVE' ? 'Live Club' : 'Legacy' }}
       </span>
-      <!-- <span class="member-chip">
-        {{ club.activeMembers }} Active Members
-      </span>
-      <span class="member-chip">
-        {{ club.totalMembers }} Members
-      </span> -->
     </div>
 
     <div class="footer-actions">
-      <button type="button" class="view-btn" @click.stop="$emit('view', club)">
+      <button class="view-btn" @click.stop="viewClub">
         View Details
       </button>
 
-      <button v-if="section === 'all-clubs' && !isMember" type="button" class="join-btn" @click.stop="$emit('join', club)">
-        Join
+      <button v-if="section === 'all-clubs' && !isMember && isStudent" type="button" class="join-btn" @click.stop="emit('join', club)">
+            Join
       </button>
     </div>
   </article>
 </template>
-
-<script setup>
-defineProps({
-  club: {
-    type: Object,
-    required: true
-  },
-  section: {
-    type: String,
-    default: ""
-  },
-  isMember: {
-    type: Boolean,
-    default: false
-  }
-})
-
-const emit = defineEmits([
-  'view',
-  'join',
-  'leave'
-])
-</script>
 
 <style scoped>
 .club-stats{
@@ -224,37 +235,9 @@ const emit = defineEmits([
     align-items:stretch;
 }
 
-.view-btn,
-.join-btn,
-.leave-btn{
+.view-btn{
     width:100%;
 }
 
-.join-btn,
-.leave-btn{
-    border:none;
-    border-radius:10px;
-    color:#fff;
-    padding:10px 18px;
-    font-weight:600;
-    cursor:pointer;
-    transition:all .2s ease;
-}
-
-.join-btn{
-    background:#16a34a;
-}
-
-.join-btn:hover{
-    background:#15803d;
-}
-
-.leave-btn{
-    background:#dc2626;
-}
-
-.leave-btn:hover{
-    background:#b91c1c;
-}
 }
 </style>

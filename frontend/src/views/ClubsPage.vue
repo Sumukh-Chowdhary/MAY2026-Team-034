@@ -1,10 +1,17 @@
 <script setup>
 import { ref, computed, onMounted } from "vue"
+import { useRouter } from "vue-router"
 
 import ClubSearch from '@/components/admin/club/ClubSearch.vue'
 import ClubGrid from '@/components/admin/club/ClubGrid.vue'
 
 import { getClubs } from '@/services/clubService'
+
+const router = useRouter()
+
+function openClub(club) {
+    router.push(`/clubs/${club.id}`)
+}
 
 const search = ref('')
 const clubList = ref([])
@@ -43,7 +50,9 @@ const filteredClubs = computed(() => {
     </section>
 
     <ClubSearch v-model="search" />
-    <ClubGrid :clubs="filteredClubs" />
+    <div class="clubs-grid-wrapper">
+      <ClubGrid :clubs="filteredClubs" @view="openClub" />
+    </div>
 
     <div
       v-if="filteredClubs.length === 0"
@@ -73,6 +82,10 @@ const filteredClubs = computed(() => {
     color:#6b7280;
     font-size:1.1rem;
     line-height:1.8;
+}
+
+.clubs-grid-wrapper{
+    margin-top:24px;
 }
 
 .empty-state{

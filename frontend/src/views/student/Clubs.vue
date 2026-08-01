@@ -1,5 +1,6 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
+import { useRouter } from "vue-router"
 import StudentLayout from '@/layouts/StudentLayout.vue'
 import ClubSearch from '@/components/admin/club/ClubSearch.vue'
 import ClubGrid from '@/components/admin/club/ClubGrid.vue'
@@ -11,6 +12,13 @@ const clubList = ref([])
 const myClubs = ref([])
 const selectedClub = ref(null)
 const showDetailsModal = ref(false)
+const router = useRouter()
+
+function visitClubPage() {
+    if (!selectedClub.value) return
+
+    router.push(`/student/clubs/${selectedClub.value.id}`)
+}
 
 onMounted(async () => {
   console.log("Clubs page mounted")
@@ -163,6 +171,7 @@ const handleLeaveClub = async () => {
           :club="selectedClub"
           :isMember="myClubs.some(c => c.id === selectedClub?.id)"
           @close="closeDetailsModal"
+          @visit="visitClubPage"
           @leave="handleLeaveClub"
       />
 
