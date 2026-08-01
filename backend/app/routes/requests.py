@@ -23,6 +23,7 @@ from app.models.tickets import (
 )
 from app.models.club import Club, ClubOrganizer, ClubFaculty
 from app.utils.auth_jwt import jwt_required
+from app.services.notification_service import NotificationService
 
 requests_bp = Blueprint("requests", __name__, url_prefix="/api/requests")
 
@@ -178,6 +179,18 @@ def create_request():
                 req.add_approval_step(approver_id=approver.id, approval_role=role, order=order)
 
         db.session.commit()
+        
+        # Notify approvers
+        for step in RequestApproval.query.filter_by(request_id=req.id).all():
+            NotificationService.create(
+                user_id=step.approver_id, 
+                title="New Request Assignment", 
+                message=f"You have been assigned to approve request: {req.title}", 
+                notification_type="TICKET",
+                entity_id=req.id,
+                reference_url=f"/requests/{req.id}"
+            )
+            
         return jsonify({"success": True, "message": "Request created successfully.", "data": req.to_dict()}), 201
     except Exception as e:
         db.session.rollback()
@@ -262,6 +275,18 @@ def update_request(request_id):
             req.add_approval_step(approver_id=approver.id, approval_role=role, order=order)
 
         db.session.commit()
+        
+        # Notify approvers
+        for step in RequestApproval.query.filter_by(request_id=req.id).all():
+            NotificationService.create(
+                user_id=step.approver_id, 
+                title="Request Updated", 
+                message=f"Request '{req.title}' has been updated. Please review again.", 
+                notification_type="TICKET",
+                entity_id=req.id,
+                reference_url=f"/requests/{req.id}"
+            )
+            
         return jsonify({"success": True, "message": "Request updated successfully.", "data": req.to_dict()}), 200
     except Exception:
         db.session.rollback()
@@ -320,6 +345,13 @@ def approve_request(request_id):
                             db.session.add(ClubMembership(club_id=req.reference_id, user_id=req.requester_id, membership_role="VOLUNTEER", membership_status="ACTIVE"))
 
         db.session.commit()
+        
+        NotificationService.notify_ticket_approved(
+            creator_id=req.requester_id,
+            ticket_id=req.id,
+            approver_name=user.email
+        )
+        
         return jsonify({"success": True, "message": "Request approved successfully.", "data": req.to_dict()}), 200
 
     except Exception:
@@ -348,6 +380,13 @@ def reject_request(request_id):
         req.workflow_status = ApprovalStatus.REJECTED
 
         db.session.commit()
+        
+        NotificationService.notify_ticket_rejected(
+            creator_id=req.requester_id,
+            ticket_id=req.id,
+            approver_name=user.email
+        )
+        
         return jsonify({"success": True, "message": "Request rejected successfully.", "data": req.to_dict()}), 200
 
     except Exception:
@@ -377,6 +416,16 @@ def request_changes(request_id):
         req.workflow_status = ApprovalStatus.CHANGES_REQUESTED
 
         db.session.commit()
+        
+        NotificationService.create(
+            user_id=req.requester_id,
+            title="Changes Requested",
+            message=f"Changes have been requested on your request '{req.title}'.",
+            notification_type="TICKET",
+            entity_id=req.id,
+            reference_url=f"/requests/{req.id}"
+        )
+        
         return jsonify({"success": True, "message": "Changes requested successfully.", "data": req.to_dict()}), 200
 
     except Exception:
@@ -426,6 +475,18 @@ def resubmit_request(request_id):
                 return jsonify({"success": False, "error": "Workflow error: Could not rebuild approver chain."}), 500
 
         db.session.commit()
+        
+        # Notify approvers
+        for step in RequestApproval.query.filter_by(request_id=req.id).all():
+            NotificationService.create(
+                user_id=step.approver_id, 
+                title="Request Resubmitted", 
+                message=f"Request '{req.title}' has been resubmitted for your approval.", 
+                notification_type="TICKET",
+                entity_id=req.id,
+                reference_url=f"/requests/{req.id}"
+            )
+            
         return jsonify({"success": True, "message": f"Request resubmitted successfully (Version v{req.version}).", "data": req.to_dict()}), 200
     except Exception as e:
         db.session.rollback()

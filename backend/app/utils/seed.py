@@ -151,10 +151,10 @@ def seed_database(app):
         created_clubs = []
         for club in CLUB_DATA:
             new_club = Club(
-                club_name=club["name"],
-                club_description=club["description"],
-                club_category=club["category"],
-                club_logo=club["logo"],
+                club_name=club.get("name", "Unknown"),
+                club_description=club.get("description", ""),
+                club_category=club.get("category", "GENERAL"),
+                club_logo=club.get("logo", "group"),
                 club_status="ACTIVE",
                 total_members=1,
                 active_members=1
@@ -163,31 +163,34 @@ def seed_database(app):
             db.session.flush()
             club_lookup[new_club.club_name] = new_club
 
-            db.session.add(
-                ClubFaculty(
-                    club_id=new_club.id,
-                    faculty_id=fac_user.id,
-                    faculty_role="FACULTY_COORDINATOR"
+            fac_user = faculty_lookup.get(club.get("faculty"))
+            if fac_user:
+                db.session.add(
+                    ClubFaculty(
+                        club_id=new_club.id,
+                        faculty_id=fac_user.id,
+                        faculty_role="FACULTY_COORDINATOR"
+                    )
                 )
-            )
 
-            organizer = student_lookup[club["organizer"]]
-            db.session.add(
-                ClubOrganizer(
-                    club_id=new_club.id,
-                    user_id=organizer.id,
-                    organizer_role="PRESIDENT"
+            organizer = student_lookup.get(club.get("organizer"))
+            if organizer:
+                db.session.add(
+                    ClubOrganizer(
+                        club_id=new_club.id,
+                        user_id=organizer.id,
+                        organizer_role="PRESIDENT"
+                    )
                 )
-            )
 
-            db.session.add(
-                ClubMembership(
-                    club_id=new_club.id,
-                    user_id=organizer.id,
-                    membership_role="MEMBER",
-                    membership_status="ACTIVE"
+                db.session.add(
+                    ClubMembership(
+                        club_id=new_club.id,
+                        user_id=organizer.id,
+                        membership_role="MEMBER",
+                        membership_status="ACTIVE"
+                    )
                 )
-            )
 
         print("6. Seeding Venues...")
         venue_lookup = {}

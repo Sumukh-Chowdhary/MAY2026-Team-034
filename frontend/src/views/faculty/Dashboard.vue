@@ -19,11 +19,6 @@ import {
           <h2>Faculty Dashboard</h2>
           <p>Manage clubs, events and requests from one place.</p>
         </div>
-
-        <div class="dashboard-actions">
-          <button class="request-btn">+ Request</button>
-          <button class="notification-btn">Notifications</button>
-        </div>
       </div>
 
       <div class="row g-4">

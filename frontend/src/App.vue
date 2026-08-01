@@ -7,7 +7,7 @@ import ToastContainer from './components/common/ToastContainer.vue'
 
 const route = useRoute()
 
-const dashboardRoutes = ['/admin', '/faculty', '/student']
+const dashboardRoutes = ['/admin', '/faculty', '/student', '/notifications']
 
 const isDashboard = computed(() =>
   dashboardRoutes.some(path => route.path.startsWith(path))
