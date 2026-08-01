@@ -23,6 +23,18 @@ def test_list_events_with_filters(client, admin_headers):
     assert any('Hack' in item['name'] for item in filtered_by_search.get_json())
 
 
+def test_get_event_detail_and_unauthorized_access(client, admin_headers):
+    detail_response = client.get(f'/api/events/{EVENT_ID}', headers=admin_headers)
+    assert detail_response.status_code == 200
+    assert detail_response.get_json()['id'] == EVENT_ID
+
+    invalid_response = client.get('/api/events/999', headers=admin_headers)
+    assert invalid_response.status_code == 404
+
+    unauthenticated_response = client.get(f'/api/events/{EVENT_ID}')
+    assert unauthenticated_response.status_code == 401
+
+
 def test_get_my_events_for_registered_and_participated(client, student_headers, admin_headers):
     register_response = client.post(
         f'/api/events/{EVENT_ID}/register',
@@ -102,6 +114,32 @@ def test_create_event_validation_errors(client, faculty_headers):
     assert missing_dates_response.status_code == 400
 
 
+def test_create_event_invalid_club_and_dates(client, faculty_headers):
+    invalid_club_response = client.post(
+        '/api/events/create',
+        headers=faculty_headers,
+        json={
+            'clubId': 999,
+            'name': 'Broken Event',
+            'startDate': '2026-02-10',
+            'endDate': '2026-02-11',
+        },
+    )
+    assert invalid_club_response.status_code == 404
+
+    invalid_date_response = client.post(
+        '/api/events/create',
+        headers=faculty_headers,
+        json={
+            'clubId': CLUB_ID,
+            'name': 'Broken Event',
+            'startDate': 'not-a-date',
+            'endDate': '2026-02-11',
+        },
+    )
+    assert invalid_date_response.status_code == 400
+
+
 def test_update_event_and_status_permissions(client, student_headers, admin_headers):
     forbidden_update = client.put(
         f'/api/events/{EVENT_ID}/edit',
@@ -127,6 +165,15 @@ def test_update_event_and_status_permissions(client, student_headers, admin_head
     assert status_update.get_json()['status'] == 'CANCELLED'
 
 
+def test_update_event_rejects_invalid_dates(client, admin_headers):
+    invalid_date_response = client.put(
+        f'/api/events/{EVENT_ID}/edit',
+        headers=admin_headers,
+        json={'startDate': 'bad-date'},
+    )
+    assert invalid_date_response.status_code == 400
+
+
 def test_assign_venue_and_invalid_venue(client, admin_headers):
     success_response = client.post(
         f'/api/events/{EVENT_ID}/venue',
@@ -142,6 +189,15 @@ def test_assign_venue_and_invalid_venue(client, admin_headers):
         json={'venueId': 999},
     )
     assert missing_venue_response.status_code == 404
+
+
+def test_assign_venue_requires_venue_id(client, admin_headers):
+    response = client.post(
+        f'/api/events/{EVENT_ID}/venue',
+        headers=admin_headers,
+        json={},
+    )
+    assert response.status_code == 400
 
 
 def test_register_and_fetch_registrations(client, student_headers, admin_headers):
@@ -194,6 +250,22 @@ def test_manage_schedule_and_announcements(client, admin_headers):
     assert replace_announcement_response.get_json()['announcements'][0]['title'] == 'Reminder'
 
 
+def test_manage_schedule_and_announcements_validation_errors(client, admin_headers):
+    missing_activity_response = client.post(
+        f'/api/events/{EVENT_ID}/schedule',
+        headers=admin_headers,
+        json={'time': '09:00'},
+    )
+    assert missing_activity_response.status_code == 400
+
+    missing_message_response = client.post(
+        f'/api/events/{EVENT_ID}/announcements',
+        headers=admin_headers,
+        json={'title': 'Notice'},
+    )
+    assert missing_message_response.status_code == 400
+
+
 def test_manage_attendance_prizes_and_organizers(client, admin_headers):
     attendance_response = client.put(
         f'/api/events/{EVENT_ID}/attendance',
@@ -224,6 +296,16 @@ def test_manage_attendance_prizes_and_organizers(client, admin_headers):
     assert any(item['userId'] == 6 for item in organizers_response.get_json()['organizers'])
 
 
+def test_manage_prizes_and_organizers_listing(client, admin_headers):
+    prizes_list_response = client.get(f'/api/events/{EVENT_ID}/prizes', headers=admin_headers)
+    assert prizes_list_response.status_code == 200
+    assert isinstance(prizes_list_response.get_json(), list)
+
+    organizers_list_response = client.get(f'/api/events/{EVENT_ID}/organizers', headers=admin_headers)
+    assert organizers_list_response.status_code == 200
+    assert isinstance(organizers_list_response.get_json(), list)
+
+
 def test_manage_volunteers_and_update_state(client, student_headers, admin_headers):
     volunteer_response = client.post(
         f'/api/events/{EVENT_ID}/volunteers',
@@ -233,6 +315,10 @@ def test_manage_volunteers_and_update_state(client, student_headers, admin_heade
     assert volunteer_response.status_code == 200
     volunteers = volunteer_response.get_json()['volunteers']
     assert any(item['userId'] == 6 for item in volunteers)
+
+    volunteers_list_response = client.get(f'/api/events/{EVENT_ID}/volunteers', headers=student_headers)
+    assert volunteers_list_response.status_code == 200
+    assert isinstance(volunteers_list_response.get_json(), list)
 
     volunteer_id = next(item['id'] for item in volunteers if item['userId'] == 6)
     update_volunteer_response = client.patch(
@@ -283,3 +369,23 @@ def test_venues_listing_and_crud(client, admin_headers, student_headers):
     )
     assert status_response.status_code == 200
     assert status_response.get_json()['availabilityStatus'] == 'MAINTENANCE'
+
+
+def test_venues_search_and_validation(client, admin_headers):
+    search_response = client.get('/api/venues?search=lab', headers=admin_headers)
+    assert search_response.status_code == 200
+    assert isinstance(search_response.get_json(), list)
+
+    duplicate_response = client.post(
+        '/api/venues/create',
+        headers=admin_headers,
+        json={'name': 'Innovation Lab', 'location': 'Block 1', 'capacity': 60},
+    )
+    assert duplicate_response.status_code == 409
+
+    missing_status_response = client.patch(
+        '/api/venues/1/status',
+        headers=admin_headers,
+        json={},
+    )
+    assert missing_status_response.status_code == 400
