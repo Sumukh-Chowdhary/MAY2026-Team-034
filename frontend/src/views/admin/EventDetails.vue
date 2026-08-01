@@ -3,7 +3,14 @@ import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 
 import AdminLayout from '@/layouts/AdminLayout.vue'
-import { getEvent } from '@/api/events'
+import {
+  getEvent,
+  updateEvent,
+  manageEventSchedule,
+  manageEventAnnouncements,
+  manageEventAttendance,
+  assignVenue
+} from '@/api/events'
 
 const route = useRoute()
 const router = useRouter()
@@ -39,8 +46,45 @@ const newScheduleTime = ref('')
 const newScheduleActivity = ref('')
 
 const showAddAnnouncementModal = ref(false)
+const showEditEventModal = ref(false)
+
+const editEventForm = ref({
+  name: '',
+  description: '',
+  startDate: '',
+  endDate: ''
+})
 const newAnnouncementTitle = ref('')
 const newAnnouncementMessage = ref('')
+
+async function saveEventChanges() {
+  if (!event.value) return
+
+  try {
+    loading.value = true
+
+    const updatedEvent = await updateEvent(event.value.id, {
+      name: editEventForm.value.name,
+      description: editEventForm.value.description,
+      startDate: editEventForm.value.startDate,
+      endDate: editEventForm.value.endDate
+    })
+
+    event.value = {
+      ...updatedEvent,
+      club: updatedEvent.clubName || updatedEvent.club || 'Unknown Club'
+    }
+
+    showEditEventModal.value = false
+
+    alert('Event updated successfully!')
+  } catch (error) {
+    console.error(error)
+    alert('Failed to update event.')
+  } finally {
+    loading.value = false
+  }
+}
 
 function goBack() {
   if (window.history.length > 1) {
@@ -50,41 +94,88 @@ function goBack() {
   }
 }
 
-function submitNewSchedule() {
-  if (!newScheduleActivity.value.trim()) return
-  if (event.value) {
-    if (!event.value.schedule) event.value.schedule = []
-    event.value.schedule.push({
-      time: newScheduleTime.value || '10:00 AM',
+async function submitNewSchedule() {
+  if (!newScheduleActivity.value.trim() || !event.value) return
+
+  try {
+    loading.value = true
+
+    const updatedEvent = await manageEventSchedule(event.value.id, {
+      time: newScheduleTime.value,
       activity: newScheduleActivity.value
     })
+
+    event.value = {
+      ...updatedEvent,
+      club: updatedEvent.clubName || updatedEvent.club || 'Unknown Club'
+    }
+
     showAddScheduleModal.value = false
     newScheduleTime.value = ''
     newScheduleActivity.value = ''
+
+    alert('Schedule added successfully!')
+  } catch (error) {
+    console.error(error)
+    alert('Failed to add schedule.')
+  } finally {
+    loading.value = false
   }
 }
 
-function submitNewAnnouncement() {
-  if (!newAnnouncementTitle.value.trim()) return
-  if (event.value) {
-    if (!event.value.announcements) event.value.announcements = []
-    event.value.announcements.unshift({
+async function submitNewAnnouncement() {
+  if (!newAnnouncementTitle.value.trim() || !event.value) return
+
+  try {
+    loading.value = true
+
+    const updatedEvent = await manageEventAnnouncements(event.value.id, {
       title: newAnnouncementTitle.value,
-      message: newAnnouncementMessage.value,
-      date: new Date().toLocaleDateString()
+      message: newAnnouncementMessage.value
     })
-    alert('Announcement broadcasted successfully!')
+
+    event.value = {
+      ...updatedEvent,
+      club: updatedEvent.clubName || updatedEvent.club || 'Unknown Club'
+    }
+
     showAddAnnouncementModal.value = false
     newAnnouncementTitle.value = ''
     newAnnouncementMessage.value = ''
+
+    alert('Announcement broadcasted successfully!')
+  } catch (error) {
+    console.error(error)
+    alert('Failed to create announcement.')
+  } finally {
+    loading.value = false
   }
 }
 
-function postAttendance() {
+async function postAttendance() {
   if (!event.value || !event.value.attendance) return
-  const presentCount = event.value.attendance.filter(a => a.status === 'Present').length
-  const totalCount = event.value.attendance.length
-  alert(`Attendance updated! ${presentCount}/${totalCount} Present.`)
+
+  try {
+    loading.value = true
+
+    const updatedEvent = await manageEventAttendance(
+      event.value.id,
+      event.value.attendance,
+      true
+    )
+
+    event.value = {
+      ...updatedEvent,
+      club: updatedEvent.clubName || updatedEvent.club || 'Unknown Club'
+    }
+
+    alert('Attendance updated successfully!')
+  } catch (error) {
+    console.error(error)
+    alert('Failed to update attendance.')
+  } finally {
+    loading.value = false
+  }
 }
 </script>
 
@@ -108,9 +199,27 @@ function postAttendance() {
               </div>
             </div>
 
-            <span class="status-badge" :class="(event.status || 'Live').toLowerCase()">
-              {{ event.status || 'Live' }}
-            </span>
+            <div class="d-flex align-items-center gap-2">
+              <button
+                class="btn btn-warning btn-sm"
+                @click="
+                editEventForm.name = event.name;
+                editEventForm.description = event.description;
+                editEventForm.startDate = event.startDate;
+                editEventForm.endDate = event.endDate;
+                showEditEventModal = true;
+                "
+              >
+                ✏️ Edit
+              </button>
+
+              <span
+                class="status-badge"
+                :class="(event.status || 'Live').toLowerCase()"
+              >
+                {{ event.status || 'Live' }}
+              </span>
+            </div>
           </div>
 
           <div class="info-grid">
@@ -201,9 +310,17 @@ function postAttendance() {
                 </thead>
                 <tbody>
                   <tr v-for="(student, index) in event.registrations" :key="index">
-                    <td class="fw-semibold">{{ student.name }}</td>
-                    <td>{{ student.registerNumber }}</td>
-                    <td>{{ student.branch }}</td>
+                    <td class="fw-semibold">
+                      {{ student.userName || student.name }}
+                    </td>
+
+                    <td>
+                      {{ student.registerNumber || '-' }}
+                    </td>
+
+                    <td>
+                      {{ student.branch || student.status }}
+                    </td>  
                   </tr>
                 </tbody>
               </table>
@@ -215,13 +332,14 @@ function postAttendance() {
               <div class="d-flex justify-content-between align-items-center mb-3">
                 <h5 class="fw-bold m-0 text-dark">Participant Attendance</h5>
                 <button class="btn btn-sm btn-primary" @click="postAttendance" v-if="event.attendance && event.attendance.length">
-                  Post Attendance
+                  Save Attendance
                 </button>
               </div>
 
               <table class="table align-middle" v-if="event.attendance && event.attendance.length">
                 <thead>
                   <tr>
+                    <th>User ID</th>
                     <th>Name</th>
                     <th>Register Number</th>
                     <th>Status</th>
@@ -229,12 +347,22 @@ function postAttendance() {
                 </thead>
                 <tbody>
                   <tr v-for="(student, index) in event.attendance" :key="index">
-                    <td class="fw-semibold">{{ student.name }}</td>
-                    <td>{{ student.registerNumber }}</td>
+                    <td>{{ student.userId }}</td>
+                    <td class="fw-semibold">
+                      {{ student.userName || student.name }}
+                    </td>
+
                     <td>
-                      <span class="attendance-badge" :class="(student.status || 'Present').toLowerCase()">
-                        {{ student.status || 'Present' }}
-                      </span>
+                      {{ student.registerNumber || '-' }}
+                    </td>
+                    <td>
+                      <select
+                        class="form-select form-select-sm"
+                        v-model="student.status"
+                      >
+                        <option value="Present">Present</option>
+                        <option value="Absent">Absent</option>
+                      </select>
                     </td>
                   </tr>
                 </tbody>
@@ -287,6 +415,70 @@ function postAttendance() {
           <div class="d-flex justify-content-end gap-2">
             <button class="btn btn-secondary" @click="showAddAnnouncementModal = false">Cancel</button>
             <button class="btn btn-success" @click="submitNewAnnouncement">+ Broadcast</button>
+          </div>
+        </div>
+      </div>
+      <!-- Edit Event Modal -->
+      <div
+        v-if="showEditEventModal"
+        class="modal-backdrop"
+        @click.self="showEditEventModal = false"
+      >
+        <div class="modal-dialog-custom">
+          <h5 class="fw-bold mb-3">Edit Event</h5>
+
+          <div class="mb-3">
+            <label class="form-label">Event Name</label>
+            <input
+              v-model="editEventForm.name"
+              class="form-control"
+              type="text"
+            />
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label">Description</label>
+            <textarea
+              v-model="editEventForm.description"
+              class="form-control"
+              rows="3"
+            ></textarea>
+          </div>
+
+          <div class="row">
+            <div class="col">
+              <label class="form-label">Start Date</label>
+              <input
+                v-model="editEventForm.startDate"
+                class="form-control"
+                type="text"
+              />
+            </div>
+
+            <div class="col">
+              <label class="form-label">End Date</label>
+              <input
+                v-model="editEventForm.endDate"
+                class="form-control"
+                type="text"
+              />
+            </div>
+          </div>
+
+          <div class="d-flex justify-content-end gap-2 mt-4">
+            <button
+              class="btn btn-secondary"
+              @click="showEditEventModal = false"
+            >
+              Cancel
+            </button>
+
+            <button
+              class="btn btn-primary"
+              @click="saveEventChanges"
+            >
+              Save Changes
+            </button>
           </div>
         </div>
       </div>

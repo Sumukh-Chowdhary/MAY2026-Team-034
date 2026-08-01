@@ -4,7 +4,7 @@ from functools import wraps
 from app.services.club_service import verify_faculty_access
 import jwt
 from flask import request, jsonify, current_app, g
-from flask_jwt_extended import get_jwt_identity
+#from flask_jwt_extended import get_jwt_identity
 from app.models import User, TokenBlocklist
 
 

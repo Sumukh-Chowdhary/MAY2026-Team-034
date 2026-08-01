@@ -117,6 +117,54 @@ STUDENT_DATA = [
 
 CLUB_DATA = [
     {
+        "name": "AI Club",
+        "description": "Learn Artificial Intelligence and Machine Learning together.",
+        "category": "Technology",
+        "logo": "robot",
+        "faculty": "FAC001",
+        "organizer": "STU001",
+    },
+    {
+        "name": "Music Club",
+        "description": "Jam sessions, performances and music workshops.",
+        "category": "Arts",
+        "logo": "musical_note",
+        "faculty": "FAC003",
+        "organizer": "STU010"
+    },
+    {
+        "name": "Sports Club",
+        "description": "Football, Cricket, Basketball and many more activities.",
+        "category": "Sports",
+        "logo": "soccer_ball",
+        "faculty": "FAC002",
+        "organizer": "STU009"
+    },
+    {
+        "name": "Drama Club",
+        "description": "Theatre performances, acting practice and stage events.",
+        "category": "Cultural",
+        "logo": "theatre_mask",
+        "faculty": "FAC003",
+        "organizer": "STU014"
+    },
+    {
+        "name": "Photography Club",
+        "description": "Capture moments and learn photography together.",
+        "category": "Creative",
+        "logo": "camera",
+        "faculty": "FAC001",
+        "organizer": "STU006"
+    },
+    {
+        "name": "Science Club",
+        "description": "Science projects, exhibitions and research discussions.",
+        "category": "Academic",
+        "logo": "test_tube",
+        "faculty": "FAC002",
+        "organizer": "STU015"
+    },
+    {
         "name": "Coding Club",
         "description": "Fostering programming, algorithmic thinking, and open source development across campus.",
         "category": "TECHNICAL",
@@ -131,76 +179,6 @@ CLUB_DATA = [
         "logo": "smart_toy",
         "faculty": "FAC001",
         "organizer": "STU001"
-    },
-    {
-        "name": "Photography Club",
-        "description": "Capturing moments, exploring visual storytelling, and conducting photography exhibitions.",
-        "category": "CULTURAL",
-        "logo": "photo_camera",
-        "faculty": "FAC003",
-        "organizer": "STU010"
-    },
-    {
-        "name": "Sports Club",
-        "description": "Football, Cricket, Basketball and many more activities.",
-        "category": "Sports",
-        "logo": "sports_soccer",
-        "faculty": "FAC002",
-        "organizer": "STU003"
-    },
-    {
-        "clubName": "Drama Club",
-        "createdByEmail": "priya@allclub.com",
-        "name": "Stagecraft Workshop",
-        "description": "An interactive workshop covering stage direction, acting, and audience engagement.",
-        "status": "SCHEDULED",
-        "startDate": "2026-08-20",
-        "endDate": "2026-08-20",
-        "startTime": "14:00:00",
-        "endTime": "18:00:00",
-        "capacity": 80,
-        "venueName": "Studio Hall",
-        "schedule": [
-            {"time": "14:00", "activity": "Welcome and icebreaker"},
-            {"time": "15:30", "activity": "Scene rehearsal"},
-            {"time": "17:00", "activity": "Feedback session"}
-        ],
-        "announcements": [
-            {"title": "Workshop reminder", "message": "Participants should arrive 15 minutes early."}
-        ],
-        "registrations": ["kavya@allclub.com", "nisha@allclub.com"],
-        "attendance": ["kavya@allclub.com"],
-        "prizes": [],
-        "organizers": ["kavya@allclub.com"],
-        "volunteers": ["neeraj@allclub.com"]
-    },
-    {
-        "clubName": "Sports Club",
-        "createdByEmail": "arjun@allclub.com",
-        "name": "Inter-Club Sports Day",
-        "description": "A fun-filled sports event featuring football, basketball, and relay competitions.",
-        "status": "SCHEDULED",
-        "startDate": "2026-09-05",
-        "endDate": "2026-09-06",
-        "startTime": "08:00:00",
-        "endTime": "18:00:00",
-        "capacity": 300,
-        "venueName": "Open Air Ground",
-        "schedule": [
-            {"time": "08:00", "activity": "Opening ceremony"},
-            {"time": "10:00", "activity": "Football matches"},
-            {"time": "15:00", "activity": "Awards and closing"}
-        ],
-        "announcements": [
-            {"title": "Team registration", "message": "Team captains should confirm their roster by Friday."}
-        ],
-        "registrations": ["aman@allclub.com", "rohan@allclub.com", "vikram@allclub.com"],
-        "attendance": ["aman@allclub.com"],
-        "prizes": [
-            {"title": "Best Team Spirit", "winnerEmail": "rohan@allclub.com", "description": "Recognized for teamwork and sportsmanship"}
-        ],
-        "organizers": ["aman@allclub.com"],
-        "volunteers": ["vikram@allclub.com", "ishita@allclub.com"]
     }
 ]
 
@@ -318,4 +296,19 @@ EVENT_DATA = [
         "organizers": ["aman@allclub.com"],
         "volunteers": ["vikram@allclub.com", "ishita@allclub.com"]
     }
+]
+
+MEMBERSHIP_SEED_DATA = [
+    {"club_id": 1, "user_id": 6, "membership_role": "PRESIDENT", "membership_status": "ACTIVE"},
+    {"club_id": 1, "user_id": 7, "membership_role": "ORGANIZER", "membership_status": "ACTIVE"},
+    {"club_id": 1, "user_id": 8, "membership_role": "MEMBER", "membership_status": "ACTIVE"},
+    {"club_id": 2, "user_id": 6, "membership_role": "ORGANIZER", "membership_status": "ACTIVE"},
+    {"club_id": 2, "user_id": 9, "membership_role": "MEMBER", "membership_status": "ACTIVE"},
+    {"club_id": 2, "user_id": 10, "membership_role": "MEMBER", "membership_status": "INACTIVE"},
+    {"club_id": 3, "user_id": 9, "membership_role": "PRESIDENT", "membership_status": "ACTIVE"},
+    {"club_id": 3, "user_id": 11, "membership_role": "MEMBER", "membership_status": "ACTIVE"},
+    {"club_id": 3, "user_id": 7, "membership_role": "VOLUNTEER", "membership_status": "ACTIVE"},
+    {"club_id": 4, "user_id": 8, "membership_role": "PRESIDENT", "membership_status": "ACTIVE"},
+    {"club_id": 4, "user_id": 10, "membership_role": "VOLUNTEER", "membership_status": "ACTIVE"},
+    {"club_id": 4, "user_id": 11, "membership_role": "MEMBER", "membership_status": "ACTIVE"}
 ]
