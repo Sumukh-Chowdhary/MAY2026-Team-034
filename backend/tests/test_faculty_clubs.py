@@ -356,3 +356,35 @@ def test_invalid_token(client):
 
     assert data["error"] == "Not enough segments"
 
+def test_edit_other_faculty_club_forbidden(client, faculty_headers):
+    response = client.put(
+        "/api/faculty/clubs/2/edit",
+        headers=faculty_headers,
+        json={
+            "name": "Music Club",
+            "description": "Updated description",
+            "category": "CULTURAL"
+        }
+    )
+
+    assert response.status_code == 403
+
+    data = response.get_json()
+
+    assert data["error"] == "You are not assigned to this club."
+
+def test_deactivate_other_faculty_member_forbidden(
+    client,
+    faculty_headers
+):
+    response = client.patch(
+        "/api/faculty/clubs/2/members/14/deactivate",
+        headers=faculty_headers
+    )
+
+    assert response.status_code == 403
+
+    data = response.get_json()
+
+    assert data["error"] == "You are not assigned to this club."
+

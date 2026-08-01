@@ -132,6 +132,11 @@ def faculty_club_access_required(func):
                 "error": e.description
             }), 404
 
+        except PermissionError as e:
+            return jsonify({
+                "error": str(e)
+            }), 403
+
         return func(*args, **kwargs)
 
     return wrapper
