@@ -32,9 +32,8 @@ async function logout() {
     <div class="modal fade" id="logoutModal" tabindex="-1">
         <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title">Logout</h5>
-                    <button class="btn-close"data-bs-dismiss="modal"></button>
+                <div class="modal-header border-0 pb-0">
+                    <button class="btn-close ms-auto" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body">
                     <div class="logout-icon"><i class="bi bi-box-arrow-right"></i></div>

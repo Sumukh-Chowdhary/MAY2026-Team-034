@@ -150,6 +150,8 @@ def seed_database(app):
 
         created_clubs = []
         for club in CLUB_DATA:
+            if "category" not in club or "faculty" not in club:
+                continue
             new_club = Club(
                 club_name=club.get("name", "Unknown"),
                 club_description=club.get("description", ""),
@@ -162,8 +164,7 @@ def seed_database(app):
             db.session.add(new_club)
             db.session.flush()
             club_lookup[new_club.club_name] = new_club
-
-            fac_user = faculty_lookup.get(club.get("faculty"))
+            fac_user = faculty_lookup.get(club.get("faculty")) or (faculty_users[0] if faculty_users else None)
             if fac_user:
                 db.session.add(
                     ClubFaculty(
@@ -173,7 +174,7 @@ def seed_database(app):
                     )
                 )
 
-            organizer = student_lookup.get(club.get("organizer"))
+            organizer = student_lookup.get(club.get("organizer")) or (student_users[0] if student_users else None)
             if organizer:
                 db.session.add(
                     ClubOrganizer(

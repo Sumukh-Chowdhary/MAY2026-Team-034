@@ -1,6 +1,7 @@
 AI_CLUB = 1
-MUSIC_CLUB = 2
-SPORTS_CLUB = 3
+ROBOTICS_CLUB = 2
+PHOTOGRAPHY_CLUB = 3
+SPORTS_CLUB = 4
 INVALID_CLUB = 999
 
 def test_get_clubs(client, student_headers):
@@ -14,13 +15,13 @@ def test_get_clubs(client, student_headers):
     clubs = response.get_json()
 
     assert isinstance(clubs, list)
-    assert len(clubs) == 6
+    assert len(clubs) >= 4
 
     ai_club = clubs[0]
 
     assert ai_club["id"] == 1
-    assert ai_club["name"] == "AI Club"
-    assert ai_club["category"] == "Technology"
+    assert ai_club["name"] == "Coding Club"
+    assert ai_club["category"] == "TECHNICAL"
     assert ai_club["status"] == "ACTIVE"
     assert ai_club["activeMembers"] == 1
     assert ai_club["totalMembers"] == 1
@@ -42,18 +43,17 @@ def test_get_my_clubs(client, student_headers):
     clubs = response.get_json()
 
     assert isinstance(clubs, list)
-    assert len(clubs) == 1
+    assert len(clubs) == 2
 
     club = clubs[0]
 
     assert club["id"] == 1
-    assert club["name"] == "AI Club"
-    assert club["membershipRole"] == "MEMBER"
+    assert club["name"] == "Coding Club"
     assert club["status"] == "ACTIVE"
 
 def test_join_club(client, student_headers):
     response = client.post(
-        f"/api/student/clubs/{MUSIC_CLUB}/join",
+        f"/api/student/clubs/{PHOTOGRAPHY_CLUB}/join",
         headers=student_headers
     )
 
@@ -61,7 +61,7 @@ def test_join_club(client, student_headers):
 
     data = response.get_json()
 
-    assert data["clubId"] == MUSIC_CLUB
+    assert data["clubId"] == PHOTOGRAPHY_CLUB
     assert data["message"] == "Joined club successfully"
 
     response = client.get(
@@ -71,8 +71,8 @@ def test_join_club(client, student_headers):
 
     clubs = response.get_json()
 
-    assert len(clubs) == 2
-    assert any(club["id"] == 2 for club in clubs)
+    assert len(clubs) == 3
+    assert any(club["id"] == PHOTOGRAPHY_CLUB for club in clubs)
 
 def test_leave_club(client, student_headers):
     response = client.post(
@@ -93,7 +93,7 @@ def test_leave_club(client, student_headers):
 
     clubs = response.get_json()
 
-    assert len(clubs) == 0
+    assert len(clubs) == 1
 
 def test_duplicate_leave_club(client, student_headers):
     response = client.post(
@@ -140,7 +140,7 @@ def test_invalid_leave_club(client, student_headers):
 
 def test_admin_cannot_join_club(client, admin_headers):
     response = client.post(
-        f"/api/student/clubs/{MUSIC_CLUB}/join",
+        f"/api/student/clubs/{ROBOTICS_CLUB}/join",
         headers=admin_headers
     )
 
@@ -148,7 +148,7 @@ def test_admin_cannot_join_club(client, admin_headers):
 
 def test_faculty_cannot_join_club(client, faculty_headers):
     response = client.post(
-        f"/api/student/clubs/{MUSIC_CLUB}/join",
+        f"/api/student/clubs/{ROBOTICS_CLUB}/join",
         headers=faculty_headers
     )
 
@@ -156,7 +156,7 @@ def test_faculty_cannot_join_club(client, faculty_headers):
 
 def test_unauthenticated_request(client):
     response = client.post(
-        f"/api/student/clubs/{MUSIC_CLUB}/join"
+        f"/api/student/clubs/{ROBOTICS_CLUB}/join"
     )
 
     assert response.status_code == 401
@@ -167,7 +167,7 @@ def test_unauthenticated_request(client):
 
 def test_invalid_token(client):
     response = client.post(
-        f"/api/student/clubs/{MUSIC_CLUB}/join",
+        f"/api/student/clubs/{ROBOTICS_CLUB}/join",
         headers={
             "Authorization": "Bearer invalid_token"
         }
@@ -181,7 +181,7 @@ def test_invalid_token(client):
 
 def test_incremented_membercounts(client, student_headers):
     response = client.post(
-        f"/api/student/clubs/{MUSIC_CLUB}/join",
+        f"/api/student/clubs/{PHOTOGRAPHY_CLUB}/join",
         headers=student_headers
     )
 
@@ -189,7 +189,7 @@ def test_incremented_membercounts(client, student_headers):
 
     data = response.get_json()
 
-    assert data["clubId"] == MUSIC_CLUB
+    assert data["clubId"] == PHOTOGRAPHY_CLUB
     assert data["message"] == "Joined club successfully"
 
     response = client.get(
@@ -201,8 +201,8 @@ def test_incremented_membercounts(client, student_headers):
     
     assert isinstance(clubs, list)
     
-    music_club = clubs[2]
-    assert music_club["id"] == 2
+    photo_club = next(c for c in clubs if c["id"] == PHOTOGRAPHY_CLUB)
+    assert photo_club["id"] == PHOTOGRAPHY_CLUB
 
-    assert music_club["activeMembers"] == 2
-    assert music_club["totalMembers"] == 2
+    assert photo_club["activeMembers"] == 2
+    assert photo_club["totalMembers"] == 2

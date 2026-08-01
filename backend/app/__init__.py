@@ -35,6 +35,7 @@ def create_app(config_class=Config):
     from app.routes.events import events_bp
     from app.routes.venues import venues_bp
     from app.routes.student import student_bp
+    from app.routes.faculty import faculty_bp
     from app.routes.requests import requests_bp
     from app.routes.action_tickets import action_tickets_bp
     from app.routes.assignment_tickets import assignments_bp

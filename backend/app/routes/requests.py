@@ -99,6 +99,11 @@ def get_approvers_for_request(req):
             (resolve_admin(), "ADMIN")
         ]
 
+    if req.request_type in {RequestType.BECOME_ORGANIZER, RequestType.BECOME_VOLUNTEER, RequestType.EDIT_CLUB_AS_COORDINATOR, RequestType.CREATE_EVENT_AS_ORGANIZER, RequestType.EDIT_EVENT_AS_ORGANIZER}:
+        club_faculty = resolve_club_faculty(req.reference_id) if req.reference_id else None
+        if club_faculty:
+            return [(club_faculty, "CLUB_FACULTY")]
+
     # Default fallback
     return [(resolve_admin(), "ADMIN")]
 
