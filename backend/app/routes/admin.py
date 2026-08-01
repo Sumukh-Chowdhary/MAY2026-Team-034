@@ -228,7 +228,11 @@ def deactivate_club_member(club_id, user_id):
 @jwt_required
 @roles_required("ADMIN")
 def get_club_events(club_id):
-    return jsonify(
-        get_club_events_service(club_id)
-    ), 200
+    try:
+        events = get_club_events_service(club_id)
+        return jsonify(events), 200
 
+    except NotFound as e:
+        return jsonify({
+            "error": e.description
+        }), 404

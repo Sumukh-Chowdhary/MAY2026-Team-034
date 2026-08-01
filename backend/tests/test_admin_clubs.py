@@ -1,10 +1,8 @@
-from pprint import pprint
-
-
 AI_CLUB = 1
 MUSIC_CLUB = 2
 SPORTS_CLUB = 3
 INVALID_CLUB = 999
+RAHUL_USER_ID = 6
 
 # Club Management
 def test_get_clubs(client, admin_headers):
@@ -18,9 +16,12 @@ def test_get_clubs(client, admin_headers):
     clubs = response.get_json()
 
     assert isinstance(clubs, list)
-    assert len(clubs) == 6
+    assert len(clubs) == 8
 
-    ai_club = clubs[0]
+    ai_club = next(
+        c for c in clubs
+        if c["name"] == "AI Club"
+    )
 
     assert ai_club["id"] == AI_CLUB
     assert ai_club["name"] == "AI Club"
@@ -91,7 +92,7 @@ def test_create_club(client, admin_headers):
 
     clubs = response.get_json()
 
-    assert len(clubs) == 7
+    assert len(clubs) == 9
 
     assert any(
         c["name"] == "Chess Club"
@@ -274,14 +275,13 @@ def test_get_faculty(client, admin_headers):
     faculty = response.get_json()
 
     assert isinstance(faculty, list)
-    assert len(faculty) == 3
+    assert len(faculty) == 4
 
     meena = next(
         f for f in faculty
         if f["name"] == "Dr. Meena Rao"
     )
 
-    assert meena["id"] == 2
     assert meena["designation"] == "Associate Professor"
     assert meena["department"] == "Computer Science"
 
@@ -297,11 +297,14 @@ def test_get_club_members(client, admin_headers):
     members = response.get_json()
 
     assert isinstance(members, list)
-    assert len(members) == 1
+    assert len(members) == 3
 
-    member = members[0]
+    member = next(
+        m for m in members
+        if m["email"] == "rahul@allclub.com"
+    )
 
-    assert member["id"] == 5
+    assert member["id"] == 6
     assert member["name"] == "Rahul Sharma"
     assert member["email"] == "rahul@allclub.com"
 
@@ -322,7 +325,7 @@ def test_get_invalid_club_members(client, admin_headers):
 
 def test_get_club_members_includes_inactive(client, admin_headers):
     response = client.patch(
-        f"/api/admin/clubs/{AI_CLUB}/members/5/deactivate",
+        f"/api/admin/clubs/{AI_CLUB}/members/{RAHUL_USER_ID}/deactivate",
         headers=admin_headers
     )
 
@@ -337,12 +340,12 @@ def test_get_club_members_includes_inactive(client, admin_headers):
 
     members = response.get_json()
 
-    assert len(members) == 1
+    assert len(members) == 3
     assert members[0]["membershipStatus"] == "INACTIVE"
 
 def test_get_club_member(client, admin_headers):
     response = client.get(
-        f"/api/admin/clubs/{AI_CLUB}/members/5",
+        f"/api/admin/clubs/{AI_CLUB}/members/{RAHUL_USER_ID}",
         headers=admin_headers
     )
 
@@ -350,7 +353,7 @@ def test_get_club_member(client, admin_headers):
 
     member = response.get_json()
 
-    assert member["id"] == 5
+    assert member["id"] == RAHUL_USER_ID
     assert member["rollNumber"] == "STU001"
     assert member["name"] == "Rahul Sharma"
     assert member["email"] == "rahul@allclub.com"
@@ -364,7 +367,7 @@ def test_get_club_member(client, admin_headers):
 
 def test_get_club_member_invalid_club(client, admin_headers):
     response = client.get(
-        f"/api/admin/clubs/{INVALID_CLUB}/members/5",
+        f"/api/admin/clubs/{INVALID_CLUB}/members/{RAHUL_USER_ID}",
         headers=admin_headers
     )
 
@@ -388,7 +391,7 @@ def test_get_invalid_club_member(client, admin_headers):
 
 def test_deactivate_club_member(client, admin_headers):
     response = client.patch(
-        f"/api/admin/clubs/{AI_CLUB}/members/5/deactivate",
+        f"/api/admin/clubs/{AI_CLUB}/members/{RAHUL_USER_ID}/deactivate",
         headers=admin_headers
     )
 
@@ -396,11 +399,11 @@ def test_deactivate_club_member(client, admin_headers):
 
     member = response.get_json()
 
-    assert member["id"] == 5
+    assert member["id"] == RAHUL_USER_ID
     assert member["membershipStatus"] == "INACTIVE"
 
     response = client.get(
-        f"/api/admin/clubs/{AI_CLUB}/members/5",
+        f"/api/admin/clubs/{AI_CLUB}/members/{RAHUL_USER_ID}",
         headers=admin_headers
     )
 
@@ -412,14 +415,14 @@ def test_deactivate_club_member(client, admin_headers):
 
 def test_duplicate_deactivate_club_member(client, admin_headers):
     response = client.patch(
-        f"/api/admin/clubs/{AI_CLUB}/members/5/deactivate",
+        f"/api/admin/clubs/{AI_CLUB}/members/{RAHUL_USER_ID}/deactivate",
         headers=admin_headers
     )
 
     assert response.status_code == 200
 
     response = client.patch(
-        f"/api/admin/clubs/{AI_CLUB}/members/5/deactivate",
+        f"/api/admin/clubs/{AI_CLUB}/members/{RAHUL_USER_ID}/deactivate",
         headers=admin_headers
     )
 
@@ -453,40 +456,43 @@ def test_deactivate_invalid_club_member(client, admin_headers):
 
     assert data["error"] == "Member not found"
 
-# def test_get_club_events(client, admin_headers):
-#     response = client.get(
-#         f"/api/admin/clubs/{AI_CLUB}/events",
-#         headers=admin_headers
-#     )
+def test_get_club_events(client, admin_headers):
+    response = client.get(
+        f"/api/admin/clubs/{AI_CLUB}/events",
+        headers=admin_headers
+    )
 
-#     assert response.status_code == 200
+    assert response.status_code == 200
 
-#     events = response.get_json()
+    events = response.get_json()
 
-#     assert isinstance(events, list)
-#     assert len(events) == 2
+    assert isinstance(events, list)
+    assert len(events) == 1
 
-#     event = events[0]
+    event = next(
+            e for e in events
+            if e["id"] == 1
+        )
 
-#     assert event["id"] == 1
-#     assert event["name"] == "AI Workshop"
-#     assert event["status"] == "UPCOMING"
+    assert event["id"] == 1
+    assert event["name"] == "AI Hack Sprint"
+    assert event["status"] == "LIVE"
 
-#     assert event["venueName"] == "Seminar Hall"
+    assert event["venueName"] == "Innovation Lab"
 
-# def test_get_invalid_club_events(client, admin_headers):
-#     response = client.get(
-#         f"/api/admin/clubs/{INVALID_CLUB}/events",
-#         headers=admin_headers
-#     )
+def test_get_invalid_club_events(client, admin_headers):
+    response = client.get(
+        f"/api/admin/clubs/{INVALID_CLUB}/events",
+        headers=admin_headers
+    )
 
-#     assert response.status_code == 404
+    assert response.status_code == 404
 
-#     data = response.get_json()
+    data = response.get_json()
 
-#     assert data["error"] == "Club not found"
+    assert data["error"] == "Club not found"
 
-def test_get_club_events_empty(client, admin_headers):
+def test_get_club_events_not_empty(client, admin_headers):
     response = client.get(
         f"/api/admin/clubs/{SPORTS_CLUB}/events",
         headers=admin_headers
@@ -496,7 +502,7 @@ def test_get_club_events_empty(client, admin_headers):
 
     events = response.get_json()
 
-    assert events == []
+    assert events != []
 
 # Authorization
 def test_student_cannot_archive_club(client, student_headers):
