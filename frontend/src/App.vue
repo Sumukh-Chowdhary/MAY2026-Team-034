@@ -4,14 +4,25 @@ import { useRoute } from 'vue-router'
 import Navbar from './components/Navbar.vue'
 import Footer from './components/Footer.vue'
 import ToastContainer from './components/common/ToastContainer.vue'
+import { isLoggedIn } from "@/services/authService"
 
 const route = useRoute()
 
-const dashboardRoutes = ['/admin', '/faculty', '/student', '/notifications']
+const dashboardRoutes = ['/admin', '/faculty', '/student']
 
-const isDashboard = computed(() =>
-  dashboardRoutes.some(path => route.path.startsWith(path))
-)
+const isDashboard = computed(() => {
+    // Normal dashboard routes
+    if (dashboardRoutes.some(path => route.path.startsWith(path))) {
+        return true
+    }
+
+    // Club page behaves differently depending on login status
+    if (route.path.startsWith("/clubs/")) {
+        return isLoggedIn()
+    }
+
+    return false
+})
 </script>
 
 <template>
