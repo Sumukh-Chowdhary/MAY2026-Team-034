@@ -4,8 +4,8 @@ from functools import wraps
 from app.services.club_service import verify_faculty_access
 import jwt
 from flask import request, jsonify, current_app, g
-#from flask_jwt_extended import get_jwt_identity
 from app.models import User, TokenBlocklist
+from werkzeug.exceptions import NotFound
 
 
 def generate_jwt_token(user):
@@ -119,16 +119,18 @@ def faculty_club_access_required(func):
     def wrapper(*args, **kwargs):
 
         club_id = kwargs.get("club_id")
-
         if club_id is None and args:
             club_id = args[0]
 
-        faculty_id = get_jwt_identity()
+        faculty_id = g.current_user.id
 
-        verify_faculty_access(
-            club_id,
-            faculty_id
-        )
+        try:
+            verify_faculty_access(club_id, faculty_id)
+
+        except NotFound as e:
+            return jsonify({
+                "error": e.description
+            }), 404
 
         return func(*args, **kwargs)
 
