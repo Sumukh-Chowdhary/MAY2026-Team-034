@@ -7,9 +7,6 @@ audit_bp = Blueprint("audit", __name__, url_prefix="/api/audit")
 def get_user_role(user):
     return user.role.name.upper()
 
-# ---------------------------------------------------------------------------
-# GET /api/audit/<subject_type>/<subject_id>
-# ---------------------------------------------------------------------------
 @audit_bp.route("/<string:subject_type>/<int:subject_id>", methods=["GET"])
 @jwt_required
 def get_ticket_history(subject_type, subject_id):
