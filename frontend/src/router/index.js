@@ -67,6 +67,12 @@ const routes = [
     component: () => import('@/views/admin/EventDetails.vue'),
     meta: { requiresAuth: true, role: 'ADMIN' }
   },
+  {
+    path: '/admin/profile',
+    name: 'AdminProfile',
+    component: () => import('@/views/admin/Profile.vue'),
+    meta: { requiresAuth: true, role: 'ADMIN' }
+  },
 
   // --- Faculty Routes ---
   {
@@ -103,6 +109,12 @@ const routes = [
     path: '/faculty/events/:id',
     name: 'FacultyEventDetail',
     component: () => import('@/views/faculty/EventDetails.vue'),
+    meta: { requiresAuth: true, role: 'FACULTY' }
+  },
+  {
+    path: '/faculty/profile',
+    name: 'FacultyProfile',
+    component: () => import('@/views/faculty/Profile.vue'),
     meta: { requiresAuth: true, role: 'FACULTY' }
   },
 
@@ -142,6 +154,20 @@ const routes = [
     name: 'StudentEventDetail',
     component: () => import('@/views/student/EventDetails.vue'),
     meta: { requiresAuth: true, role: 'STUDENT' }
+  },
+  {
+    path: '/student/profile',
+    name: 'StudentProfile',
+    component: () => import('@/views/student/Profile.vue'),
+    meta: { requiresAuth: true, role: 'STUDENT' }
+  },
+
+  // --- General Authenticated Routes ---
+  {
+    path: '/notifications',
+    name: 'Notifications',
+    component: () => import('@/views/NotificationsView.vue'),
+    meta: { requiresAuth: true }
   },
 
   {

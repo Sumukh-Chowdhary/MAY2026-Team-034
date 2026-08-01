@@ -155,3 +155,43 @@ def get_user_assignments(target_user_id):
             "history": [t.to_dict() for t in history_tickets] + [t.to_dict() for t in active_tickets if t.status != AssignmentStatus.ACTIVE]
         }
     }), 200
+
+# ---------------------------------------------------------------------------
+# POST /api/assignment-tickets/<id>/leave
+# ---------------------------------------------------------------------------
+@assignments_bp.route("/<int:ticket_id>/leave", methods=["POST"])
+@jwt_required
+def leave_assignment(ticket_id):
+    """Allows the assignment ticket holder to step down/leave their role."""
+    user = g.current_user
+    ticket = AssignmentTicket.query.get(ticket_id)
+
+    if not ticket:
+        return jsonify({"success": False, "error": "Assignment ticket not found."}), 404
+
+    if ticket.holder_id != user.id and get_user_role(user) != "ADMIN":
+        return jsonify({"success": False, "error": "Not authorized to step down from this role."}), 403
+
+    if ticket.status != AssignmentStatus.ACTIVE:
+        return jsonify({"success": False, "error": "Role assignment is not active."}), 400
+
+    try:
+        ticket.terminate(performed_by_id=user.id, remarks="User stepped down from role")
+        
+        # Clean up corresponding club membership/organizer record
+        if ticket.reference_type == "CLUB" and ticket.reference_id:
+            from app.models.club import ClubOrganizer, ClubMembership
+            if ticket.assignment_role in {"ORGANIZER", "PRESIDENT"}:
+                org = ClubOrganizer.query.filter_by(club_id=ticket.reference_id, user_id=ticket.holder_id).first()
+                if org:
+                    db.session.delete(org)
+            elif ticket.assignment_role in {"VOLUNTEER", "MEMBER"}:
+                mem = ClubMembership.query.filter_by(club_id=ticket.reference_id, user_id=ticket.holder_id).first()
+                if mem:
+                    mem.membership_status = "INACTIVE"
+
+        db.session.commit()
+        return jsonify({"success": True, "message": "Successfully left role.", "data": ticket.to_dict()}), 200
+    except Exception:
+        db.session.rollback()
+        return jsonify({"success": False, "error": "Failed to leave role."}), 500

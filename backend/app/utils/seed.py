@@ -32,8 +32,7 @@ from app.utils.seed_data import (
     STUDENT_DATA,
     CLUB_DATA,
     VENUE_DATA,
-    EVENT_DATA,
-    MEMBERSHIP_SEED_DATA
+    EVENT_DATA
 )
 
 def seed_database(app):
@@ -154,10 +153,10 @@ def seed_database(app):
             if "category" not in club or "faculty" not in club:
                 continue
             new_club = Club(
-                club_name=club["name"],
-                club_description=club["description"],
-                club_category=club["category"],
-                club_logo=club["logo"],
+                club_name=club.get("name", "Unknown"),
+                club_description=club.get("description", ""),
+                club_category=club.get("category", "GENERAL"),
+                club_logo=club.get("logo", "group"),
                 club_status="ACTIVE",
                 total_members=1,
                 active_members=1
@@ -165,47 +164,32 @@ def seed_database(app):
             db.session.add(new_club)
             db.session.flush()
             club_lookup[new_club.club_name] = new_club
-
-            fac_user = faculty_lookup[club["faculty"]]
-            db.session.add(
-                ClubFaculty(
-                    club_id=new_club.id,
-                    faculty_id=fac_user.id,
-                    faculty_role="FACULTY_COORDINATOR"
+            fac_user = faculty_lookup.get(club.get("faculty")) or (faculty_users[0] if faculty_users else None)
+            if fac_user:
+                db.session.add(
+                    ClubFaculty(
+                        club_id=new_club.id,
+                        faculty_id=fac_user.id,
+                        faculty_role="FACULTY_COORDINATOR"
+                    )
                 )
-            )
 
-            organizer = student_lookup.get(club["organizer"]) or student_users[0]
-            db.session.add(
-                ClubOrganizer(
-                    club_id=new_club.id,
-                    user_id=organizer.id,
-                    organizer_role="PRESIDENT"
+            organizer = student_lookup.get(club.get("organizer")) or (student_users[0] if student_users else None)
+            if organizer:
+                db.session.add(
+                    ClubOrganizer(
+                        club_id=new_club.id,
+                        user_id=organizer.id,
+                        organizer_role="PRESIDENT"
+                    )
                 )
-            )
 
-            db.session.add(
-                ClubMembership(
-                    club_id=new_club.id,
-                    user_id=organizer.id,
-                    membership_role="MEMBER",
-                    membership_status="ACTIVE"
-                )
-            )
-
-        print("5b. Seeding Additional Club Memberships...")
-        for mem in MEMBERSHIP_SEED_DATA:
-            existing = ClubMembership.query.filter_by(
-                club_id=mem["club_id"],
-                user_id=mem["user_id"]
-            ).first()
-            if not existing:
                 db.session.add(
                     ClubMembership(
-                        club_id=mem["club_id"],
-                        user_id=mem["user_id"],
-                        membership_role=mem.get("membership_role", "MEMBER"),
-                        membership_status=mem.get("membership_status", "ACTIVE")
+                        club_id=new_club.id,
+                        user_id=organizer.id,
+                        membership_role="MEMBER",
+                        membership_status="ACTIVE"
                     )
                 )
 

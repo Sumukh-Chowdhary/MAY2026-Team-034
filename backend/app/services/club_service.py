@@ -364,6 +364,11 @@ def get_club_events(club_id):
     return [serialize_event(event) for event in events]
 
 def verify_faculty_access(club_id, faculty_id):
+    Club.query.get_or_404(
+        club_id,
+        description="Club not found"
+    )
+
     assignment = ClubFaculty.query.filter_by(
         club_id=club_id,
         faculty_id=faculty_id

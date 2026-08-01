@@ -19,24 +19,10 @@ import {
 
         <div>
             <h2>Student Dashboard</h2>
-
             <p>
                 Discover clubs, manage your roles, and stay updated with campus events.
             </p>
         </div>
-
-        <div class="dashboard-actions">
-
-            <button class="request-btn">
-                + Request
-            </button>
-
-            <button class="notification-btn">
-                Notifications
-            </button>
-
-        </div>
-
     </div>
 
     <div class="row g-4">
