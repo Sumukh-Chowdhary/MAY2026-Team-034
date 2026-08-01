@@ -171,7 +171,7 @@ class EventAttendance(db.Model):
             'userName': self.user.student_profile.full_name if self.user and self.user.student_profile else (
                 self.user.faculty_profile.full_name if self.user and self.user.faculty_profile else None
             ),
-            'status': self.attendance_status,
+            'status': self.attendance_status.title(),
             'markedAt': self.marked_at.isoformat() if self.marked_at else None,
         }
 
