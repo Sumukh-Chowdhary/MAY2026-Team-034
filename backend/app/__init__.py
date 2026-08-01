@@ -3,6 +3,7 @@ from flask import Flask
 from flask_cors import CORS
 from config import Config, INSTANCE_DIR
 from app.models import db
+from app.extensions import socketio
 
 BASE_DIR = os.path.abspath(os.path.dirname(__file__))
 ROOT_DIR = os.path.abspath(os.path.join(BASE_DIR, '..', '..'))
@@ -26,6 +27,7 @@ def create_app(config_class=Config):
 
     db.init_app(app)
     CORS(app, resources={r"/api/*": {"origins": "*"}})
+    socketio.init_app(app)
 
     from app.routes.auth import auth_bp
     from app.routes.users import users_bp
@@ -39,6 +41,7 @@ def create_app(config_class=Config):
     from app.routes.request_views import request_views_bp
     from app.routes.faculty import faculty_bp
     from app.routes.clubpage import club_bp
+    from app.routes.notifications import notifications_bp
 
     app.register_blueprint(auth_bp)
     app.register_blueprint(users_bp)
@@ -52,6 +55,7 @@ def create_app(config_class=Config):
     app.register_blueprint(assignments_bp)
     app.register_blueprint(request_views_bp)
     app.register_blueprint(club_bp)
+    app.register_blueprint(notifications_bp)
 
     @app.route('/health', methods=['GET'])
     def health_check():
