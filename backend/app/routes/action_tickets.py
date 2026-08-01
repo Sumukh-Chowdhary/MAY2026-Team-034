@@ -29,9 +29,6 @@ VALID_ACTION_TYPES = {
 def get_user_role(user):
     return user.role.name.upper()
 
-# ---------------------------------------------------------------------------
-# WORKFLOW ENGINE FOR ACTION TICKETS (Phase 4 Completed)
-# ---------------------------------------------------------------------------
 def flatten_approvers(approver_mixed_list):
     flat_list = []
     for item, role in approver_mixed_list:
@@ -63,10 +60,6 @@ def build_action_approval_chain(ticket):
     for order, (approver, role) in enumerate(final_approvers, start=1):
         ticket.add_approval_step(approver_id=approver.id, approval_role=role, order=order)
     return True
-
-# ---------------------------------------------------------------------------
-# TICKET CREATION & LISTING
-# ---------------------------------------------------------------------------
 
 @action_tickets_bp.route("", methods=["POST"])
 @jwt_required
@@ -157,10 +150,6 @@ def get_action_ticket(ticket_id):
     if not ticket: return jsonify({"success": False, "error": "Ticket not found."}), 404
     return jsonify({"success": True, "data": ticket.to_dict()}), 200
 
-# ---------------------------------------------------------------------------
-# TASK EXECUTION (The "To-Do List" Phase)
-# ---------------------------------------------------------------------------
-
 @action_tickets_bp.route("/<int:ticket_id>/task", methods=["PATCH"])
 @jwt_required
 def update_task_status(ticket_id):
@@ -214,10 +203,6 @@ def update_task_status(ticket_id):
     except Exception as e:
         db.session.rollback()
         return jsonify({"success": False, "error": "Unable to update task."}), 500
-
-# ---------------------------------------------------------------------------
-# APPROVAL WORKFLOW ROUTES
-# ---------------------------------------------------------------------------
 
 @action_tickets_bp.route("/<int:ticket_id>/approve", methods=["POST"])
 @jwt_required
@@ -367,4 +352,4 @@ def resubmit_action_ticket(ticket_id):
         return jsonify({"success": True, "message": f"Action ticket resubmitted successfully (Version v{ticket.version}).", "data": ticket.to_dict()}), 200
     except Exception as e:
         db.session.rollback()
-        return jsonify({"success": False, "error": f"Resubmit failed: {str(e)}"}), 500
+        return jsonify({"success": False, "error": f"Resubmit failed: {str(e)}"}), 500

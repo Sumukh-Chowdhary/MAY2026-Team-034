@@ -14,9 +14,6 @@ assignments_bp = Blueprint("assignments", __name__, url_prefix="/api/assignment-
 def get_user_role(user):
     return user.role.name.upper()
 
-# ---------------------------------------------------------------------------
-# GET /api/assignment-tickets
-# ---------------------------------------------------------------------------
 @assignments_bp.route("", methods=["GET"])
 @jwt_required
 def get_all_assignments():
@@ -44,9 +41,6 @@ def get_all_assignments():
 
     return jsonify({"success": True, "count": len(tickets), "data": [t.to_dict() for t in tickets]}), 200
 
-# ---------------------------------------------------------------------------
-# GET /api/assignment-tickets/<id>
-# ---------------------------------------------------------------------------
 @assignments_bp.route("/<int:ticket_id>", methods=["GET"])
 @jwt_required
 def get_assignment(ticket_id):
@@ -66,9 +60,6 @@ def get_assignment(ticket_id):
 
     return jsonify({"success": True, "data": ticket.to_dict()}), 200
 
-# ---------------------------------------------------------------------------
-# PATCH /api/assignment-tickets/<id>
-# ---------------------------------------------------------------------------
 @assignments_bp.route("/<int:ticket_id>", methods=["PATCH"])
 @jwt_required
 def update_assignment(ticket_id):
@@ -128,9 +119,6 @@ def update_assignment(ticket_id):
         db.session.rollback()
         return jsonify({"success": False, "error": "Unable to update assignment ticket."}), 500
 
-# ---------------------------------------------------------------------------
-# GET /api/assignment-tickets/user/<id>
-# ---------------------------------------------------------------------------
 @assignments_bp.route("/user/<int:target_user_id>", methods=["GET"])
 @jwt_required
 def get_user_assignments(target_user_id):
