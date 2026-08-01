@@ -3,9 +3,7 @@ from app.models import db
 from app.models.events import Venue
 from app.utils.auth_jwt import jwt_required, roles_required
 
-
 venues_bp = Blueprint('venues', __name__, url_prefix='/api/venues')
-
 
 @venues_bp.route('', methods=['GET'])
 @jwt_required

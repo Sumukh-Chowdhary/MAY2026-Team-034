@@ -13,6 +13,7 @@ from app.models.tickets import (
     resolve_principal
 )
 from app.utils.auth_jwt import jwt_required
+from app.services.notification_service import NotificationService
 
 action_tickets_bp = Blueprint("action_tickets", __name__, url_prefix="/api/action-tickets")
 
@@ -107,6 +108,18 @@ def create_action_ticket():
             if not build_action_approval_chain(ticket):
                 db.session.rollback()
                 return jsonify({"success": False, "error": "Workflow error: No approvers resolved."}), 500
+
+        db.session.flush()
+        # Send notifications to approvers
+        for approval in ticket.approvals:
+            NotificationService.create(
+                user_id=approval.approver_id,
+                title="New Action Ticket",
+                message=f"You have a new action ticket to review: {title}",
+                notification_type="TICKET",
+                entity_id=ticket.id,
+                reference_url="/notifications"
+            )
 
         db.session.commit()
         return jsonify({"success": True, "message": "Action Ticket raised successfully.", "data": ticket.to_dict()}), 201
@@ -225,7 +238,23 @@ def approve_action(ticket_id):
         if remaining == 0:
             # All approvals done! Open the task and assign it to an Admin to execute.
             admin = resolve_admin()
-            ticket.mark_approved_and_open_task(assigned_to_id=admin.id if admin else user.id)
+            assigned_id = admin.id if admin else user.id
+            ticket.mark_approved_and_open_task(assigned_to_id=assigned_id)
+            
+            # Notify task assignee
+            NotificationService.create(
+                user_id=assigned_id, title="Task Assigned", message=f"Action Ticket '{ticket.title}' is approved and assigned to you.", 
+                notification_type="TICKET", entity_id=ticket.id, reference_url="/notifications"
+            )
+            # Notify creator
+            NotificationService.notify_ticket_fully_approved(
+                creator_id=ticket.raised_by_id, ticket_id=ticket.id
+            )
+        else:
+            # Notify creator of partial approval
+            NotificationService.notify_ticket_approved(
+                creator_id=ticket.raised_by_id, ticket_id=ticket.id, approver_name=user.email
+            )
 
         db.session.commit()
         return jsonify({"success": True, "message": "Approved successfully.", "data": ticket.to_dict()}), 200
@@ -249,6 +278,11 @@ def reject_action(ticket_id):
         approval.approved_at = datetime.utcnow()
         ticket.approval_status = ApprovalStatus.REJECTED
 
+        # Notify creator
+        NotificationService.notify_ticket_rejected(
+            creator_id=ticket.raised_by_id, ticket_id=ticket.id, approver_name=user.email
+        )
+
         db.session.commit()
         return jsonify({"success": True, "message": "Rejected.", "data": ticket.to_dict()}), 200
     except Exception:
@@ -270,6 +304,12 @@ def request_changes_action(ticket_id):
         approval.remarks = data.get("remarks")
         approval.approved_at = datetime.utcnow()
         ticket.approval_status = ApprovalStatus.CHANGES_REQUESTED
+
+        # Notify creator
+        NotificationService.create(
+            user_id=ticket.raised_by_id, title="Changes Requested", message=f"Changes requested for ticket '{ticket.title}' by {user.email}.", 
+            notification_type="TICKET", entity_id=ticket.id, reference_url="/notifications"
+        )
 
         db.session.commit()
         return jsonify({"success": True, "message": "Changes requested.", "data": ticket.to_dict()}), 200
@@ -310,6 +350,18 @@ def resubmit_action_ticket(ticket_id):
             if not build_action_approval_chain(ticket):
                 db.session.rollback()
                 return jsonify({"success": False, "error": "Workflow error: Could not rebuild approval chain."}), 500
+
+        db.session.flush()
+        # Notify approvers about resubmit
+        for approval in ticket.approvals:
+            NotificationService.create(
+                user_id=approval.approver_id,
+                title="Ticket Resubmitted",
+                message=f"Action ticket '{ticket.title}' has been resubmitted for your review.",
+                notification_type="TICKET",
+                entity_id=ticket.id,
+                reference_url="/notifications"
+            )
 
         db.session.commit()
         return jsonify({"success": True, "message": f"Action ticket resubmitted successfully (Version v{ticket.version}).", "data": ticket.to_dict()}), 200

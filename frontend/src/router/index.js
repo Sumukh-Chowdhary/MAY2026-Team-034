@@ -144,6 +144,14 @@ const routes = [
     meta: { requiresAuth: true, role: 'STUDENT' }
   },
 
+  // --- General Authenticated Routes ---
+  {
+    path: '/notifications',
+    name: 'Notifications',
+    component: () => import('@/views/NotificationsView.vue'),
+    meta: { requiresAuth: true }
+  },
+
   {
     path: '/:pathMatch(.*)*',
     redirect: '/'

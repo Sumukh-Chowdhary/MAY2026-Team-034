@@ -32,6 +32,8 @@ from app.models.events import (
     EventAttendance, EventPrize, EventOrganizer, EventVolunteer
 )
 
+from app.models.notification import Notification
+
 __all__ = [
     'db',
     'Role',
@@ -52,6 +54,7 @@ __all__ = [
     'EventAttendance',
     'EventPrize',
     'EventOrganizer',
+    'EventOrganizer',
     'EventVolunteer',
     'ClubOrganizer',
 
@@ -60,5 +63,7 @@ __all__ = [
     'AssignmentTicket',
     'ActionTicket',
     'ActionTicketApproval',
-    'TicketAudit'
+    'TicketAudit',
+    
+    'Notification'
 ]
