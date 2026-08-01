@@ -1,11 +1,22 @@
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from "vue"
+
 import ClubSearch from '@/components/admin/club/ClubSearch.vue'
-import ClubGrid from '@/components/admin/club/ClubGrid.vue' //Change later these are home page things
-import { clubs } from '@/data/clubs'
+import ClubGrid from '@/components/admin/club/ClubGrid.vue'
+
+import { getClubs } from '@/services/clubService'
 
 const search = ref('')
-const clubList = ref(clubs)
+const clubList = ref([])
+
+onMounted(async () => {
+    try {
+        clubList.value = await getClubs()
+    }
+    catch (err) {
+        console.error("Failed to load clubs:", err)
+    }
+})
 
 const filteredClubs = computed(() => {
   const query = search.value.trim().toLowerCase()

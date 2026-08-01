@@ -1,12 +1,19 @@
 from datetime import datetime
 
-from app.services.club_service import get_all_clubs
-from flask import Blueprint, request, jsonify, g # type: ignore
+from app.services.club_service import (
+    get_all_clubs as get_all_clubs_service,
+    get_club_by_id as get_club_by_id_service,
+    get_club_events as get_club_events_service,
+    get_club_members as get_club_members_service,
+)
+from app.services.club_service import get_all_clubs, get_club_by_id as get_club_by_id_service
+from flask import Blueprint, jsonify, g # type: ignore
 
 from app.models import db, User
 from app.models.club import Club, ClubFaculty, ClubOrganizer, ClubMembership
 
 from app.utils.auth_jwt import jwt_required, roles_required
+from werkzeug.exceptions import NotFound
 
 
 student_bp = Blueprint(
@@ -71,7 +78,19 @@ def get_my_clubs():
 @jwt_required
 @roles_required("STUDENT")
 def get_clubs():
-    return jsonify(get_all_clubs()), 200
+    return jsonify(get_all_clubs_service()), 200
+
+@student_bp.get("/clubs/<int:club_id>")
+@jwt_required
+@roles_required("STUDENT")
+def get_club(club_id):
+    try:
+        club = get_club_by_id_service(club_id)
+        return jsonify(club), 200
+    except NotFound as e:
+        return jsonify({
+            "error": e.description
+        }), 404
 
 @student_bp.route("/clubs/<int:club_id>/join", methods=["POST"])
 @jwt_required
@@ -168,3 +187,32 @@ def leave_club(club_id):
         "activeMembers": club.active_members,
         "totalMembers": club.total_members
     }), 200
+
+@student_bp.get("/clubs/<int:club_id>/members")
+@jwt_required
+@roles_required("STUDENT")
+def get_club_members(club_id):
+
+    try:
+        members = get_club_members_service(
+            club_id,
+            include_inactive=True
+        )
+        return jsonify(members), 200
+    except NotFound as e:
+        return jsonify({
+            "error": e.description
+        }), 404
+
+@student_bp.get("/clubs/<int:club_id>/events")
+@jwt_required
+@roles_required("STUDENT")
+def get_club_events(club_id):
+
+    try:
+        events = get_club_events_service(club_id)
+        return jsonify(events), 200
+    except NotFound as e:
+        return jsonify({
+            "error": e.description
+        }), 404
