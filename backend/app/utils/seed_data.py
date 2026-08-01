@@ -117,6 +117,54 @@ STUDENT_DATA = [
 
 CLUB_DATA = [
     {
+        "name": "AI Club",
+        "description": "Learn Artificial Intelligence and Machine Learning together.",
+        "category": "Technology",
+        "logo": "robot",
+        "faculty": "FAC001",
+        "organizer": "STU001",
+    },
+    {
+        "name": "Music Club",
+        "description": "Jam sessions, performances and music workshops.",
+        "category": "Arts",
+        "logo": "musical_note",
+        "faculty": "FAC003",
+        "organizer": "STU010"
+    },
+    {
+        "name": "Sports Club",
+        "description": "Football, Cricket, Basketball and many more activities.",
+        "category": "Sports",
+        "logo": "soccer_ball",
+        "faculty": "FAC002",
+        "organizer": "STU009"
+    },
+    {
+        "name": "Drama Club",
+        "description": "Theatre performances, acting practice and stage events.",
+        "category": "Cultural",
+        "logo": "theatre_mask",
+        "faculty": "FAC003",
+        "organizer": "STU014"
+    },
+    {
+        "name": "Photography Club",
+        "description": "Capture moments and learn photography together.",
+        "category": "Creative",
+        "logo": "camera",
+        "faculty": "FAC001",
+        "organizer": "STU006"
+    },
+    {
+        "name": "Science Club",
+        "description": "Science projects, exhibitions and research discussions.",
+        "category": "Academic",
+        "logo": "test_tube",
+        "faculty": "FAC002",
+        "organizer": "STU015"
+    },
+    {
         "name": "Coding Club",
         "description": "Fostering programming, algorithmic thinking, and open source development across campus.",
         "category": "TECHNICAL",
@@ -131,22 +179,6 @@ CLUB_DATA = [
         "logo": "smart_toy",
         "faculty": "FAC001",
         "organizer": "STU001"
-    },
-    {
-        "name": "Photography Club",
-        "description": "Capturing moments, exploring visual storytelling, and conducting photography exhibitions.",
-        "category": "CULTURAL",
-        "logo": "photo_camera",
-        "faculty": "FAC003",
-        "organizer": "STU004"
-    },
-    {
-        "name": "Sports Club",
-        "description": "Football, Cricket, Basketball and many more activities.",
-        "category": "Sports",
-        "logo": "sports_soccer",
-        "faculty": "FAC002",
-        "organizer": "STU003"
     }
 ]
 
@@ -264,4 +296,19 @@ EVENT_DATA = [
         "organizers": ["aman@allclub.com"],
         "volunteers": ["vikram@allclub.com", "ishita@allclub.com"]
     }
+]
+
+MEMBERSHIP_SEED_DATA = [
+    {"club_id": 1, "user_id": 6, "membership_role": "PRESIDENT", "membership_status": "ACTIVE"},
+    {"club_id": 1, "user_id": 7, "membership_role": "ORGANIZER", "membership_status": "ACTIVE"},
+    {"club_id": 1, "user_id": 8, "membership_role": "MEMBER", "membership_status": "ACTIVE"},
+    {"club_id": 2, "user_id": 6, "membership_role": "ORGANIZER", "membership_status": "ACTIVE"},
+    {"club_id": 2, "user_id": 9, "membership_role": "MEMBER", "membership_status": "ACTIVE"},
+    {"club_id": 2, "user_id": 10, "membership_role": "MEMBER", "membership_status": "INACTIVE"},
+    {"club_id": 3, "user_id": 9, "membership_role": "PRESIDENT", "membership_status": "ACTIVE"},
+    {"club_id": 3, "user_id": 11, "membership_role": "MEMBER", "membership_status": "ACTIVE"},
+    {"club_id": 3, "user_id": 7, "membership_role": "VOLUNTEER", "membership_status": "ACTIVE"},
+    {"club_id": 4, "user_id": 8, "membership_role": "PRESIDENT", "membership_status": "ACTIVE"},
+    {"club_id": 4, "user_id": 10, "membership_role": "VOLUNTEER", "membership_status": "ACTIVE"},
+    {"club_id": 4, "user_id": 11, "membership_role": "MEMBER", "membership_status": "ACTIVE"}
 ]

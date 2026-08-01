@@ -2,6 +2,7 @@
 import { ref } from 'vue'
 import Sidebar from '@/components/student/Sidebar.vue'
 import LogoutModal from '@/components/LogoutModal.vue'
+import NotificationBell from '@/components/NotificationBell.vue'
 
 const collapsed = ref(false)
 </script>
@@ -9,7 +10,10 @@ const collapsed = ref(false)
 <template>
     <div class="dashboard" :class="{ collapsed }">
         <Sidebar @toggle="collapsed = $event" />
-        <main class="page-content">
+        <main class="page-content relative">
+            <div class="absolute top-4 right-6 z-40" style="position: absolute; top: 1rem; right: 1.5rem; z-index: 40;">
+                <NotificationBell />
+            </div>
             <slot />
         </main>
         <LogoutModal />

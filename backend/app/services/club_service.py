@@ -3,6 +3,7 @@ from app.models.club import ClubFaculty, ClubMembership
 from app.models.user import FacultyProfile
 from app.models.events import Event
 from sqlalchemy import case
+from flask import g
 
 VALID_CLUB_CATEGORIES = {
     "Technology",
@@ -238,7 +239,7 @@ def update_club(club_id, name, category, description, logo, faculty_ids):
     if not faculty_ids:
         raise ValueError("Select at least one faculty coordinator.")
 
-    club = Club.query.get_or_404(club_id)
+    club = Club.query.get_or_404(club_id, description="Club not found")
 
     existing = Club.query.filter(
         db.func.lower(Club.club_name) == name.lower(),
@@ -292,7 +293,8 @@ def update_club(club_id, name, category, description, logo, faculty_ids):
     return serialize_club(club)
 
 def archive_club(club_id):
-    club = Club.query.get_or_404(club_id)
+
+    club = Club.query.get_or_404(club_id, description="Club not found")
 
     if club.club_status == "INACTIVE":
         raise ValueError("Club is already inactive.")
@@ -304,7 +306,7 @@ def archive_club(club_id):
     return serialize_club(club)
 
 def get_club_members(club_id, include_inactive=False):
-    club = Club.query.get_or_404(club_id)
+    club = Club.query.get_or_404(club_id, description="Club not found")
 
     query = ClubMembership.query.filter_by(club_id=club.id)
 
@@ -320,22 +322,22 @@ def get_club_members(club_id, include_inactive=False):
     return [serialize_member(member) for member in members]
 
 def get_club_member(club_id, user_id):
-    Club.query.get_or_404(club_id)
+    Club.query.get_or_404(club_id, description="Club not found")
 
     membership = ClubMembership.query.filter_by(
         club_id=club_id,
         user_id=user_id
-    ).first_or_404()
+    ).first_or_404(description="Member not found")
 
     return serialize_member_profile(membership)
 
 def deactivate_club_member(club_id, user_id):
-    club = Club.query.get_or_404(club_id)
+    club = Club.query.get_or_404(club_id, description="Club not found")
 
     membership = ClubMembership.query.filter_by(
         club_id=club_id,
         user_id=user_id
-    ).first_or_404()
+    ).first_or_404(description="Member not found")
 
     if membership.membership_status == "INACTIVE":
         raise ValueError("Member is already inactive.")
@@ -350,7 +352,7 @@ def deactivate_club_member(club_id, user_id):
     return serialize_member(membership)
 
 def get_club_events(club_id):
-    Club.query.get_or_404(club_id)
+    Club.query.get_or_404(club_id, description="Club not found")
 
     events = (
         Event.query
@@ -362,6 +364,11 @@ def get_club_events(club_id):
     return [serialize_event(event) for event in events]
 
 def verify_faculty_access(club_id, faculty_id):
+    Club.query.get_or_404(
+        club_id,
+        description="Club not found"
+    )
+
     assignment = ClubFaculty.query.filter_by(
         club_id=club_id,
         faculty_id=faculty_id

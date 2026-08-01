@@ -117,7 +117,6 @@ function navigateToRequests() {
           <h2>Faculty Dashboard</h2>
           <p>Welcome back, {{ userProfile?.fullName || userProfile?.name || 'Faculty Coordinator' }}. Manage clubs, events, and profile.</p>
         </div>
-
         <div class="dashboard-actions">
           <button class="request-btn" @click="openEditProfile">
             <i class="bi bi-person-gear me-1"></i> View / Edit Profile
