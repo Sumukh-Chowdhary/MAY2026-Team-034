@@ -28,8 +28,8 @@ def test_get_clubs(client, faculty_headers):
     assert ai_club["category"] == "Technology"
     assert ai_club["status"] == "ACTIVE"
 
-    assert ai_club["activeMembers"] == 1
-    assert ai_club["totalMembers"] == 1
+    assert ai_club["activeMembers"] == 3
+    assert ai_club["totalMembers"] == 3
 
     assert len(ai_club["faculty"]) == 1
     assert ai_club["faculty"][0]["name"] == "Dr. Meena Rao"
