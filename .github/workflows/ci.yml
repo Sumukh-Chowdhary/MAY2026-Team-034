@@ -2,9 +2,9 @@ name: Continuous Integration (CI)
 
 on:
   push:
-    branches: [ main, int_testing ]
+    branches: [ main ]
   pull_request:
-    branches: [ main, int_testing ]
+    branches: [ main ]
 
 jobs:
   # Job 1: Test and Validate Flask Backend
