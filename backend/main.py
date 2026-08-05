@@ -6,7 +6,12 @@ from app.utils.seed import seed_database
 app = create_app()
 register_notification_socket(socketio)
 
-if __name__ == '__main__':
-    socketio.run(app, host='127.0.0.1', port=5000, debug=True)
+if __name__ == "__main__":
     seed_database(app)
-    app.run(host='127.0.0.1', port=5000, debug=True)
+
+    socketio.run(
+        app,
+        host="127.0.0.1",
+        port=5000,
+        debug=True
+    )
