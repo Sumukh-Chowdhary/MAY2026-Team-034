@@ -1,29 +1,58 @@
 <script setup>
-import { ref, computed } from 'vue'
 import FacultyLayout from '@/layouts/FacultyLayout.vue'
 import ClubSearch from '@/components/admin/club/ClubSearch.vue'
 import ClubGrid from '@/components/admin/club/ClubGrid.vue'
 import EditClubModal from '@/components/admin/club/EditClubModal.vue'
-import DeleteClubModal from '@/components/admin/club/ArchiveClubModal.vue'
 import ClubDetailsModal from '@/components/admin/club/ClubDetailsModal.vue'
-import { clubs } from '@/data/clubs'
 
+import { useRouter } from "vue-router"
+import { ref, computed, onMounted, watch, nextTick } from 'vue'
+import { getFacultyClubs, updateFacultyClub } from '@/api/clubs'
+
+const router = useRouter()
+const clubList = ref([])
+const selectedStatus = ref("ALL")
 const search = ref('')
-const clubList = ref([...clubs])
 const selectedClub = ref(null)
 const showDetailsModal = ref(false)
 const showEditModal = ref(false)
-const showDeleteModal = ref(false)
+const currentPage = ref(1)
+const itemsPerPage = 3
+const editingPage = ref(false)
+const pageInput = ref(1)
+const pageInputRef = ref(null)
+
+const fetchClubs = async () => {
+  try {
+    clubList.value = await getFacultyClubs()
+  } catch (error) {
+    console.error(error)
+  }
+}
+
+onMounted(() => {
+  fetchClubs()
+})
 
 const filteredClubs = computed(() => {
-  const query = search.value.trim().toLowerCase()
+  let filtered = clubList.value
 
-  if (!query) return clubList.value
+  if (search.value.trim()) {
+    const keyword = search.value.toLowerCase()
 
-  return clubList.value.filter((club) =>
-    club.name.toLowerCase().includes(query) ||
-    club.category.toLowerCase().includes(query)
-  )
+    filtered = filtered.filter(club =>
+      club.name.toLowerCase().includes(keyword) ||
+      club.category.toLowerCase().includes(keyword)
+    )
+  }
+
+  if (selectedStatus.value !== "ALL") {
+    filtered = filtered.filter(
+      club => club.status === selectedStatus.value
+    )
+  }
+
+  return filtered
 })
 
 const openDetailsModal = (club) => {
@@ -47,20 +76,15 @@ const closeEditModal = () => {
   selectedClub.value = null
 }
 
-const saveEdit = (updatedClub) => {
-  clubList.value = clubList.value.map((club) => (club.id === updatedClub.id ? updatedClub : club))
-  closeEditModal()
-}
-
-const openDeleteModal = (club) => {
-  if (!club) return
-  selectedClub.value = { ...club }
-  showDeleteModal.value = true
-}
-
-const closeDeleteModal = () => {
-  showDeleteModal.value = false
-  selectedClub.value = null
+const saveEdit = async (clubData) => {
+    try {
+        await updateFacultyClub(clubData.id, clubData)
+        await fetchClubs()
+        closeEditModal()
+    } catch (error) {
+        console.error(error)
+        alert("Failed to update club.")
+    }
 }
 
 const handleEditFromDetails = () => {
@@ -69,16 +93,76 @@ const handleEditFromDetails = () => {
   openEditModal(clubToEdit)
 }
 
-const handleDeleteFromDetails = () => {
-  const clubToDelete = selectedClub.value
-  closeDetailsModal()
-  openDeleteModal(clubToDelete)
+const activeCount = computed(() =>
+  clubList.value.filter(c => c.status === "ACTIVE").length
+)
+
+const legacyCount = computed(() =>
+  clubList.value.filter(c => c.status === "INACTIVE").length
+)
+
+watch([search, selectedStatus], () => {
+  currentPage.value = 1
+})
+
+const paginatedClubs = computed(() => {
+  const start = (currentPage.value - 1) * itemsPerPage
+  return filteredClubs.value.slice(
+    start,
+    start + itemsPerPage
+  )
+})
+
+const totalPages = computed(() =>
+  Math.max(
+    1,
+    Math.ceil(filteredClubs.value.length / itemsPerPage)
+  )
+)
+
+function previousPage() {
+  if (currentPage.value > 1) {
+    currentPage.value--
+  }
 }
 
-const confirmDelete = () => {
-  if (!selectedClub.value) return
-  clubList.value = clubList.value.filter((club) => club.id !== selectedClub.value.id)
-  closeDeleteModal()
+function nextPage() {
+  if (currentPage.value < totalPages.value) {
+    currentPage.value++
+  }
+}
+
+function savePage() {
+  let page = Number(pageInput.value)
+  if (isNaN(page)) {
+    page = currentPage.value
+  }
+
+  page = Math.max(1, Math.min(page, totalPages.value))
+  currentPage.value = page
+  editingPage.value = false
+}
+
+function cancelEditingPage() {
+  editingPage.value = false
+}
+
+function visitClubPage() {
+    if (!selectedClub.value) return
+
+    const clubId = selectedClub.value.id
+
+    closeDetailsModal()
+
+    router.push(`/faculty/clubs/${clubId}`)
+}
+
+async function startEditingPage() {
+  editingPage.value = true
+  pageInput.value = currentPage.value
+  await nextTick()
+  pageInputRef.value.focus()
+  pageInputRef.value.select()
 }
 </script>
 
@@ -90,7 +174,7 @@ const confirmDelete = () => {
           <p class="eyebrow">Faculty Dashboard</p>
           <h2 class="fw-bold mb-2">Clubs Management</h2>
           <p class="subtitle">
-            Manage your student club, its members, and club activities from one place.
+            Manage student clubs, discover new interests, and keep club details up to date from one place.
           </p>
         </div>
       </div>
@@ -99,14 +183,53 @@ const confirmDelete = () => {
         <div class="search-wrap">
           <ClubSearch v-model="search" />
         </div>
+        <div class="status-tabs">
+          <button
+            :class="{ active: selectedStatus === 'ALL' }"
+            @click="selectedStatus = 'ALL'"
+          >
+            All
+            <span>{{ clubList.length }}</span>
+          </button>
+
+          <button
+            :class="{ active: selectedStatus === 'ACTIVE' }"
+            @click="selectedStatus = 'ACTIVE'"
+          >
+            Live
+            <span>{{ activeCount }}</span>
+          </button>
+
+          <button
+            :class="{ active: selectedStatus === 'INACTIVE' }"
+            @click="selectedStatus = 'INACTIVE'"
+          >
+            Legacy
+            <span>{{ legacyCount }}</span>
+          </button>
+        </div>
       </div>
 
-      <div class="grid-panel">
-        <ClubGrid
-          :clubs="filteredClubs"
-          :isFaculty="true"
-          @view="openDetailsModal"
-        />
+      <ClubGrid :clubs="paginatedClubs" @view="openDetailsModal"/>
+
+      <div v-if="filteredClubs.length" class="pagination-bar">
+        <button @click="previousPage" :disabled="currentPage === 1">← Previous</button>
+        <div class="page-indicator" @dblclick="startEditingPage">
+          <span v-if="!editingPage">{{ currentPage }}</span>
+          <input
+              v-else
+              ref="pageInputRef"
+              v-model.number="pageInput"
+              class="page-input"
+              type="number"
+              min="1"
+              :max="totalPages"
+              @keyup.enter="savePage"
+              @keyup.esc="cancelEditingPage"
+              @blur="savePage"
+          />
+        </div>
+        <button @click="nextPage" :disabled="currentPage === totalPages">Next →</button>
       </div>
 
       <div v-if="filteredClubs.length === 0" class="empty-state">
@@ -118,15 +241,15 @@ const confirmDelete = () => {
       <ClubDetailsModal
         v-if="showDetailsModal && selectedClub"
         :club="selectedClub"
-        :isAdmin="false"
-        :isFaculty="true"
+        :canArchive="false"
         @close="closeDetailsModal"
-        @visit="closeDetailsModal"
+        @visit="visitClubPage"
         @edit="handleEditFromDetails"
-        @delete="handleDeleteFromDetails"
+        @archive="handleArchiveFromDetails"
+        @restore="handleRestoreFromDetails"
       />
-      <EditClubModal v-if="showEditModal && selectedClub" :club="selectedClub" @close="closeEditModal" @submit="saveEdit" />
-      <DeleteClubModal v-if="showDeleteModal && selectedClub" :club="selectedClub" @close="closeDeleteModal" @confirm="confirmDelete" />
+      <EditClubModal v-if="showEditModal && selectedClub" :club="selectedClub" :canEditFaculty="false" @close="closeEditModal" @submit="saveEdit" />
+      <ArchiveClubModal v-if="showArchiveModal && selectedClub" :club="selectedClub" @close="closeArchiveModal" @confirm="confirmArchive" />
     </section>
   </FacultyLayout>
 </template>
@@ -175,21 +298,28 @@ const confirmDelete = () => {
   cursor: pointer;
 }
 
-.toolbar {
-  display: flex;
-  align-items: center;
-  margin-bottom: 20px;
+.toolbar{
+    display:grid;
+    grid-template-columns:minmax(0, 1fr) auto;
+    align-items:center;
+    gap:24px;
+    margin-bottom:32px;
 }
 
-.search-wrap {
-  flex: 1;
+.search-wrap{
+    width:100%;
+    max-width:850px;
 }
 
-.grid-panel {
-  background: #ffffff;
-  border-radius: 24px;
-  padding: 24px;
-  box-shadow: 0 10px 30px rgba(15, 23, 42, 0.06);
+.status-tabs{
+    display:inline-flex;
+    align-items:center;
+    gap:6px;
+    padding:6px;
+    background:#fff;
+    border:1px solid #e5e7eb;
+    border-radius:18px;
+    justify-self:end;
 }
 
 .empty-state {
@@ -203,6 +333,115 @@ const confirmDelete = () => {
   margin-bottom: 10px;
 }
 
+.status-tabs button{
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    gap:10px;
+    min-width:88px;
+    height:50px;
+    border:none;
+    border-radius:14px;
+    background:transparent;
+    font-weight:600;
+    color:#475569;
+    cursor:pointer;
+    transition:.2s;
+}
+
+.status-tabs button span{
+    width:28px;
+    height:28px;
+    display:grid;
+    place-items:center;
+    border-radius:50%;
+    background:#eef2ff;
+    color:#2563eb;
+    font-size:13px;
+    font-weight:700;
+}
+
+.status-tabs button.active{
+    background:#2563eb;
+    color:white;
+}
+
+.status-tabs button.active span{
+    background:white;
+    color:#2563eb;
+}
+
+.pagination-bar{
+    display:flex;
+    justify-content:center;
+    align-items:center;
+    gap:18px;
+    margin-top:40px;
+}
+
+.pagination-bar button{
+    border:none;
+    background:#fff;
+    border:1px solid #e5e7eb;
+    border-radius:14px;
+    padding:12px 18px;
+    font-weight:600;
+    cursor:pointer;
+    transition:.2s;
+}
+
+.pagination-bar button:hover:not(:disabled){
+    background:#2563eb;
+    color:#fff;
+}
+
+.pagination-bar button:disabled{
+    opacity:.5;
+    cursor:not-allowed;
+}
+
+.page-indicator{
+    width:64px;
+    height:56px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    border-radius:16px;
+    background:#eff6ff;
+    color:#2563eb;
+    font-size:20px;
+    font-weight:700;
+    cursor:pointer;
+    transition:.2s;
+}
+
+.page-indicator:hover{
+    background:#dbeafe;
+}
+
+.page-input{
+    width:100%;
+    height:100%;
+    border:none;
+    outline:none;
+    background:transparent;
+    color:#2563eb;
+    text-align:center;
+    font-size:20px;
+    font-weight:700;
+}
+
+.page-input::-webkit-outer-spin-button,
+.page-input::-webkit-inner-spin-button{
+    -webkit-appearance:none;
+    margin:0;
+}
+
+.page-input{
+    appearance:textfield;
+    -moz-appearance:textfield;
+}
+
 @media (max-width: 768px) {
   .page-top {
     flex-direction: column;
@@ -212,5 +451,19 @@ const confirmDelete = () => {
   .add-btn {
     width: 100%;
   }
+}
+
+@media (max-width:900px){
+    .toolbar{
+        grid-template-columns:1fr;
+    }
+
+    .search-wrap{
+        max-width:100%;
+    }
+
+    .status-tabs{
+        justify-self:start;
+    }
 }
 </style>

@@ -34,11 +34,12 @@ const Layout = computed(() => {
         v-if="loggedIn"
         :is="Layout"
     >
-        <ClubContent :club-id="clubId" />
+        <ClubContent :club-id="clubId" :user-role="user?.role"/>
     </component>
 
     <ClubContent
         v-else
         :club-id="clubId"
+        user-role="GUEST"
     />
 </template>

@@ -29,13 +29,6 @@
           <h3 id="club-details-title">{{ club.name }}</h3>
           <div class="club-tags">
             <span class="club-category">{{ club.category }}</span>
-            <!-- <span
-              class="club-status"
-              :class="club.status === 'ACTIVE' ? 'live' : 'inactive'"
-            >
-              <span class="status-dot"></span>
-              {{ club.status === 'ACTIVE' ? 'Live Club' : 'Inactive' }}
-            </span> -->
           </div>
         </div>
       </div>
@@ -110,7 +103,7 @@
             </button>
             <div v-if="!isMember">
               <button
-                v-if="club.status === 'ACTIVE'"
+                v-if="canArchive && club.status === 'ACTIVE'"
                 type="button"
                 class="archive-btn"
                 @click.stop="emit('archive')"
@@ -118,13 +111,14 @@
                 Archive Club
               </button>
 
+
               <button
-                v-else
-                type="button"
-                class="restore-btn"
-                @click.stop="emit('restore')"
+                  v-if="canArchive && club.status === 'INACTIVE'"
+                  type="button"
+                  class="restore-btn"
+                  @click.stop="emit('restore')"
               >
-                Restore Club
+                  Restore Club
               </button>
             </div>
           </div>
@@ -162,6 +156,10 @@ const props = defineProps({
     type: Boolean,
     default: false
   },
+  canArchive: {
+    type: Boolean,
+    default: false
+  }
 })
 
 const emit = defineEmits([
