@@ -331,7 +331,7 @@ def get_club_member(club_id, user_id):
 
     return serialize_member_profile(membership)
 
-def deactivate_club_member(club_id, user_id):
+def update_club_member_status(club_id, user_id, active):
     club = Club.query.get_or_404(club_id, description="Club not found")
 
     membership = ClubMembership.query.filter_by(
@@ -339,13 +339,20 @@ def deactivate_club_member(club_id, user_id):
         user_id=user_id
     ).first_or_404(description="Member not found")
 
-    if membership.membership_status == "INACTIVE":
-        raise ValueError("Member is already inactive.")
+    new_status = "ACTIVE" if active else "INACTIVE"
 
-    membership.membership_status = "INACTIVE"
+    if membership.membership_status == new_status:
+        raise ValueError(
+            f"Member is already {new_status.lower()}."
+        )
 
-    if club.active_members > 0:
-        club.active_members -= 1
+    membership.membership_status = new_status
+
+    if active:
+        club.active_members += 1
+    else:
+        if club.active_members > 0:
+            club.active_members -= 1
 
     db.session.commit()
 

@@ -7,9 +7,11 @@ import EditClubModal from '@/components/admin/club/EditClubModal.vue'
 import ArchiveClubModal from '@/components/admin/club/ArchiveClubModal.vue'
 import ClubDetailsModal from '@/components/admin/club/ClubDetailsModal.vue'
 
+import { useRouter } from "vue-router"
 import { ref, computed, onMounted, watch, nextTick } from 'vue'
 import { getClubs, updateClubStatus, createClub, updateClub } from '@/api/clubs'
 
+const router = useRouter()
 const clubList = ref([])
 const selectedStatus = ref("ALL")
 const search = ref('')
@@ -157,15 +159,6 @@ const confirmArchive = async () => {
   }
 }
 
-const restoreClub = (clubId) => {
-  clubList.value = clubList.value.map(club => {
-    if (club.id === clubId) {
-      return { ...club, status: "ACTIVE" }
-    }
-    return club
-  })
-}
-
 const activeCount = computed(() =>
   clubList.value.filter(c => c.status === "ACTIVE").length
 )
@@ -218,6 +211,16 @@ function savePage() {
 
 function cancelEditingPage() {
   editingPage.value = false
+}
+
+function visitClubPage() {
+    if (!selectedClub.value) return
+
+    const clubId = selectedClub.value.id
+
+    closeDetailsModal()
+
+    router.push(`/admin/clubs/${clubId}`)
 }
 
 async function startEditingPage() {
@@ -305,13 +308,14 @@ async function startEditingPage() {
       <ClubDetailsModal
         v-if="showDetailsModal && selectedClub"
         :club="selectedClub"
+        :canArchive="true"
         @close="closeDetailsModal"
-        @visit="closeDetailsModal"
+        @visit="visitClubPage"
         @edit="handleEditFromDetails"
         @archive="handleArchiveFromDetails"
         @restore="handleRestoreFromDetails"
       />
-      <EditClubModal v-if="showEditModal && selectedClub" :club="selectedClub" @close="closeEditModal" @submit="saveEdit" />
+      <EditClubModal v-if="showEditModal && selectedClub" :club="selectedClub" :canEditFaculty="true" @close="closeEditModal" @submit="saveEdit" />
       <ArchiveClubModal v-if="showArchiveModal && selectedClub" :club="selectedClub" @close="closeArchiveModal" @confirm="confirmArchive" />
     </section>
   </AdminLayout>

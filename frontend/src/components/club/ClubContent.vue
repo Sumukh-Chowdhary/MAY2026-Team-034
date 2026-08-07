@@ -1,15 +1,50 @@
 <script setup>
 import ClubPanel from "./ClubPanel.vue";
+import { useRouter } from "vue-router";
 import { ref, onMounted } from "vue";
-import { getClub, getClubEvents, getClubMembers } from "@/services/clubService";
+import { getClub, getClubEvents, getClubMembers, updateClubMemberStatus } from "@/services/clubService";
+
+const router = useRouter()
 
 const props = defineProps({
-    clubId: Number
+    clubId: Number,
+    userRole: {
+        type: String,
+        default: "GUEST"
+    }
 });
 
 const club = ref(null);
 const events = ref([]);
 const members = ref([]);
+
+function viewProfile(member) {
+    console.log("TODO profile page", member)
+}
+
+function viewEvent(event) {
+    const prefix =
+        props.userRole === "GUEST"
+            ? ""
+            : `/${props.userRole.toLowerCase()}`
+
+    router.push(`${prefix}/events/${event.id}`)
+}
+
+async function toggleMembership(member) {
+    try {
+        await updateClubMemberStatus(
+            props.clubId,
+            member.id,
+            member.membershipStatus !== "ACTIVE"
+        )
+
+        members.value = await getClubMembers(props.clubId)
+    }
+    catch (err) {
+        console.error(err)
+    }
+}
 
 onMounted(async () => {
     club.value = await getClub(props.clubId);
@@ -63,26 +98,38 @@ onMounted(async () => {
                 class="member-list"
             >
 
-                <div
-                    v-for="member in members"
-                    :key="member.id"
-                    class="member-card"
-                >
+                <div class="member-card" v-for="member in members" :key="member.id">
 
                     <div class="member-avatar">
                         {{ member.name.charAt(0) }}
                     </div>
 
                     <div class="member-info">
+                        <div class="member-name">{{ member.name }}</div>
+                        <div class="member-role">{{ member.membershipRole }}</div>
+                    </div>
 
-                        <div class="member-name">
-                            {{ member.name }}
-                        </div>
+                    <div
+                        v-if="props.userRole === 'ADMIN' || props.userRole === 'FACULTY'"
+                        class="member-actions"
+                    >
+                        <button
+                        class="profile-btn"
+                        @click="viewProfile(member)"
+                        >
+                        View Profile
+                        </button>
 
-                        <div class="member-role">
-                            {{ member.membershipRole }}
-                        </div>
-
+                        <button
+                        :class="member.membershipStatus === 'ACTIVE'
+                            ? 'deactivate-btn'
+                            : 'activate-btn'"
+                        @click="toggleMembership(member)"
+                        >
+                        {{ member.membershipStatus === 'ACTIVE'
+                            ? 'Deactivate'
+                            : 'Activate' }}
+                        </button>
                     </div>
 
                 </div>
@@ -118,15 +165,18 @@ onMounted(async () => {
                     :key="event.id"
                     class="event-card"
                 >
-
-                    <div class="event-name">
-                        {{ event.name }}
+                    <div class="event-info">
+                        <div class="event-name">{{ event.name }}</div>
+                        <div class="event-date">{{ event.startDate }}</div>
                     </div>
 
-                    <div class="event-date">
-                        {{ event.startDate }}
-                    </div>
-
+                    <button
+                        v-if="userRole !== 'GUEST'"
+                        class="event-details-btn"
+                        @click="viewEvent(event)"
+                    >
+                        View Details
+                    </button>
                 </div>
 
             </div>
@@ -217,18 +267,23 @@ onMounted(async () => {
     padding-right: 0.35rem;
 }
 
-.event-card {
-    border: 1px solid #3b82f6;
-    border-left: 4px solid #2563eb;
-    border-radius: 10px;
-    padding: 0.75rem 1rem;
-    background: #ffffff;
-    transition: all 0.2s ease;
+.event-header{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
 }
 
-.event-card:hover {
-    background: #eff6ff;
-    transform: translateY(-1px);
+.event-card {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+
+    padding: 1rem;
+
+    border: 1px solid #dbeafe;
+    border-radius: 12px;
+
+    background: white;
 }
 
 .event-name {
@@ -264,9 +319,9 @@ onMounted(async () => {
 .member-card {
     display: flex;
     align-items: center;
-    gap: 0.75rem;
+    gap: 1rem;
 
-    border: 1px solid #e5e7eb;
+    border:1px solid #dbeafe;
     border-radius: 10px;
 
     padding: 0.75rem;
@@ -274,7 +329,17 @@ onMounted(async () => {
     transition: all 0.2s ease;
 }
 
+.member-card,
+.event-card{
+    padding:1rem;
+    min-height:90px;
+}
+
 .member-card:hover {
+    background: #f8fafc;
+}
+
+.event-card:hover {
     background: #f8fafc;
 }
 
@@ -297,6 +362,7 @@ onMounted(async () => {
 .member-info {
     display: flex;
     flex-direction: column;
+    flex: 1;
 }
 
 .member-name {
@@ -380,6 +446,82 @@ onMounted(async () => {
 
 .events-icon {
     color: #f59e0b;
+}
+
+.member-actions{
+    display:flex;
+    gap: 0.6rem;
+    margin-left: auto;
+    margin-top:.65rem;
+    align-items: center;
+}
+
+.profile-btn,
+.deactivate-btn,
+.activate-btn {
+    padding: 0.45rem 0.9rem;
+    border: none;
+    border-radius: 10px;
+    cursor: pointer;
+    font-size: 0.85rem;
+    font-weight: 600;
+    transition: all 0.2s ease;
+}
+
+.profile-btn {
+    background: #eff6ff;
+    color: #2563eb;
+    border: 1px solid #3b82f6;
+}
+
+.profile-btn:hover {
+    background: #dbeafe;
+}
+
+.deactivate-btn {
+    background: #fee2e2;
+    color: #dc2626;
+    border: 1px solid #e27373;
+}
+
+.deactivate-btn:hover {
+    background: #fecaca;
+}
+
+.activate-btn {
+    background: #dcfce7;
+    color: #15803d;
+    border: 1px solid #548365;
+}
+
+.activate-btn:hover {
+    background: #bbf7d0;
+}
+
+.member-actions button {
+    min-width: 110px;
+}
+
+.event-details-btn {
+    padding: 0.45rem 0.9rem;
+    min-width: 110px;
+
+    border: none;
+    border-radius: 10px;
+
+    background: #eff6ff;
+    color: #2563eb;
+    border: 1px solid #3b82f6;
+
+    font-size: 0.85rem;
+    font-weight: 600;
+
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.event-details-btn:hover {
+    background: #bfdbfe;
 }
 
 </style>

@@ -57,3 +57,13 @@ export async function getClubs() {
     return response.data
 }
 
+export async function updateClubMemberStatus(clubId, userId, active) {
+    const endpoint = active ? "reactivate" : "deactivate"
+
+    const response = await axios.patch(
+        `${API}${getRolePrefix()}/clubs/${clubId}/members/${userId}/${endpoint}`
+    )
+
+    return response.data
+}
+

@@ -1,5 +1,5 @@
 from app.services.club_service import (
-    deactivate_club_member as deactivate_club_member_service,
+    update_club_member_status as update_club_member_status_service,
     get_all_clubs as get_all_clubs_service,
     get_club_by_id as get_club_by_id_service,
     update_club as update_club_service,
@@ -113,9 +113,10 @@ def deactivate_club_member(club_id, user_id):
 
     try:
 
-        member = deactivate_club_member_service(
+        member = update_club_member_status_service(
             club_id,
-            user_id
+            user_id,
+            active=False
         )
 
         return jsonify(member), 200
@@ -137,6 +138,42 @@ def deactivate_club_member(club_id, user_id):
 
         return jsonify({
             "error": "Failed to deactivate member.",
+            "details": str(e)
+        }), 500
+
+@faculty_bp.patch("/clubs/<int:club_id>/members/<int:user_id>/reactivate")
+@jwt_required
+@roles_required("FACULTY")
+@faculty_club_access_required
+def reactivate_club_member(club_id, user_id):
+
+    try:
+
+        member = update_club_member_status_service(
+            club_id,
+            user_id,
+            active=True
+        )
+
+        return jsonify(member), 200
+
+    except ValueError as e:
+
+        return jsonify({
+            "error": str(e)
+        }), 400
+
+    except NotFound as e:
+        return jsonify({
+            "error": e.description
+        }), 404
+
+    except Exception as e:
+
+        db.session.rollback()
+
+        return jsonify({
+            "error": "Failed to reactivate member.",
             "details": str(e)
         }), 500
 
