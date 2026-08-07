@@ -67,7 +67,10 @@
           <textarea v-model="form.description" rows="5" maxlength="500" placeholder="Update club description"></textarea>
         </label>
 
-        <div class="field">
+        <div
+            v-if="canEditFaculty"
+            class="field"
+        >
           <FacultyPicker
               v-model="form.facultyCoordinatorIds"
               :faculty="faculty"
@@ -96,6 +99,10 @@ const props = defineProps({
   club: {
     type: Object,
     required: true
+  },
+  canEditFaculty: {
+    type: Boolean,
+    default: true
   }
 })
 
@@ -144,7 +151,11 @@ async function loadFaculty() {
   }
 }
 
-onMounted(loadFaculty)
+onMounted(() => {
+  if (props.canEditFaculty) {
+    loadFaculty()
+  }
+})
 
 function selectIcon(icon) {
   form.logo = icon

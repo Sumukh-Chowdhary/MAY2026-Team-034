@@ -1,12 +1,12 @@
 from app.services.club_service import (
     archive_club as archive_club_service,
-    deactivate_club_member as deactivate_club_member_service,
     get_all_clubs as get_all_clubs_service,
     get_club_by_id as get_club_by_id_service,
     get_club_events as get_club_events_service,
     get_club_member as get_club_member_service,
     get_club_members as get_club_members_service,
     get_faculty_details as get_faculty_details_service,
+    update_club_member_status as update_club_member_status_service,
     update_club_status as update_club_status_service,
     update_club as update_club_service,
     create_club as create_club_service
@@ -197,9 +197,10 @@ def deactivate_club_member(club_id, user_id):
 
     try:
 
-        member = deactivate_club_member_service(
+        member = update_club_member_status_service(
             club_id,
-            user_id
+            user_id,
+            active=False
         )
 
         return jsonify(member), 200
@@ -221,6 +222,41 @@ def deactivate_club_member(club_id, user_id):
 
         return jsonify({
             "error": "Failed to deactivate member.",
+            "details": str(e)
+        }), 500
+
+@admin_bp.patch("/clubs/<int:club_id>/members/<int:user_id>/reactivate")
+@jwt_required
+@roles_required("ADMIN")
+def reactivate_club_member(club_id, user_id):
+
+    try:
+
+        member = update_club_member_status_service(
+            club_id,
+            user_id,
+            active=True
+        )
+
+        return jsonify(member), 200
+
+    except ValueError as e:
+
+        return jsonify({
+            "error": str(e)
+        }), 400
+
+    except NotFound as e:
+        return jsonify({
+            "error": e.description
+        }), 404
+
+    except Exception as e:
+
+        db.session.rollback()
+
+        return jsonify({
+            "error": "Failed to reactivate member.",
             "details": str(e)
         }), 500
 

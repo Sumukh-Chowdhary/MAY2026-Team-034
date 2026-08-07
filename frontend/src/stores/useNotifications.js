@@ -11,9 +11,8 @@ export const useNotifications = defineStore('notifications', () => {
     const connectSocket = (userId) => {
         if (socket.value) return // already connected
         
-        socket.value = io(import.meta.env.VITE_API_URL || 'http://localhost:5000', {
-            path: '/socket.io',
-            transports: ['websocket', 'polling']
+        socket.value = io(import.meta.env.VITE_API_URL || "http://localhost:5000", {
+            path: "/socket.io"
         })
 
         socket.value.on('connect', () => {

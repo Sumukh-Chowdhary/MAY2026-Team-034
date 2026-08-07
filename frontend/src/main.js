@@ -12,7 +12,7 @@ import './assets/style.css'
 
 const app = createApp(App)
 
-app.use(createPinia())   // Install Pinia
+app.use(createPinia())
 app.use(router)
 
 app.mount('#app')
