@@ -174,6 +174,8 @@ async function handleSubmit() {
                 <option value="CREATE_EVENT_GENERAL">Propose General Open Event</option>
               </optgroup>
             </select>
+          </div>
+
           <!-- Target Recipient Role (Sprint 2) -->
           <div class="mb-3">
             <label class="form-label text-sm fw-bold">Target Recipient</label>

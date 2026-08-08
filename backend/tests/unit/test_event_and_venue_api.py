@@ -142,7 +142,7 @@ def test_create_event_invalid_club_and_dates(client, faculty_headers):
 
 def test_update_event_and_status_permissions(client, student_headers, admin_headers):
     forbidden_update = client.put(
-        f'/api/events/{EVENT_ID}/edit',
+        '/api/events/2/edit',
         headers=student_headers,
         json={'name': 'Blocked Update'},
     )
