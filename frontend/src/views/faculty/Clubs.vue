@@ -1,32 +1,34 @@
 <script setup>
 import FacultyLayout from '@/layouts/FacultyLayout.vue'
 import ClubSearch from '@/components/admin/club/ClubSearch.vue'
-import ClubGrid from '@/components/admin/club/ClubGrid.vue'
-import EditClubModal from '@/components/admin/club/EditClubModal.vue'
-import ClubDetailsModal from '@/components/admin/club/ClubDetailsModal.vue'
+import FacultyClubCard from '@/components/faculty/clubs/FacultyClubCard.vue'
 
 import { useRouter } from "vue-router"
 import { ref, computed, onMounted, watch, nextTick } from 'vue'
-import { getFacultyClubs, updateFacultyClub } from '@/api/clubs'
+import { getFacultyClubs } from '@/api/clubs'
+import { getMySupervisedClubs } from '@/api/faculty'
 
 const router = useRouter()
-const clubList = ref([])
+const allClubsList = ref([])
+const myClubsList = ref([])
 const selectedStatus = ref("ALL")
 const search = ref('')
-const selectedClub = ref(null)
-const showDetailsModal = ref(false)
-const showEditModal = ref(false)
 const currentPage = ref(1)
-const itemsPerPage = 3
+const itemsPerPage = 9
 const editingPage = ref(false)
 const pageInput = ref(1)
 const pageInputRef = ref(null)
 
 const fetchClubs = async () => {
   try {
-    clubList.value = await getFacultyClubs()
+    const [all, my] = await Promise.all([
+      getFacultyClubs().catch(() => []),
+      getMySupervisedClubs().catch(() => [])
+    ])
+    allClubsList.value = all || []
+    myClubsList.value = my || []
   } catch (error) {
-    console.error(error)
+    console.error('Error fetching faculty clubs:', error)
   }
 }
 
@@ -34,80 +36,59 @@ onMounted(() => {
   fetchClubs()
 })
 
-const filteredClubs = computed(() => {
-  let filtered = clubList.value
+const myClubIds = computed(() => myClubsList.value.map(c => Number(c.id || c.clubId)))
+
+const filteredMyClubs = computed(() => {
+  let filtered = myClubsList.value
 
   if (search.value.trim()) {
     const keyword = search.value.toLowerCase()
-
     filtered = filtered.filter(club =>
-      club.name.toLowerCase().includes(keyword) ||
-      club.category.toLowerCase().includes(keyword)
+      (club.name || club.clubName || club.club_name || '').toLowerCase().includes(keyword) ||
+      (club.category || club.club_category || '').toLowerCase().includes(keyword)
     )
   }
 
   if (selectedStatus.value !== "ALL") {
-    filtered = filtered.filter(
-      club => club.status === selectedStatus.value
-    )
+    filtered = filtered.filter(club => club.status === selectedStatus.value)
   }
 
   return filtered
 })
 
-const openDetailsModal = (club) => {
-  selectedClub.value = { ...club }
-  showDetailsModal.value = true
-}
+const filteredAllClubs = computed(() => {
+  let filtered = allClubsList.value
 
-const closeDetailsModal = () => {
-  showDetailsModal.value = false
-  selectedClub.value = null
-}
+  if (search.value.trim()) {
+    const keyword = search.value.toLowerCase()
+    filtered = filtered.filter(club =>
+      (club.name || club.clubName || club.club_name || '').toLowerCase().includes(keyword) ||
+      (club.category || club.club_category || '').toLowerCase().includes(keyword)
+    )
+  }
 
-const openEditModal = (club) => {
-  if (!club) return
-  selectedClub.value = { ...club }
-  showEditModal.value = true
-}
+  if (selectedStatus.value !== "ALL") {
+    filtered = filtered.filter(club => club.status === selectedStatus.value)
+  }
 
-const closeEditModal = () => {
-  showEditModal.value = false
-  selectedClub.value = null
-}
-
-const saveEdit = async (clubData) => {
-    try {
-        await updateFacultyClub(clubData.id, clubData)
-        await fetchClubs()
-        closeEditModal()
-    } catch (error) {
-        console.error(error)
-        alert("Failed to update club.")
-    }
-}
-
-const handleEditFromDetails = () => {
-  const clubToEdit = selectedClub.value
-  closeDetailsModal()
-  openEditModal(clubToEdit)
-}
+  return filtered
+})
 
 const activeCount = computed(() =>
-  clubList.value.filter(c => c.status === "ACTIVE").length
+  allClubsList.value.filter(c => c.status === "ACTIVE").length
 )
 
 const legacyCount = computed(() =>
-  clubList.value.filter(c => c.status === "INACTIVE").length
+  allClubsList.value.filter(c => c.status === "INACTIVE").length
 )
 
 watch([search, selectedStatus], () => {
   currentPage.value = 1
 })
 
-const paginatedClubs = computed(() => {
+const paginatedAllClubs = computed(() => {
   const start = (currentPage.value - 1) * itemsPerPage
-  return filteredClubs.value.slice(
+  return filteredAllClubs.value.slice(
     start,
     start + itemsPerPage
   )
@@ -116,7 +97,7 @@ const paginatedClubs = computed(() => {
 const totalPages = computed(() =>
   Math.max(
     1,
-    Math.ceil(filteredClubs.value.length / itemsPerPage)
+    Math.ceil(filteredAllClubs.value.length / itemsPerPage)
   )
 )
 
@@ -147,16 +128,6 @@ function cancelEditingPage() {
   editingPage.value = false
 }
 
-function visitClubPage() {
-    if (!selectedClub.value) return
-
-    const clubId = selectedClub.value.id
-
-    closeDetailsModal()
-
-    router.push(`/faculty/clubs/${clubId}`)
-}
-
 async function startEditingPage() {
   editingPage.value = true
   pageInput.value = currentPage.value
@@ -172,14 +143,14 @@ async function startEditingPage() {
       <div class="page-top">
         <div>
           <p class="eyebrow">Faculty Dashboard</p>
-          <h2 class="fw-bold mb-2">Clubs Management</h2>
+          <h2 class="fw-bold mb-2">Faculty Clubs</h2>
           <p class="subtitle">
-            Manage student clubs, discover new interests, and keep club details up to date from one place.
+            Supervise your assigned clubs and explore all campus student clubs from one place.
           </p>
         </div>
       </div>
 
-      <div class="toolbar">
+      <div class="toolbar mb-4">
         <div class="search-wrap">
           <ClubSearch v-model="search" />
         </div>
@@ -189,7 +160,7 @@ async function startEditingPage() {
             @click="selectedStatus = 'ALL'"
           >
             All
-            <span>{{ clubList.length }}</span>
+            <span>{{ allClubsList.length }}</span>
           </button>
 
           <button
@@ -210,46 +181,70 @@ async function startEditingPage() {
         </div>
       </div>
 
-      <ClubGrid :clubs="paginatedClubs" @view="openDetailsModal"/>
+      <!-- SECTION 1: My Clubs (Coordinated Clubs) -->
+      <div class="club-section mb-5" v-if="filteredMyClubs.length > 0">
+        <div class="d-flex align-items-center gap-2 mb-3">
+          <span class="material-symbols-rounded text-primary fs-4">verified_user</span>
+          <h4 class="fw-bold m-0 text-dark">My Clubs</h4>
+          <span class="badge bg-primary-subtle text-primary border rounded-pill px-2.5 py-1 text-xs">
+            {{ filteredMyClubs.length }} Coordinated / Assigned
+          </span>
+        </div>
 
-      <div v-if="filteredClubs.length" class="pagination-bar">
-        <button @click="previousPage" :disabled="currentPage === 1">← Previous</button>
-        <div class="page-indicator" @dblclick="startEditingPage">
-          <span v-if="!editingPage">{{ currentPage }}</span>
-          <input
-              v-else
-              ref="pageInputRef"
-              v-model.number="pageInput"
-              class="page-input"
-              type="number"
-              min="1"
-              :max="totalPages"
-              @keyup.enter="savePage"
-              @keyup.esc="cancelEditingPage"
-              @blur="savePage"
+        <div class="cards-grid">
+          <FacultyClubCard
+            v-for="club in filteredMyClubs"
+            :key="club.id || club.clubId"
+            :club="club"
+            :isMyClub="true"
           />
         </div>
-        <button @click="nextPage" :disabled="currentPage === totalPages">Next →</button>
       </div>
 
-      <div v-if="filteredClubs.length === 0" class="empty-state">
-        <h3>No clubs matched your search.</h3>
-        <p>Try searching with another keyword.</p>
-      </div>
+      <!-- SECTION 2: All Clubs -->
+      <div class="club-section">
+        <div class="d-flex align-items-center gap-2 mb-3">
+          <span class="material-symbols-rounded text-secondary fs-4">account_balance</span>
+          <h4 class="fw-bold m-0 text-dark">All Clubs</h4>
+          <span class="badge bg-secondary-subtle text-secondary border rounded-pill px-2.5 py-1 text-xs">
+            {{ filteredAllClubs.length }} Total
+          </span>
+        </div>
 
-      <AddClubModal v-if="showAddModal" @close="closeAddModal" @submit="addClub" />
-      <ClubDetailsModal
-        v-if="showDetailsModal && selectedClub"
-        :club="selectedClub"
-        :canArchive="false"
-        @close="closeDetailsModal"
-        @visit="visitClubPage"
-        @edit="handleEditFromDetails"
-        @archive="handleArchiveFromDetails"
-        @restore="handleRestoreFromDetails"
-      />
-      <EditClubModal v-if="showEditModal && selectedClub" :club="selectedClub" :canEditFaculty="false" @close="closeEditModal" @submit="saveEdit" />
-      <ArchiveClubModal v-if="showArchiveModal && selectedClub" :club="selectedClub" @close="closeArchiveModal" @confirm="confirmArchive" />
+        <div class="cards-grid">
+          <FacultyClubCard
+            v-for="club in paginatedAllClubs"
+            :key="club.id || club.clubId"
+            :club="club"
+            :isMyClub="false"
+          />
+        </div>
+
+        <div v-if="filteredAllClubs.length" class="pagination-bar">
+          <button @click="previousPage" :disabled="currentPage === 1">← Previous</button>
+          <div class="page-indicator" @dblclick="startEditingPage">
+            <span v-if="!editingPage">{{ currentPage }}</span>
+            <input
+                v-else
+                ref="pageInputRef"
+                v-model.number="pageInput"
+                class="page-input"
+                type="number"
+                min="1"
+                :max="totalPages"
+                @keyup.enter="savePage"
+                @keyup.esc="cancelEditingPage"
+                @blur="savePage"
+            />
+          </div>
+          <button @click="nextPage" :disabled="currentPage === totalPages">Next →</button>
+        </div>
+
+        <div v-if="filteredAllClubs.length === 0" class="empty-state">
+          <h3>No clubs matched your search.</h3>
+          <p>Try searching with another keyword.</p>
+        </div>
+      </div>
     </section>
   </FacultyLayout>
 </template>
@@ -257,6 +252,12 @@ async function startEditingPage() {
 <style scoped>
 .faculty-clubs-page {
   width: 100%;
+}
+
+.cards-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 24px;
 }
 
 .page-top {

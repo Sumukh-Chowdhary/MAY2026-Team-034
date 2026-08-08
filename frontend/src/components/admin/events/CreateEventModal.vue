@@ -23,33 +23,26 @@
           />
         </div>
 
-        <!-- Event Scope (STEP 8) -->
-        <div class="mb-3">
+        <!-- Event Scope (Only visible for Admin) -->
+        <div class="mb-3" v-if="currentUser?.role === 'ADMIN'">
           <label class="form-label text-sm fw-bold">Event Classification *</label>
-          <div class="btn-group w-100" role="group">
-            <input
-              type="radio"
-              class="btn-check"
-              name="eventScope"
-              id="scopeClub"
-              value="CLUB_EVENT"
-              v-model="form.eventScope"
-            />
-            <label class="btn btn-outline-primary fw-semibold" for="scopeClub">
+          <div class="scope-toggle-group">
+            <button
+              type="button"
+              class="scope-toggle-btn"
+              :class="{ 'scope-toggle-active': form.eventScope === 'CLUB_EVENT' }"
+              @click="form.eventScope = 'CLUB_EVENT'"
+            >
               👥 Club Event
-            </label>
-
-            <input
-              type="radio"
-              class="btn-check"
-              name="eventScope"
-              id="scopeGeneral"
-              value="GENERAL_EVENT"
-              v-model="form.eventScope"
-            />
-            <label class="btn btn-outline-purple fw-semibold" for="scopeGeneral">
-              🎓 General College Event
-            </label>
+            </button>
+            <button
+              type="button"
+              class="scope-toggle-btn"
+              :class="{ 'scope-toggle-active': form.eventScope === 'GENERAL_EVENT' }"
+              @click="form.eventScope = 'GENERAL_EVENT'"
+            >
+              🎓 General Event
+            </button>
           </div>
         </div>
 
@@ -87,16 +80,6 @@
           <!-- Dropdown List -->
           <div v-if="showClubDropdown" class="club-autocomplete-dropdown">
             <div
-              class="dropdown-item-custom border-bottom bg-light"
-              @click="selectClub(null)"
-            >
-              <div class="d-flex justify-content-between align-items-center">
-                <span class="fw-bold text-primary">🎉 General / Institutional Event (No Club)</span>
-                <span class="category-badge-sm">General</span>
-              </div>
-            </div>
-
-            <div
               v-for="club in filteredClubs"
               :key="club.id"
               class="dropdown-item-custom"
@@ -105,6 +88,38 @@
               <div class="d-flex justify-content-between align-items-center">
                 <span class="fw-semibold text-dark">{{ club.name || club.club_name }}</span>
                 <span class="category-badge-sm">{{ club.category || club.club_category || 'General' }}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Searchable Faculty Organizer Dropdown (If Admin creating General Event) -->
+        <div class="mb-3 position-relative" v-if="currentUser?.role === 'ADMIN' && form.eventScope === 'GENERAL_EVENT'">
+          <label class="form-label text-sm fw-bold">Faculty Event Organizer *</label>
+          
+          <div class="input-group">
+            <span class="input-group-text bg-light text-muted border-end-0">
+              <span class="material-symbols-rounded icon-sm">person_search</span>
+            </span>
+            <input
+              v-model="facultySearchQuery"
+              type="text"
+              class="form-control custom-input border-start-0"
+              placeholder="Search and assign faculty organizer..."
+              @focus="showFacultyDropdown = true"
+            />
+          </div>
+
+          <div v-if="showFacultyDropdown && filteredFaculty.length" class="club-autocomplete-dropdown">
+            <div
+              v-for="fac in filteredFaculty"
+              :key="fac.id"
+              class="dropdown-item-custom"
+              @click="selectFacultyOrganizer(fac)"
+            >
+              <div class="d-flex justify-content-between align-items-center">
+                <span class="fw-semibold text-dark">👨‍🏫 {{ fac.name || fac.email }}</span>
+                <span class="category-badge-sm">{{ fac.department || 'Faculty' }}</span>
               </div>
             </div>
           </div>
@@ -212,6 +227,14 @@
             placeholder="Provide event overview and details..."
           ></textarea>
         </div>
+
+        <!-- Faculty Permission Warning Banner -->
+        <div v-if="!isFacultyPermissionValid" class="alert alert-danger d-flex align-items-center gap-2 rounded-3 text-sm p-3 mb-0">
+          <span class="material-symbols-rounded icon-sm">gpp_maybe</span>
+          <div>
+            <strong>Permission Denied:</strong> You are not assigned as Faculty Coordinator for this club. Only assigned Faculty Coordinators can submit event requests for this club.
+          </div>
+        </div>
       </div>
 
       <!-- Footer -->
@@ -219,7 +242,7 @@
         <button class="btn btn-light me-2 rounded-pill px-4" @click="$emit('close')">Cancel</button>
         <button
           class="btn btn-success font-semibold rounded-pill px-4"
-          :disabled="loading || checkingAvailability || venueAvailabilityStatus === 'OCCUPIED' || (form.startDate && form.endDate && form.endDate < form.startDate)"
+          :disabled="loading || !isFacultyPermissionValid || checkingAvailability || venueAvailabilityStatus === 'OCCUPIED' || (form.startDate && form.endDate && form.endDate < form.startDate)"
           @click="handleSubmit"
         >
           <span v-if="loading" class="spinner-border spinner-border-sm me-1"></span>
@@ -235,6 +258,14 @@ import { ref, computed, watch, onMounted } from 'vue'
 import { createEvent } from '@/api/events'
 import { getClubs } from '@/api/clubs'
 import { getVenues, checkVenueAvailability } from '@/api/venues'
+import { getCurrentUser } from '@/services/authService'
+import { getMySupervisedClubs } from '@/api/faculty'
+import { getUsers } from '@/api/users'
+import { useToast } from '@/composables/useToast'
+
+const { showToast } = useToast()
+const currentUser = getCurrentUser()
+const supervisedClubIds = ref([])
 
 const props = defineProps({
   fixedClubId: {
@@ -260,11 +291,17 @@ const checkingAvailability = ref(false)
 const venueAvailabilityStatus = ref(null) // null | 'AVAILABLE' | 'OCCUPIED'
 const conflictingEventDetails = ref(null)
 
+const facultyList = ref([])
+const facultySearchQuery = ref('')
+const selectedFacultyOrganizerObj = ref(null)
+const showFacultyDropdown = ref(false)
+
 const form = ref({
   name: '',
   eventScope: 'CLUB_EVENT',
   club: '',
   clubId: null,
+  facultyOrganizerId: null,
   venueId: null,
   venueName: '',
   eventType: 'General',
@@ -318,6 +355,15 @@ watch(
 )
 
 onMounted(async () => {
+  if (currentUser?.role === 'FACULTY') {
+    try {
+      const myClubs = await getMySupervisedClubs()
+      supervisedClubIds.value = (myClubs || []).map(c => Number(c.id || c.clubId))
+    } catch (e) {
+      console.error('Failed to fetch supervised clubs', e)
+    }
+  }
+
   if (!props.fixedClubId) {
     try {
       const clubs = await getClubs()
@@ -333,7 +379,38 @@ onMounted(async () => {
   } catch (e) {
     console.error('Failed to fetch venues list', e)
   }
+
+  if (currentUser?.role === 'ADMIN') {
+    try {
+      const usersRes = await getUsers()
+      const users = Array.isArray(usersRes) ? usersRes : (usersRes.data || usersRes.users || [])
+      facultyList.value = users.filter(u => (u.role || u.userRole || '').toUpperCase() === 'FACULTY')
+    } catch (e) {
+      console.error('Failed to fetch faculty list', e)
+    }
+  }
 })
+
+const isFacultyPermissionValid = computed(() => {
+  if (currentUser?.role !== 'FACULTY') return true
+  if (form.value.eventScope === 'GENERAL_EVENT') return true
+  const targetId = Number(props.fixedClubId || form.value.clubId)
+  if (!targetId) return true
+  return supervisedClubIds.value.includes(targetId)
+})
+
+const filteredFaculty = computed(() => {
+  if (!facultySearchQuery.value.trim()) return facultyList.value
+  const q = facultySearchQuery.value.toLowerCase()
+  return facultyList.value.filter(f => (f.name || f.email || '').toLowerCase().includes(q))
+})
+
+function selectFacultyOrganizer(fac) {
+  selectedFacultyOrganizerObj.value = fac
+  form.value.facultyOrganizerId = fac.id
+  facultySearchQuery.value = fac.name || fac.email
+  showFacultyDropdown.value = false
+}
 
 const filteredClubs = computed(() => {
   if (!clubSearchQuery.value.trim()) return clubsList.value
@@ -393,18 +470,23 @@ function selectVenue(v) {
 }
 
 async function handleSubmit() {
+  if (!isFacultyPermissionValid.value) {
+    showToast('You are not assigned as Faculty Coordinator for this club and cannot create event requests for it.', 'error')
+    return
+  }
+
   if (!form.value.name.trim()) {
-    alert('Please provide Event Name.')
+    showToast('Please provide Event Name.', 'warning')
     return
   }
 
   if (form.value.eventScope === 'CLUB_EVENT' && !props.fixedClubId && !form.value.club.trim() && !form.value.clubId) {
-    alert('Please select a Club.')
+    showToast('Please select a Club.', 'warning')
     return
   }
 
   if (!form.value.startDate || !form.value.endDate) {
-    alert('Please select valid Start and End dates.')
+    showToast('Please select valid Start and End dates.', 'warning')
     return
   }
 
@@ -425,6 +507,7 @@ async function handleSubmit() {
     venueName: form.value.venueName || venueSearchQuery.value,
     club: isGeneral ? null : (form.value.club || 'Club Event'),
     clubId: targetClubId,
+    facultyOrganizerId: isGeneral ? form.value.facultyOrganizerId : null,
     capacity: selectedVenueObj.value?.capacity || 0
   }
 
@@ -432,9 +515,9 @@ async function handleSubmit() {
     const res = await createEvent(payload)
 
     if (res && res.isRequest) {
-      alert(`Event creation request for "${res.name || form.value.name}" submitted successfully for approval!`)
+      showToast(`Event creation request for "${res.name || form.value.name}" submitted successfully for approval!`, 'success')
     } else {
-      alert(`Event "${res?.name || form.value.name}" created and venue reserved successfully!`)
+      showToast(`Event "${res?.name || form.value.name}" created and venue reserved successfully!`, 'success')
     }
 
     emit('created', res)
@@ -443,7 +526,7 @@ async function handleSubmit() {
   } catch (error) {
     console.error('Failed to create event', error)
     const errMessage = error?.response?.data?.error || 'Failed to process event creation.'
-    alert(errMessage)
+    showToast(errMessage, 'error')
   } finally {
     loading.value = false
   }
@@ -566,5 +649,42 @@ async function handleSubmit() {
   display: flex;
   justify-content: flex-end;
   background: #f8fafc;
+}
+
+/* Event Classification segmented toggle */
+.scope-toggle-group {
+  display: flex;
+  width: 100%;
+  border: 1px solid #cbd5e1;
+  border-radius: 12px;
+  overflow: hidden;
+  background: #f8fafc;
+}
+
+.scope-toggle-btn {
+  flex: 1;
+  padding: 0.55rem 0.75rem;
+  border: none;
+  background: transparent;
+  color: #64748b;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.18s ease, color 0.18s ease;
+  white-space: nowrap;
+}
+
+.scope-toggle-btn:not(:last-child) {
+  border-right: 1px solid #cbd5e1;
+}
+
+.scope-toggle-btn:hover:not(.scope-toggle-active) {
+  background: #eff6ff;
+  color: #2563eb;
+}
+
+.scope-toggle-active {
+  background: #2563eb;
+  color: #ffffff;
 }
 </style>

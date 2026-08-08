@@ -191,8 +191,10 @@ const eventTargetUrl = computed(() => {
 }
 
 .status-badge.scheduled {
-  background: #e0f2fe;
-  color: #0369a1;
+  background: #f3e8ff;
+  color: #7c3aed;
+  border: 1px solid #d8b4fe;
+  box-shadow: 0 0 12px rgba(124, 58, 237, 0.25);
 }
 
 .status-badge.completed {

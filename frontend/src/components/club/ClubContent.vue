@@ -2,12 +2,20 @@
 import ClubPanel from "./ClubPanel.vue";
 import EditClubModal from "@/components/admin/club/EditClubModal.vue";
 import CreateEventModal from "@/components/admin/events/CreateEventModal.vue";
+import UserAvatar from "@/components/profile/UserAvatar.vue";
 import { useRouter } from "vue-router";
 import { ref, computed, onMounted } from "vue";
-import { getClub, getClubEvents, getClubMembers, updateClubMemberStatus } from "@/services/clubService";
 import { updateClub, updateFacultyClub } from "@/api/clubs";
+import { getClub, getClubMembers, getClubEvents, updateClubMemberStatus } from "@/services/clubService";
+import { getCurrentUser } from "@/services/authService";
+import { getMySupervisedClubs } from "@/api/faculty";
+import { useToast } from "@/composables/useToast";
+
+const { showToast } = useToast();
 
 const router = useRouter()
+const currentUser = getCurrentUser()
+const supervisedClubIds = ref([])
 
 const props = defineProps({
     clubId: Number,
@@ -43,6 +51,11 @@ function viewProfile(member) {
     console.log("TODO profile page", member)
 }
 
+function viewRequests() {
+    const prefix = props.userRole === "ADMIN" ? "/admin" : "/faculty"
+    router.push(`${prefix}/requests`)
+}
+
 function viewEvent(event) {
     const prefix =
         props.userRole === "GUEST"
@@ -61,9 +74,12 @@ async function toggleMembership(member) {
         )
 
         members.value = await getClubMembers(props.clubId)
+        showToast('Member status updated successfully.', 'success');
     }
     catch (err) {
         console.error(err)
+        const errMsg = err?.response?.data?.error || 'Permission Denied: Only the assigned Faculty Coordinator can manage members.'
+        showToast(errMsg, 'error')
     }
 }
 
@@ -76,9 +92,11 @@ async function handleSaveEdit(clubData) {
         }
         club.value = await getClub(props.clubId);
         showEditClubModal.value = false;
+        showToast('Club updated successfully.', 'success');
     } catch (err) {
         console.error('Failed to update club', err);
-        alert('Failed to update club.');
+        const errMsg = err?.response?.data?.error || 'Permission Denied: Only the assigned Faculty Coordinator can edit this club.'
+        showToast(errMsg, 'error');
     }
 }
 
@@ -91,15 +109,58 @@ onMounted(async () => {
     club.value = await getClub(props.clubId);
     events.value = await getClubEvents(props.clubId);
     members.value = await getClubMembers(props.clubId);
+
+    if (props.userRole === 'FACULTY') {
+        try {
+            const myClubs = await getMySupervisedClubs()
+            supervisedClubIds.value = (myClubs || []).map(c => Number(c.id || c.clubId))
+        } catch (err) {
+            console.error('Failed to load supervised clubs for permission check', err)
+        }
+    }
 });
+
+const canManageClub = computed(() => {
+    if (props.userRole === 'ADMIN') return true
+    if (props.userRole === 'FACULTY') {
+        const targetClubId = Number(props.clubId)
+        if (!targetClubId) return false
+
+        const isSupervised = supervisedClubIds.value.map(Number).includes(targetClubId)
+        if (isSupervised) return true
+
+        if (currentUser) {
+            const currentUserId = Number(currentUser.id || currentUser.userId)
+            const currentUserEmail = (currentUser.email || '').toLowerCase()
+            const currentUserName = (currentUser.name || currentUser.username || '').toLowerCase()
+
+            const isMatchedInCoordinators = facultyCoordinators.value.some(coord => {
+                if (!coord) return false
+                const coordId = Number(coord.id || coord.userId || coord.facultyId)
+                if (coordId && currentUserId && coordId === currentUserId) return true
+                if (coord.email && currentUserEmail && coord.email.toLowerCase() === currentUserEmail) return true
+                if (coord.name && currentUserName && coord.name.toLowerCase() === currentUserName) return true
+                return false
+            })
+
+            if (isMatchedInCoordinators) return true
+        }
+
+        return false
+    }
+    return false
+})
 </script>
 
 <template>
   <div class="club-page">
-
     <!-- Details Panel -->
     <ClubPanel title="Club Details" class="details-panel">
-      <template #header-actions v-if="userRole === 'ADMIN' || userRole === 'FACULTY'">
+      <template #header-actions v-if="canManageClub">
+        <button class="view-requests-btn me-2" @click="viewRequests">
+          <span class="material-symbols-rounded">pending_actions</span>
+          View Requests
+        </button>
         <button class="edit-club-btn" @click="openEditModal">
           <span class="material-symbols-rounded">edit</span>
           Edit Club
@@ -200,19 +261,15 @@ onMounted(async () => {
                 class="member-list"
             >
 
-                <div class="member-card" v-for="member in members" :key="member.id">
-
-                    <div class="member-avatar">
-                        {{ member.name.charAt(0) }}
-                    </div>
-
+                <div class="member-card d-flex align-items-center gap-2" v-for="member in members" :key="member.id">
+                    <UserAvatar size="list" :user="member" />
                     <div class="member-info">
                         <div class="member-name">{{ member.name }}</div>
                         <div class="member-role">{{ member.membershipRole }}</div>
                     </div>
 
                     <div
-                        v-if="props.userRole === 'ADMIN' || props.userRole === 'FACULTY'"
+                        v-if="canManageClub"
                         class="member-actions"
                     >
                         <button
@@ -256,7 +313,7 @@ onMounted(async () => {
         </ClubPanel>
 
         <ClubPanel title="Events">
-            <template #header-actions v-if="userRole === 'ADMIN' || userRole === 'FACULTY'">
+            <template #header-actions v-if="canManageClub">
                 <button class="create-event-btn" @click="showCreateEventModal = true">
                     <span class="material-symbols-rounded">add</span>
                     Create Event
@@ -340,6 +397,7 @@ onMounted(async () => {
 }
 
 /* Header Action Buttons */
+.view-requests-btn,
 .edit-club-btn,
 .create-event-btn {
   display: inline-flex;
@@ -365,7 +423,19 @@ onMounted(async () => {
   color: #0f172a;
 }
 
+.view-requests-btn {
+  background: #fef3c7;
+  color: #b45309;
+  border: 1px solid #fde68a;
+}
+
+.view-requests-btn:hover {
+  background: #fde68a;
+  color: #92400e;
+}
+
 .edit-club-btn .material-symbols-rounded,
+.view-requests-btn .material-symbols-rounded,
 .create-event-btn .material-symbols-rounded {
   font-size: 1.1rem;
 }

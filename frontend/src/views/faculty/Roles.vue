@@ -1,21 +1,55 @@
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import FacultyLayout from '@/layouts/FacultyLayout.vue'
 
 import { getMySupervisedClubs, getFacultyGeneralEvents, leaveFacultyRole } from '@/api/faculty'
 import { getFacultyRequestsDashboard, approveRequest as apiApproveRequest, rejectRequest as apiRejectRequest } from '@/api/requests'
+import { useToast } from '@/composables/useToast'
 
+const { showToast } = useToast()
 const router = useRouter()
 
 // Dynamic Faculty assigned roles & requests
 const facultyRoles = ref([])
 const generalEvents = ref([])
 const incomingRequests = ref([])
+const completedRolesCount = ref(5)
 const loading = ref(true)
+
+// Active Responsibilities Search & Navigation
+const searchQuery = ref('')
+
+function navigateToRoleHistory() {
+  router.push('/faculty/roles/history')
+}
+
+function navigateToClub(clubId) {
+  router.push(`/faculty/clubs/${clubId}`)
+}
+
+// Filtered Active Lists (Active Only)
+const filteredFacultyRoles = computed(() => {
+  if (!searchQuery.value.trim()) return facultyRoles.value
+  const query = searchQuery.value.toLowerCase()
+  return facultyRoles.value.filter(r =>
+    (r.clubName || '').toLowerCase().includes(query) ||
+    (r.roleTitle || '').toLowerCase().includes(query)
+  )
+})
+
+const filteredGeneralEvents = computed(() => {
+  if (!searchQuery.value.trim()) return generalEvents.value
+  const query = searchQuery.value.toLowerCase()
+  return generalEvents.value.filter(e =>
+    (e.name || e.title || '').toLowerCase().includes(query) ||
+    (e.role || '').toLowerCase().includes(query)
+  )
+})
 
 // Active Navigation States
 const activeRoleView = ref(null)
+const showDetailModal = ref(false)
 const activeClubTab = ref('details') // 'details', 'members', 'events', 'alumni'
 
 // User Profile Modal State
@@ -48,41 +82,81 @@ onMounted(async () => {
 async function loadFacultyRolesData() {
   loading.value = true
   try {
-    const rolesData = await getMySupervisedClubs().catch(() => [])
-    facultyRoles.value = Array.isArray(rolesData) ? rolesData : []
+    const [supervisedClubs, myGenEvents, reqsData] = await Promise.all([
+      getMySupervisedClubs().catch(() => []),
+      getFacultyGeneralEvents().catch(() => []),
+      getFacultyRequestsDashboard().catch(() => ({ requests: [] }))
+    ])
 
-    const genEvents = await getFacultyGeneralEvents().catch(() => [])
-    generalEvents.value = Array.isArray(genEvents) ? genEvents : []
+    facultyRoles.value = (supervisedClubs || []).map(club => ({
+      id: club.id,
+      clubId: club.id,
+      clubName: club.clubName || 'Campus Club',
+      roleTitle: club.roleTitle || 'Faculty Coordinator',
+      status: club.status || 'Active',
+      startDate: 'Aug 2025',
+      logo: club.logo || 'groups',
+      category: club.category || 'General',
+      activeMembersCount: club.memberCount || 0,
+      totalEventsCount: club.eventCount || 0,
+      pendingRequestsCount: club.pendingRequestsCount || 0,
+      assignedStudents: club.assignedStudents || [],
+      events: (club.events || []).map(ev => ({
+        id: ev.id,
+        title: ev.name,
+        club: club.clubName,
+        status: ev.status || 'Active',
+        startDate: 'Upcoming',
+        description: `Event organized under ${club.clubName}.`
+      }))
+    }))
 
-    const reqData = await getFacultyRequestsDashboard().catch(() => ({ data: {} }))
-    incomingRequests.value = reqData?.data?.incomingRequests || []
+    generalEvents.value = (myGenEvents || []).map(ev => ({
+      id: ev.id,
+      name: ev.name || ev.event_name || 'General Event',
+      role: 'Event Organizer',
+      status: ev.status || 'Active',
+      startDate: ev.startDate || 'Upcoming',
+      logo: 'star'
+    }))
+
+    incomingRequests.value = reqsData.requests || reqsData || []
   } catch (err) {
-    console.error('Failed to load faculty roles data', err)
+    console.error('Failed to load faculty dashboard roles:', err)
   } finally {
     loading.value = false
   }
 }
 
-function openFacultyDashboard(role) {
-  activeRoleView.value = JSON.parse(JSON.stringify(role))
-  activeClubTab.value = 'details'
+function openDashboard(role) {
+  activeRoleView.value = role
+  showDetailModal.value = true
 }
 
+const showLeaveRoleModal = ref(false)
+const selectedRoleForLeave = ref(null)
+
 function closeDashboard() {
+  showDetailModal.value = false
   activeRoleView.value = null
 }
 
-async function handleLeaveFacultyRole(clubId) {
-  if (confirm('Are you sure you want to step down from coordinating this club?')) {
-    try {
-      await leaveFacultyRole(clubId)
-      alert('Successfully stepped down from club coordinator role.')
-      await loadFacultyRolesData()
-      closeDashboard()
-    } catch (err) {
-      alert('Failed to leave role.')
-      console.error(err)
-    }
+function triggerLeaveRole(role) {
+  selectedRoleForLeave.value = role
+  showLeaveRoleModal.value = true
+}
+
+async function confirmLeaveRole() {
+  if (!selectedRoleForLeave.value) return
+  try {
+    await leaveFacultyRole(selectedRoleForLeave.value.id || selectedRoleForLeave.value.clubId)
+    showToast(`Successfully stepped down from role for ${selectedRoleForLeave.value.clubName}.`, 'success')
+    await loadFacultyRolesData()
+    showLeaveRoleModal.value = false
+    closeDashboard()
+  } catch (err) {
+    showToast('Failed to leave role.', 'error')
+    console.error(err)
   }
 }
 
@@ -99,7 +173,7 @@ function navigateToEventDetails(eventId) {
 
 // Faculty Event Creation
 function submitFacultyCreateEvent() {
-  if (!newEventForm.value.name.trim()) return alert('Please enter Event Name.')
+  if (!newEventForm.value.name.trim()) return showToast('Please enter Event Name.', 'warning')
 
   const newId = activeRoleView.value.events.length ? Math.max(...activeRoleView.value.events.map(e => e.id)) + 1 : 101
   const created = {
@@ -123,7 +197,7 @@ function submitFacultyCreateEvent() {
     description: created.description
   })
 
-  alert(`Event "${created.name}" created successfully!`)
+  showToast(`Event "${created.name}" created successfully!`, 'success')
   showCreateEventModal.value = false
   newEventForm.value = { name: '', startDate: '', endDate: '', description: '' }
 }
@@ -137,17 +211,16 @@ function triggerAssignRole(student) {
 }
 
 function confirmAssignRole() {
-  if (!assignRoleInput.value.trim()) return alert('Please enter role title.')
+  if (!assignRoleInput.value.trim()) return showToast('Please enter role title.', 'warning')
   selectedStudentForAssign.value.role = assignRoleInput.value.trim()
-  alert(`Successfully assigned role "${assignRoleInput.value}" to ${selectedStudentForAssign.value.name}!`)
+  showToast(`Successfully assigned role "${assignRoleInput.value}" to ${selectedStudentForAssign.value.name}!`, 'success')
   showAssignRoleModal.value = false
 }
 
 // Remove Role (Faculty Only)
 function handleRemoveRole(student) {
-  if (confirm(`Are you sure you want to revoke the role from ${student.name}?`)) {
-    student.role = 'Member'
-  }
+  student.role = 'Member'
+  showToast(`Revoked role from ${student.name}.`, 'info')
 }
 
 // Request Approvals
@@ -155,9 +228,9 @@ async function handleApproveRequest(reqId) {
   try {
     await apiApproveRequest(reqId)
     incomingRequests.value = incomingRequests.value.filter(r => r.id !== reqId)
-    alert('Request approved successfully!')
+    showToast('Request approved successfully!', 'success')
   } catch (err) {
-    alert('Failed to approve request.')
+    showToast('Failed to approve request.', 'error')
     console.error(err)
   }
 }
@@ -169,14 +242,14 @@ function triggerRejectRequest(req) {
 }
 
 async function confirmRejectRequest() {
-  if (!rejectionReason.value.trim()) return alert('Please enter rejection reason.')
+  if (!rejectionReason.value.trim()) return showToast('Please enter rejection reason.', 'warning')
   try {
     await apiRejectRequest(selectedRequestForReject.value.id, rejectionReason.value)
     incomingRequests.value = incomingRequests.value.filter(r => r.id !== selectedRequestForReject.value.id)
-    alert('Request rejected successfully.')
+    showToast('Request rejected successfully.', 'success')
     showRejectModal.value = false
   } catch (err) {
-    alert('Failed to reject request.')
+    showToast('Failed to reject request.', 'error')
     console.error(err)
   }
 }
@@ -185,20 +258,97 @@ async function confirmRejectRequest() {
 <template>
   <FacultyLayout>
     <section class="roles-page">
-      <!-- Page Header -->
-      <div class="page-header">
+      <!-- Page Header (STEP 1) -->
+      <div class="page-header mb-4">
         <div>
-          <h2>My Roles & Supervised Clubs</h2>
-          <p>Supervise club coordinators, manage student roles, and review incoming requests.</p>
+          <h2>Faculty Responsibilities</h2>
+          <p>Supervise club activities, lead institutional events, and track past responsibilities.</p>
         </div>
       </div>
 
-      <!-- Main Roles View -->
+      <!-- Dashboard Statistics Grid (STEP 6) -->
+      <div class="row g-3 mb-4">
+        <div class="col-6 col-md-3">
+          <div class="stat-mini-card">
+            <div class="stat-icon bg-primary-subtle text-primary">
+              <span class="material-symbols-rounded">groups</span>
+            </div>
+            <div>
+              <div class="stat-num">{{ facultyRoles.length }}</div>
+              <div class="stat-lbl">Current Clubs</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="col-6 col-md-3">
+          <div class="stat-mini-card">
+            <div class="stat-icon bg-purple-subtle text-purple">
+              <span class="material-symbols-rounded">campaign</span>
+            </div>
+            <div>
+              <div class="stat-num">{{ generalEvents.length }}</div>
+              <div class="stat-lbl">General Events</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="col-6 col-md-3">
+          <div class="stat-mini-card">
+            <div class="stat-icon bg-warning-subtle text-warning">
+              <span class="material-symbols-rounded">pending_actions</span>
+            </div>
+            <div>
+              <div class="stat-num">{{ incomingRequests.length }}</div>
+              <div class="stat-lbl">Pending Requests</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="col-6 col-md-3">
+          <div class="stat-mini-card cursor-pointer" @click="navigateToRoleHistory">
+            <div class="stat-icon bg-success-subtle text-success">
+              <span class="material-symbols-rounded">history</span>
+            </div>
+            <div>
+              <div class="stat-num">{{ completedRolesCount }}</div>
+              <div class="stat-lbl">Completed Roles</div>
+            </div>
+          </div>
+        </div>
+      </div>      <!-- Filter Toolbar (Active Only) -->
+      <div class="filter-toolbar-card mb-4">
+        <div class="row g-3 align-items-center justify-content-between">
+          <!-- Search -->
+          <div class="col-12 col-md-8">
+            <div class="input-group">
+              <span class="input-group-text bg-white border-end-0 text-muted">
+                <span class="material-symbols-rounded icon-sm">search</span>
+              </span>
+              <input
+                v-model="searchQuery"
+                type="text"
+                class="form-control border-start-0 ps-0"
+                placeholder="Search active clubs or general events..."
+              />
+            </div>
+          </div>
+
+          <!-- View History Button -->
+          <div class="col-12 col-md-4 text-md-end">
+            <button class="btn btn-outline-primary rounded-pill px-4 font-semibold text-sm d-inline-flex align-items-center gap-1.5" @click="navigateToRoleHistory">
+              <span class="material-symbols-rounded icon-sm">history</span>
+              View Role History
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Main Roles View (Active Only) -->
       <div v-if="!activeRoleView">
         
         <div v-if="loading" class="text-center py-5">
           <div class="spinner-border text-primary" role="status"></div>
-          <p class="text-muted mt-2">Loading roles data...</p>
+          <p class="text-muted mt-2">Loading active responsibilities...</p>
         </div>
 
         <div v-else>
@@ -212,52 +362,68 @@ async function confirmRejectRequest() {
               <p class="text-muted text-sm m-0 ms-1">Clubs you currently supervise and manage.</p>
             </div>
             
-            <div v-if="facultyRoles.length === 0" class="card p-4 text-center text-muted border-0 rounded-4 shadow-sm">
-              You are not currently designated as a Faculty Coordinator for any active clubs.
+            <div v-if="filteredFacultyRoles.length === 0" class="card p-4 text-center text-muted border-0 rounded-4 shadow-sm">
+              No active club coordination roles match your current search.
             </div>
 
-            <div v-else class="row g-4">
-              <div v-for="role in facultyRoles" :key="role.id" class="col-12 col-md-6 col-xl-4">
+            <div v-else class="row g-3">
+              <div v-for="role in filteredFacultyRoles" :key="role.id" class="col-12 col-md-6 col-xl-4">
                 <div class="compact-assignment-card">
-                  <div class="card-head">
-                    <div class="brand-avatar">
-                      <span class="material-symbols-rounded">groups</span>
+                  <!-- Header: Title + Active Badge + Overflow Menu -->
+                  <div class="d-flex justify-content-between align-items-center mb-2">
+                    <div class="d-flex align-items-center gap-2">
+                      <h5 class="assignment-title m-0">{{ role.clubName }}</h5>
+                      <span class="status-pill-subtle">Active</span>
                     </div>
-                    <div>
-                      <h5 class="assignment-title">{{ role.clubName }}</h5>
-                      <div class="badges-group">
-                        <span class="compact-role-badge">
-                          <span class="material-symbols-rounded icon-xs">workspace_premium</span>
-                          {{ role.roleTitle || 'Faculty Coordinator' }}
-                        </span>
-                        <span class="status-pill active">
-                          <span class="status-dot"></span>
-                          ACTIVE
-                        </span>
-                      </div>
+
+                    <!-- Overflow Menu Dropdown -->
+                    <div class="dropdown">
+                      <button class="btn btn-sm btn-icon-ghost text-muted p-1 rounded-circle" type="button" data-bs-toggle="dropdown" aria-expanded="false" title="More options">
+                        <span class="material-symbols-rounded icon-sm">more_vert</span>
+                      </button>
+                      <ul class="dropdown-menu dropdown-menu-end shadow-sm border-0 text-xs">
+                        <li>
+                          <a class="dropdown-item d-flex align-items-center gap-2 py-1.5" href="#" @click.prevent="navigateToClub(role.id)">
+                            <span class="material-symbols-rounded icon-xs text-primary">visibility</span>
+                            View Club Details
+                          </a>
+                        </li>
+                        <li><hr class="dropdown-divider my-1"></li>
+                        <li>
+                          <a class="dropdown-item d-flex align-items-center gap-2 py-1.5 text-danger" href="#" @click.prevent="triggerLeaveRoleModal(role)">
+                            <span class="material-symbols-rounded icon-xs text-danger">no_accounts</span>
+                            Leave Role
+                          </a>
+                        </li>
+                      </ul>
                     </div>
                   </div>
 
-                  <div class="metrics-row">
-                    <div class="metric-box">
-                      <span class="metric-val">{{ role.memberCount || role.totalMembers || 1 }}</span>
-                      <span class="metric-lbl">Members</span>
+                  <!-- Simplified Info Rows -->
+                  <div class="simplified-info-stack my-2">
+                    <div class="info-line-clean">
+                      <span class="material-symbols-rounded icon-xs text-secondary">groups</span>
+                      <span>{{ role.memberCount || role.totalMembers || 1 }} Members</span>
                     </div>
-                    <div class="metric-box">
-                      <span class="metric-val">{{ role.eventCount || (role.events ? role.events.length : 0) }}</span>
-                      <span class="metric-lbl">Events</span>
+                    <div class="info-line-clean">
+                      <span class="material-symbols-rounded icon-xs text-secondary">event</span>
+                      <span class="text-truncate">{{ role.events?.[0]?.name || role.nextEvent?.name || 'AI Hack Sprint' }}</span>
                     </div>
-                    <div class="metric-box" :class="{ 'has-pending': (role.pendingRequestsCount || 0) > 0 }">
-                      <span class="metric-val">{{ role.pendingRequestsCount || 0 }}</span>
-                      <span class="metric-lbl">Pending</span>
+                    <div class="info-line-clean">
+                      <span class="material-symbols-rounded icon-xs text-secondary">location_on</span>
+                      <span class="text-truncate">{{ role.events?.[0]?.venueName || role.primaryVenue || 'Innovation Lab' }}</span>
+                    </div>
+
+                    <!-- Highlighted Warning Chip when Pending > 0 -->
+                    <div v-if="(role.pendingRequestsCount || 0) > 0" class="pending-warning-chip mt-2">
+                      <span class="material-symbols-rounded icon-xs text-warning">warning</span>
+                      <span>{{ role.pendingRequestsCount }} Pending Request(s)</span>
                     </div>
                   </div>
 
-                  <div class="card-actions">
-                    <button class="btn btn-sm btn-outline-danger rounded-pill px-3" @click="handleLeaveFacultyRole(role.id)">
-                      Leave Role
-                    </button>
-                    <button class="btn-manage-club-compact" @click="openFacultyDashboard(role)">
+                  <!-- Primary Action -->
+                  <div class="card-footer-clean pt-2 mt-auto">
+                    <button class="btn-manage-club-compact w-100 justify-content-center" @click="navigateToClub(role.id)">
                       Manage Club
                       <span class="material-symbols-rounded icon-sm">arrow_forward</span>
                     </button>
@@ -277,50 +443,63 @@ async function confirmRejectRequest() {
               <p class="text-muted text-sm m-0 ms-1">College-wide institutional events (Orientation, Convocation, Placement Drive, Blood Donation Camp).</p>
             </div>
 
-            <div v-if="generalEvents.length === 0" class="card p-4 text-center text-muted border-0 rounded-4 shadow-sm">
-              No general college events currently organized.
+            <div v-if="filteredGeneralEvents.length === 0" class="card p-4 text-center text-muted border-0 rounded-4 shadow-sm">
+              No general college events match your current search.
             </div>
 
-            <div v-else class="row g-4">
-              <div v-for="event in generalEvents" :key="event.id" class="col-12 col-md-6 col-xl-3">
-                <div class="compact-assignment-card">
-                  <div class="card-head">
-                    <div class="brand-avatar general-avatar">
-                      <span class="material-symbols-rounded">campaign</span>
+            <div v-else class="row g-3">
+              <div v-for="event in filteredGeneralEvents" :key="event.id" class="col-12 col-md-6 col-xl-3">
+                <div class="compact-assignment-card" style="min-width: 0;">
+                  <!-- Header: Three-dot menu + Title stacked + Purple Badge below -->
+                  <div class="d-flex justify-content-between align-items-start mb-2">
+                    <div style="min-width: 0; flex: 1;">
+                      <h5 class="assignment-title m-0" style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{{ event.name }}</h5>
+                      <span class="status-pill-purple mt-1 d-inline-block">General Event</span>
                     </div>
-                    <div>
-                      <h5 class="assignment-title">{{ event.name }}</h5>
-                      <span class="compact-role-badge">
-                        <span class="material-symbols-rounded icon-xs">event</span>
-                        General Event
-                      </span>
+
+                    <div class="dropdown ms-2 flex-shrink-0">
+                      <button class="btn btn-sm btn-icon-ghost text-muted p-1 rounded-circle" type="button" data-bs-toggle="dropdown" aria-expanded="false" title="More options">
+                        <span class="material-symbols-rounded icon-sm">more_vert</span>
+                      </button>
+                      <ul class="dropdown-menu dropdown-menu-end shadow-sm border-0 text-xs">
+                        <li>
+                          <a class="dropdown-item d-flex align-items-center gap-2 py-1.5" href="#" @click.prevent="navigateToEventDetails(event.id)">
+                            <span class="material-symbols-rounded icon-xs text-primary">visibility</span>
+                            View Event Details
+                          </a>
+                        </li>
+                      </ul>
                     </div>
                   </div>
 
-                  <div class="compact-meta-block">
-                    <div class="meta-line">
-                      <span class="material-symbols-rounded icon-xs text-primary">location_on</span>
-                      <span>{{ event.venueName || 'Campus Venue' }}</span>
+                  <!-- Simplified Info Rows -->
+                  <div class="simplified-info-stack my-2">
+                    <div class="info-line-clean">
+                      <span class="material-symbols-rounded icon-xs text-secondary">groups</span>
+                      <span>Capacity: {{ event.capacity || 'Unlimited' }}</span>
                     </div>
-                    <div class="meta-line">
-                      <span class="material-symbols-rounded icon-xs text-primary">calendar_today</span>
-                      <span>{{ event.startDate }}</span>
+                    <div class="info-line-clean">
+                      <span class="material-symbols-rounded icon-xs text-secondary">calendar_today</span>
+                      <span class="text-truncate">{{ event.startDate }}</span>
+                    </div>
+                    <div class="info-line-clean">
+                      <span class="material-symbols-rounded icon-xs text-secondary">location_on</span>
+                      <span class="text-truncate">{{ event.venueName || 'Campus Venue' }}</span>
                     </div>
                   </div>
 
-                  <div class="card-actions justify-content-between align-items-center border-top pt-2 mt-2">
-                    <span class="badge bg-light text-secondary border">Capacity: {{ event.capacity || 'Unlimited' }}</span>
-                    <span class="status-pill" :class="(event.status || 'Scheduled').toLowerCase()">
-                      <span class="status-dot"></span>
-                      {{ event.status }}
-                    </span>
+                  <!-- Primary Action -->
+                  <div class="card-footer-clean pt-2 mt-auto">
+                    <button class="btn-manage-club-compact w-100 justify-content-center" @click="navigateToEventDetails(event.id)">
+                      Manage Event
+                      <span class="material-symbols-rounded icon-sm">arrow_forward</span>
+                    </button>
                   </div>
                 </div>
               </div>
             </div>
           </div>
         </div>
-
       </div>
 
       <!-- ==================================================================== -->
@@ -521,6 +700,27 @@ async function confirmRejectRequest() {
           </div>
         </div>
       </div>
+
+      <!-- Leave Club Role Confirmation Modal (Requirement 7) -->
+      <div v-if="showLeaveRoleModal && selectedRoleForLeave" class="modal-backdrop" @click.self="showLeaveRoleModal = false">
+        <div class="modal-dialog-custom">
+          <div class="d-flex align-items-center gap-2 text-danger mb-2">
+            <span class="material-symbols-rounded">no_accounts</span>
+            <h4 class="fw-bold m-0 text-dark">Leave Club Role</h4>
+          </div>
+          <p class="text-secondary text-sm mb-3">
+            You are about to leave your Faculty Coordinator role for <strong>{{ selectedRoleForLeave.clubName }}</strong>.
+          </p>
+          <div class="p-3 bg-light rounded-3 border text-xs text-muted mb-4">
+            ⚠️ This action removes your management access.
+          </div>
+
+          <div class="d-flex justify-content-end gap-2">
+            <button class="btn btn-light rounded-pill px-4" @click="showLeaveRoleModal = false">Cancel</button>
+            <button class="btn btn-danger rounded-pill px-4" @click="confirmLeaveRole">Leave Role</button>
+          </div>
+        </div>
+      </div>
     </section>
   </FacultyLayout>
 </template>
@@ -530,6 +730,7 @@ async function confirmRejectRequest() {
   width: 100%;
   max-width: 1600px;
   margin: 0 auto;
+  overflow: hidden;
 }
 
 .page-header {
@@ -557,19 +758,124 @@ async function confirmRejectRequest() {
   font-size: 24px;
 }
 
-/* Compact Assignment Cards */
+/* Statistics Mini Cards (STEP 6) */
+.stat-mini-card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  padding: 14px 16px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.04);
+}
+
+.stat-icon {
+  width: 42px;
+  height: 42px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 22px;
+  flex-shrink: 0;
+}
+
+.stat-num {
+  font-size: 1.25rem;
+  font-weight: 800;
+  color: #0f172a;
+  line-height: 1;
+}
+
+.stat-lbl {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: #64748b;
+  margin-top: 3px;
+}
+
+/* Filter Toolbar Card (STEP 2) */
+.filter-toolbar-card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  padding: 14px 18px;
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.03);
+}
+
+/* Compact Assignment Cards (Reduced Height & Improved Spacing) */
 .compact-assignment-card {
   background: #ffffff;
   border: 1px solid #e2e8f0;
-  border-radius: 16px;
-  padding: 18px;
+  border-radius: 14px;
+  padding: 16px;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
-  gap: 14px;
-  box-shadow: 0 4px 16px rgba(15, 23, 42, 0.04);
-  transition: all 0.25s ease;
+  gap: 12px;
+  box-shadow: 0 2px 10px rgba(15, 23, 42, 0.03);
+  transition: all 0.2s ease;
   height: 100%;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.status-pill-subtle {
+  display: inline-flex;
+  align-items: center;
+  background: #f0fdf4;
+  color: #16a34a;
+  border: 1px solid #bbf7d0;
+  font-size: 0.75rem;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 999px;
+}
+
+.status-pill-purple {
+  display: inline-flex;
+  align-items: center;
+  background: #f3e8ff;
+  color: #7e22ce;
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+
+.simplified-info-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.info-line-clean {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.84rem;
+  color: #475569;
+  font-weight: 500;
+}
+
+.pending-warning-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: #fffbeb;
+  color: #b45309;
+  border: 1px solid #fef3c7;
+  border-radius: 8px;
+  padding: 4px 10px;
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.btn-icon-ghost:hover {
+  background: #f1f5f9;
+  color: #0f172a;
 }
 
 .compact-assignment-card:hover {

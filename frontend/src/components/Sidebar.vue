@@ -1,45 +1,75 @@
 <script setup>
-import {ref,onMounted,onBeforeUnmount} from 'vue'
-import {useRouter} from 'vue-router'
-import {Modal} from 'bootstrap'
+import { ref, computed, watch, onMounted, onBeforeUnmount } from 'vue'
+import { useRouter, useRoute } from 'vue-router'
+import { Modal } from 'bootstrap'
+import { getCurrentUser } from '@/services/authService'
+import UserAvatar from '@/components/profile/UserAvatar.vue'
 
-const router=useRouter()
-const collapsed=ref(false)
-const showProfileMenu=ref(false)
-const emit=defineEmits(['toggle'])
+const router = useRouter()
+const route = useRoute()
+const collapsed = ref(false)
+const showProfileMenu = ref(false)
+const emit = defineEmits(['toggle'])
 
-function toggleSidebar(){
-    collapsed.value=!collapsed.value
-    emit('toggle',collapsed.value)
-}
-
-function toggleProfileMenu(){
-    showProfileMenu.value=!showProfileMenu.value
-}
-
-function goToProfile(){
-    showProfileMenu.value=false
-    router.push('/admin/profile')
-}
-
-function openLogoutModal(){
-    showProfileMenu.value=false
-    const modal=new Modal(document.getElementById('logoutModal'))
-    modal.show()
-}
-
-function handleOutsideClick(event){
-    if(!event.target.closest('.profile-container')){
-        showProfileMenu.value=false
-    }
-}
-
-onMounted(()=>{
-    document.addEventListener('click',handleOutsideClick)
+const user = computed(() => getCurrentUser() || {})
+const userInitial = computed(() => (user.value.name || user.value.username || 'A').charAt(0).toUpperCase())
+const userName = computed(() => user.value.name || user.value.username || 'Admin')
+const userRole = computed(() => user.value.role || 'Administrator')
+const userAvatarUrl = computed(() => {
+  const style = user.value.avatarStyle || 'adventurer'
+  const seed = user.value.avatarSeed || user.value.fullName || user.value.name || user.value.username || 'Admin'
+  return `https://api.dicebear.com/7.x/${style}/svg?seed=${encodeURIComponent(seed)}`
 })
 
-onBeforeUnmount(()=>{
-    document.removeEventListener('click',handleOutsideClick)
+function toggleSidebar() {
+  collapsed.value = !collapsed.value
+  emit('toggle', collapsed.value)
+}
+
+function toggleProfileMenu() {
+  showProfileMenu.value = !showProfileMenu.value
+}
+
+function goToProfile() {
+  showProfileMenu.value = false
+  router.push('/admin/profile')
+}
+
+function goToSettings() {
+  showProfileMenu.value = false
+  router.push('/admin/profile')
+}
+
+function openLogoutModal() {
+  showProfileMenu.value = false
+  const modal = new Modal(document.getElementById('logoutModal'))
+  modal.show()
+}
+
+function handleOutsideClick(event) {
+  if (!event.target.closest('.profile-container')) {
+    showProfileMenu.value = false
+  }
+}
+
+function handleKeydown(event) {
+  if (event.key === 'Escape') {
+    showProfileMenu.value = false
+  }
+}
+
+watch(() => route.path, () => {
+  showProfileMenu.value = false
+})
+
+onMounted(() => {
+  document.addEventListener('click', handleOutsideClick)
+  document.addEventListener('keydown', handleKeydown)
+})
+
+onBeforeUnmount(() => {
+  document.removeEventListener('click', handleOutsideClick)
+  document.removeEventListener('keydown', handleKeydown)
 })
 </script>
 
@@ -109,24 +139,24 @@ onBeforeUnmount(()=>{
             </ul>
         </div>
         <div class="profile-container">
-            <div class="profile" @click.stop="toggleProfileMenu">
-                <div class="profile-icon">A</div>
+            <div class="profile d-flex align-items-center gap-2" @click.stop="toggleProfileMenu">
+                <UserAvatar size="sidebar" :user="user" />
                 <div class="profile-info" v-if="!collapsed">
-                    <h6>Admin</h6>
-                    <small>Administrator</small>
+                    <h6>{{ userName }}</h6>
+                    <small>{{ userRole }}</small>
                 </div>
             </div>
             <Transition name="dropdown">
-            <div v-if="showProfileMenu" class="profile-menu">
-                <button class="menu-item" @click="goToProfile"><i class="bi bi-person-circle"></i>Profile</button>
-                <button
-                class="menu-item logout"
-                @click="openLogoutModal">
-                <i class="bi bi-box-arrow-right"></i>Logout
-            </button>
-        </div>
+                <div v-if="showProfileMenu" class="profile-menu">
+                    <button class="menu-item" @click="goToProfile">
+                        <i class="bi bi-person-circle"></i> My Profile
+                    </button>
+                    <button class="menu-item logout" @click="openLogoutModal">
+                        <i class="bi bi-box-arrow-right"></i> Logout
+                    </button>
+                </div>
             </Transition>
-            </div>
+        </div>
     </aside>
 </template>
 

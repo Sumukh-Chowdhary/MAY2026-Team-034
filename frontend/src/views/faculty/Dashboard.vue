@@ -1,5 +1,6 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
+import UserAvatar from '@/components/profile/UserAvatar.vue'
 import { useRouter } from 'vue-router'
 import FacultyLayout from '@/layouts/FacultyLayout.vue'
 import StatCard from '@/components/admin/analytics/StatCard.vue'
@@ -351,9 +352,7 @@ function navigateToRequests() {
 
             <div class="card-content py-3">
               <div v-if="userProfile" class="d-flex align-items-center gap-3 mb-3 p-3 bg-light rounded-3">
-                <div class="avatar-lg bg-primary text-white rounded-circle d-flex align-items-center justify-content-center fw-bold" style="width: 48px; height: 48px; font-size: 1.25rem;">
-                  {{ (userProfile.fullName || userProfile.name || 'F').charAt(0).toUpperCase() }}
-                </div>
+                <UserAvatar size="card" :user="userProfile" />
                 <div>
                   <h6 class="mb-0 fw-bold">{{ userProfile.fullName || userProfile.name }}</h6>
                   <small class="text-muted">{{ userProfile.email }}</small>

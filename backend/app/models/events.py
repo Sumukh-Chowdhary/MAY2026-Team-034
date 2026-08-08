@@ -105,7 +105,7 @@ class Event(db.Model):
             'id': self.id,
             'name': self.event_name,
             'description': self.event_description,
-            'status': self.computed_status,
+            'status': self.computed_status.upper() if self.computed_status else (self.event_status.upper() if self.event_status else 'SCHEDULED'),
             'rawStatus': self.event_status,
             'organizerType': self.computed_organizer_type,
             'eventType': self.event_type,

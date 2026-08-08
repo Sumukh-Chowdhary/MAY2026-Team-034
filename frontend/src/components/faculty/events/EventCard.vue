@@ -149,6 +149,18 @@ const statusText = computed(() => {
 
 }
 
+.status-badge.scheduled{
+
+    background:#f3e8ff;
+
+    color:#7c3aed;
+
+    border:1px solid #d8b4fe;
+
+    box-shadow:0 0 12px rgba(124, 58, 237, 0.25);
+
+}
+
 .status-badge.completed{
 
     background:#f1f5f9;

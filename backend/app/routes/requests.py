@@ -69,10 +69,21 @@ def build_request_approval_chain(req):
     raw_approvers = get_approvers_for_request(req)
     final_approvers = flatten_approvers(raw_approvers)
     
-    if not final_approvers:
+    # REQUIREMENT 2: Exclude requester so creator NEVER appears as an approver in their own workflow
+    filtered_approvers = [
+        (appr, role) for (appr, role) in final_approvers
+        if appr and getattr(appr, 'id', None) != req.requester_id
+    ]
+
+    if not filtered_approvers:
+        admin_user = resolve_admin()
+        if admin_user and getattr(admin_user, 'id', None) != req.requester_id:
+            filtered_approvers = [(admin_user, "ADMIN")]
+
+    if not filtered_approvers:
         return False
 
-    for order, (approver, role) in enumerate(final_approvers, start=1):
+    for order, (approver, role) in enumerate(filtered_approvers, start=1):
         req.add_approval_step(approver_id=approver.id, approval_role=role, order=order)
         
     return True
@@ -102,6 +113,10 @@ def get_approvers_for_request(req):
     if req.request_type in {RequestType.BECOME_ORGANIZER, RequestType.BECOME_VOLUNTEER, RequestType.EDIT_CLUB_AS_COORDINATOR, RequestType.CREATE_EVENT_AS_ORGANIZER, RequestType.EDIT_EVENT_AS_ORGANIZER}:
         club_faculty = resolve_club_faculty(req.reference_id) if req.reference_id else None
         if club_faculty:
+            # If club faculty is the requester, escalate to Principal -> Admin
+            fac_id = getattr(club_faculty, 'id', None)
+            if fac_id and fac_id == req.requester_id:
+                return [(resolve_principal(), "PRINCIPAL"), (resolve_admin(), "ADMIN")]
             return [(club_faculty, "CLUB_FACULTY")]
 
     # Default fallback
@@ -123,6 +138,8 @@ def validate_request_permission(user, request_type, reference_id=None):
         return ClubFaculty.query.filter_by(faculty_id=user.id, club_id=reference_id, faculty_role="FACULTY_COORDINATOR").first() is not None
 
     if request_type in {RequestType.CREATE_EVENT_AS_ORGANIZER, RequestType.EDIT_EVENT_AS_ORGANIZER, RequestType.VENUE_REQUEST, RequestType.BUDGET_REQUEST, RequestType.SCHEDULE_REQUEST}:
+        if role == "FACULTY":
+            return ClubFaculty.query.filter_by(faculty_id=user.id, club_id=reference_id).first() is not None
         return ClubOrganizer.query.filter_by(user_id=user.id, club_id=reference_id).first() is not None or ClubFaculty.query.filter_by(faculty_id=user.id, club_id=reference_id).first() is not None
 
     return False

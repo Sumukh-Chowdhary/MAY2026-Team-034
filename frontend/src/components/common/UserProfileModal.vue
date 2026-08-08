@@ -1,6 +1,7 @@
 <script setup>
 import { ref, watch } from 'vue'
 import { getUser } from '@/api/users'
+import UserAvatar from '@/components/profile/UserAvatar.vue'
 
 const props = defineProps({
   show: {
@@ -66,9 +67,7 @@ function roleBadgeClass(role, designation) {
             
             <!-- User Avatar & Core Banner -->
             <div class="avatar-banner d-flex align-items-center gap-3 p-3 bg-light rounded-3 mb-3">
-              <div class="user-avatar-lg">
-                {{ (userData.fullName || userData.name || 'U').charAt(0).toUpperCase() }}
-              </div>
+              <UserAvatar size="card" :user="userData" />
               <div>
                 <h5 class="fw-bold text-dark mb-1">{{ userData.fullName || userData.name }}</h5>
                 <span class="badge" :class="roleBadgeClass(userData.role, userData.designation)">

@@ -85,12 +85,13 @@ class User(db.Model):
                 if hasattr(profile, attr):
                     data[key] = getattr(profile, attr)
 
-            data['registerNumber'] = (
-                getattr(profile, 'roll_no', None)
-                or getattr(profile, 'employee_id', None)
-            )
-            if profile.department:
-                data['department'] = profile.department.name
+            data['avatarStyle'] = getattr(profile, 'avatar_style', None) or 'adventurer'
+            data['avatarSeed'] = getattr(profile, 'avatar_seed', None) or data['fullName']
+
+        if 'avatarStyle' not in data or not data['avatarStyle']:
+            data['avatarStyle'] = 'adventurer'
+        if 'avatarSeed' not in data or not data['avatarSeed']:
+            data['avatarSeed'] = data.get('fullName') or data.get('name') or data.get('email', 'User')
 
         data['clubs'] = [membership.club.club_name for membership in self.club_memberships if membership.club]
         return data
@@ -106,6 +107,8 @@ class StudentProfile(db.Model):
     year_of_study = db.Column(db.String(20), nullable=True)
     department_id = db.Column(db.Integer, db.ForeignKey('departments.id'), nullable=True)
     bio = db.Column(db.Text, nullable=True)
+    avatar_style = db.Column(db.String(50), default='adventurer')
+    avatar_seed = db.Column(db.String(100), nullable=True)
 
     department = db.relationship('Department', lazy=True)
 
@@ -123,7 +126,9 @@ class StudentProfile(db.Model):
             'yearOfStudy': self.year_of_study,
             'departmentId': self.department_id,
             'department': self.department.name if self.department else None,
-            'role': user_role
+            'role': user_role,
+            'avatarStyle': self.avatar_style or 'adventurer',
+            'avatarSeed': self.avatar_seed or self.full_name
         }
 
 class FacultyProfile(db.Model):
@@ -137,6 +142,8 @@ class FacultyProfile(db.Model):
     designation = db.Column(db.String(100), nullable=True, default='Faculty Advisor')
     department_id = db.Column(db.Integer, db.ForeignKey('departments.id'), nullable=True)
     bio = db.Column(db.Text, nullable=True)
+    avatar_style = db.Column(db.String(50), default='adventurer')
+    avatar_seed = db.Column(db.String(100), nullable=True)
 
     department = db.relationship('Department', lazy=True)
 
@@ -154,7 +161,9 @@ class FacultyProfile(db.Model):
             'designation': self.designation,
             'departmentId': self.department_id,
             'department': self.department.name if self.department else None,
-            'role': user_role
+            'role': user_role,
+            'avatarStyle': self.avatar_style or 'adventurer',
+            'avatarSeed': self.avatar_seed or self.full_name
         }
 
 # ── Token Blocklist (For JWT Logout & Session Management) ──────────────

@@ -1,6 +1,7 @@
 from datetime import datetime, time
 from flask import Blueprint, request, jsonify, g
 from app.models import db
+from sqlalchemy import not_
 from app.models.club import Club
 from app.models.events import (
     Event, Venue,
@@ -38,10 +39,19 @@ def _parse_time(value):
 def _can_manage_event(event, user):
     if not user:
         return False
-    if user.role and user.role.name == 'ADMIN':
+    role_name = user.role.name.upper() if user.role else ''
+    if role_name == 'ADMIN':
         return True
-    if user.role and user.role.name == 'FACULTY':
-        return True
+    if role_name == 'FACULTY':
+        if event.club_id:
+            from app.models.club import ClubFaculty
+            if ClubFaculty.query.filter_by(faculty_id=user.id, club_id=event.club_id).first() is not None:
+                return True
+        if event.created_by == user.id:
+            return True
+        if EventOrganizer.query.filter_by(event_id=event.id, user_id=user.id).first() is not None:
+            return True
+        return False
     return event.created_by == user.id
 
 
@@ -61,7 +71,7 @@ def get_events():
 
     if search_q:
         q = f"%{search_q.strip().lower()}%"
-        query = query.join(Club, Event.club_id == Club.id).outerjoin(Venue, Event.venue_id == Venue.id).filter(
+        query = query.outerjoin(Club, Event.club_id == Club.id).outerjoin(Venue, Event.venue_id == Venue.id).filter(
             db.or_(
                 db.func.lower(Event.event_name).like(q),
                 db.func.lower(Event.event_description).like(q),
@@ -168,13 +178,12 @@ def create_event():
     user_role = g.current_user.role.name.upper()
     organizer_type = (data.get('organizerType') or ('GENERAL' if not club_id else 'CLUB')).upper()
 
-    # Faculty workflow: Must belong to club (if club event) and submit Request
+    # Faculty workflow: Must be assigned Faculty Coordinator of club (if club event) and submit Request
     if user_role == 'FACULTY':
         if club_id:
             is_fac_member = ClubFaculty.query.filter_by(faculty_id=g.current_user.id, club_id=club_id).first() is not None
-            is_org_member = ClubOrganizer.query.filter_by(user_id=g.current_user.id, club_id=club_id).first() is not None
-            if not is_fac_member and not is_org_member:
-                return jsonify({'error': 'Faculty must belong to the selected club to create an event for it.'}), 403
+            if not is_fac_member:
+                return jsonify({'error': 'You are not assigned as Faculty Coordinator for this club and cannot create event requests for it.'}), 403
 
         event_payload = {
             'name': name,
@@ -230,6 +239,13 @@ def create_event():
         capacity=capacity,
     )
     db.session.add(event)
+    db.session.flush()
+
+    faculty_organizer_id = data.get('facultyOrganizerId') or data.get('faculty_organizer_id')
+    if faculty_organizer_id:
+        org = EventOrganizer(event_id=event.id, user_id=int(faculty_organizer_id), organizer_role='FACULTY_ORGANIZER')
+        db.session.add(org)
+
     db.session.commit()
     return jsonify(event.to_dict()), 201
 
