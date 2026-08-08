@@ -328,6 +328,33 @@ def seed_database(app):
                         volunteer_status="PENDING"
                     ))
 
+
+            # app/utils/seed.py me Event Seeding ke baad add karein:
+            print("8. Seeding Assignment Tickets for Organizers...")
+            ai_club_obj = club_lookup.get("AI Club")
+            rahul_obj = user_lookup.get("rahul@allclub.com")
+
+            if ai_club_obj and rahul_obj:
+                existing_ticket = AssignmentTicket.query.filter_by(
+                    holder_id=rahul_obj.id,
+                    reference_type="CLUB",
+                    reference_id=ai_club_obj.id,
+                    status=AssignmentStatus.ACTIVE
+                ).first()
+                
+                if not existing_ticket:
+                    db.session.add(AssignmentTicket(
+                        request_id=1,
+                        holder_id=rahul_obj.id,
+                        assignment_role="ORGANIZER",
+                        reference_type="CLUB",
+                        reference_id=ai_club_obj.id,
+                        duration_type=AssignmentDuration.INDEFINITE,
+                        status=AssignmentStatus.ACTIVE,
+                        granted_by_id=user_admin.id
+                    ))
+        db.session.commit()
+
         db.session.commit()
 
         print("Database successfully seeded with ALL request, ticket, and assignment possibilities!")

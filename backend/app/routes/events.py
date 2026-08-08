@@ -9,7 +9,8 @@ from app.models.events import (
     EventPrize, EventOrganizer, EventVolunteer,
 )
 from app.utils.auth_jwt import jwt_required, roles_required
-
+from app.models.club import ClubOrganizer
+from app.models.tickets import AssignmentTicket, AssignmentStatus, AssignmentRole
 
 events_bp = Blueprint('events', __name__, url_prefix='/api/events')
 
@@ -35,13 +36,46 @@ def _parse_time(value):
             return None
 
 
+from app.models.club import ClubOrganizer
+
+# app/routes/events.py ke andar _can_manage_event ko update/verify karein:
+
+from app.models.club import ClubOrganizer
+from app.models.tickets import AssignmentTicket, AssignmentStatus, AssignmentRole
+
 def _can_manage_event(event, user):
-    if not user:
+    if not user or user.account_status != 'ACTIVE':
         return False
-    if user.role and user.role.name == 'ADMIN':
+
+    user_role = user.role.name.upper() if user.role else ''
+
+    # 1. Admin & Faculty always have management rights
+    if user_role in ['ADMIN', 'FACULTY']:
         return True
-    if user.role and user.role.name == 'FACULTY':
+
+    # 2. Check if student is an assigned Event Organizer
+    from app.models.events import EventOrganizer
+    if EventOrganizer.query.filter_by(event_id=event.id, user_id=user.id).first():
         return True
+
+    # 3. Check if student is a Club Organizer for this event's club
+    if ClubOrganizer.query.filter_by(club_id=event.club_id, user_id=user.id).first():
+        return True
+
+    # 4. Check active Assignment Tickets for this club
+    active_assignment = AssignmentTicket.query.filter_by(
+        holder_id=user.id,
+        reference_type='CLUB',
+        reference_id=event.club_id,
+        status=AssignmentStatus.ACTIVE
+    ).filter(
+        AssignmentTicket.assignment_role.in_([AssignmentRole.ORGANIZER, 'PRESIDENT'])
+    ).first()
+
+    if active_assignment:
+        return True
+
+    # 5. Creator check
     return event.created_by == user.id
 
 
@@ -455,3 +489,18 @@ def update_volunteer_status(event_id, volunteer_id):
     volunteer.volunteer_status = (data.get('status') or 'PENDING').upper()
     db.session.commit()
     return jsonify(volunteer.to_dict()), 200
+
+
+
+
+
+@events_bp.route('/organizer/my-events', methods=['GET'])
+@jwt_required
+def get_my_managed_events():
+    user = g.current_user
+
+    events = Event.query.join(EventOrganizer).filter(
+        EventOrganizer.user_id == user.id
+    ).all()
+
+    return jsonify([e.to_dict() for e in events]), 200
