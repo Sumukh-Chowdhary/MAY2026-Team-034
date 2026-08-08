@@ -11,7 +11,8 @@ from app.models.events import (
 from app.models.tickets import ActionTicket, ActionTicketType
 from app.utils.auth_jwt import jwt_required, roles_required
 from app.services.event_service import EventService
-
+from app.models.club import ClubOrganizer
+from app.models.tickets import AssignmentTicket, AssignmentStatus, AssignmentRole
 
 events_bp = Blueprint('events', __name__, url_prefix='/api/events')
 
@@ -38,20 +39,53 @@ def _parse_time(value):
 
 
 def _can_manage_event(event, user):
-    if not user:
+    if not user or user.account_status != 'ACTIVE':
         return False
-    if user.role and user.role.name in ['ADMIN', 'FACULTY']:
-        return True
+
+    role_name = user.role.name.upper() if user.role else ''
+
+    # 1. Admin & Faculty always have management rights
+    if role_name in ['ADMIN', 'FACULTY']:
+        if role_name == 'FACULTY' and event.club_id:
+            from app.models.club import ClubFaculty
+            if ClubFaculty.query.filter_by(faculty_id=user.id, club_id=event.club_id).first() is not None:
+                return True
+            if event.created_by == user.id:
+                return True
+        else:
+            return True
+
+    # 2. Check Event Creator
     if event.created_by == user.id:
         return True
+
+    # 3. Check Event Organizer assignment
     if EventOrganizer.query.filter_by(event_id=event.id, user_id=user.id).first():
         return True
+
+    # 4. Check Club Organizer assignment (Module 21)
     if event.club_id and ClubOrganizer.query.filter_by(club_id=event.club_id, user_id=user.id).first():
         return True
-    # Module 22: Event Volunteer with status 'APPROVED' has management access to that event only
+
+    # 5. Check Active Assignment Tickets for Club (Module 21)
+    if event.club_id:
+        active_assignment = AssignmentTicket.query.filter_by(
+            holder_id=user.id,
+            reference_type='CLUB',
+            reference_id=event.club_id,
+            status=AssignmentStatus.ACTIVE
+        ).filter(
+            AssignmentTicket.assignment_role.in_([AssignmentRole.ORGANIZER, 'PRESIDENT'])
+        ).first()
+
+        if active_assignment:
+            return True
+
+    # 6. Check Approved Event Volunteer access (Module 22)
     vol = EventVolunteer.query.filter_by(event_id=event.id, user_id=user.id, volunteer_status='APPROVED').first()
     if vol:
         return True
+
     return False
 
 
@@ -543,3 +577,18 @@ def update_volunteer_status(event_id, volunteer_id):
     volunteer.volunteer_status = (data.get('status') or 'PENDING').upper()
     db.session.commit()
     return jsonify(volunteer.to_dict()), 200
+
+
+
+
+
+@events_bp.route('/organizer/my-events', methods=['GET'])
+@jwt_required
+def get_my_managed_events():
+    user = g.current_user
+
+    events = Event.query.join(EventOrganizer).filter(
+        EventOrganizer.user_id == user.id
+    ).all()
+
+    return jsonify([e.to_dict() for e in events]), 200

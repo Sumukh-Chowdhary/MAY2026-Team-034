@@ -1,7 +1,6 @@
 from datetime import datetime, timedelta
 import os
 import sys
-from datetime import datetime
 
 BACKEND_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
 if BACKEND_ROOT not in sys.path:
@@ -34,8 +33,6 @@ from app.utils.seed_data import (
     VENUE_DATA,
     EVENT_DATA,
     MEMBERSHIP_SEED_DATA,
-    REQUEST_SEED_DATA,
-    ACTION_TICKET_SEED_DATA,
     ASSIGNMENT_TICKET_SEED_DATA
 )
 
@@ -147,8 +144,6 @@ def seed_database(app):
             student["roll_no"]: user
             for student, user in zip(STUDENT_DATA, student_users)
         }
-
-        club_lookup = {}
 
         club_lookup = {}
 
@@ -333,93 +328,10 @@ def seed_database(app):
                         volunteer_status="PENDING"
                     ))
 
-        print("8. Seeding Requests & Approvals...")
-        event_lookup = {
-            e.event_name: e
-            for e in Event.query.all()
-        }
+        # Build event_lookup dictionary safely from existing Events
+        event_lookup = {e.event_name: e for e in Event.query.all()}
 
-        for req_data in REQUEST_SEED_DATA:
-            requester = user_lookup.get(req_data["requesterEmail"])
-            if not requester:
-                continue
-
-            ref_id = None
-            if req_data.get("referenceType") == "CLUB":
-                c = club_lookup.get(req_data.get("referenceName"))
-                ref_id = c.id if c else None
-            elif req_data.get("referenceType") == "EVENT":
-                e = event_lookup.get(req_data.get("referenceName"))
-                ref_id = e.id if e else None
-
-            req = Request(
-                requester_id=requester.id,
-                request_type=req_data["requestType"],
-                title=req_data["title"],
-                description=req_data.get("description"),
-                reference_type=req_data.get("referenceType"),
-                reference_id=ref_id,
-                reference_name=req_data.get("referenceName"),
-                priority=req_data.get("priority", "MEDIUM"),
-                workflow_status=req_data.get("workflowStatus", "PENDING")
-            )
-            db.session.add(req)
-            db.session.flush()
-
-            for app_data in req_data.get("approvals", []):
-                approver = user_lookup.get(app_data["approverEmail"])
-                if approver:
-                    db.session.add(RequestApproval(
-                        request_id=req.id,
-                        approver_id=approver.id,
-                        approval_order=app_data.get("approvalOrder", 1),
-                        approval_role=app_data.get("approvalRole", "REVIEWER"),
-                        status=app_data.get("status", "PENDING"),
-                        remarks=app_data.get("remarks"),
-                        approved_at=datetime.utcnow() if app_data.get("status") in ["APPROVED", "REJECTED", "CHANGES_REQUESTED"] else None
-                    ))
-
-        print("9. Seeding Action Tickets...")
-        for ticket_data in ACTION_TICKET_SEED_DATA:
-            raised_by = user_lookup.get(ticket_data["raisedByEmail"])
-            assigned_to = user_lookup.get(ticket_data.get("assignedToEmail"))
-            if not raised_by:
-                continue
-
-            closed_at_val = None
-            if ticket_data.get("closedAt"):
-                closed_at_val = datetime.fromisoformat(ticket_data["closedAt"])
-
-            ticket = ActionTicket(
-                raised_by_id=raised_by.id,
-                ticket_type=ticket_data["ticketType"],
-                title=ticket_data["title"],
-                description=ticket_data.get("description"),
-                priority=ticket_data.get("priority", "MEDIUM"),
-                approval_status=ticket_data.get("approvalStatus", "PENDING"),
-                assigned_to_id=assigned_to.id if assigned_to else None,
-                task_status=ticket_data.get("taskStatus"),
-                due_date=datetime.strptime(ticket_data["dueDate"], "%Y-%m-%d").date() if ticket_data.get("dueDate") else None,
-                completion_remarks=ticket_data.get("completionRemarks"),
-                closed_at=closed_at_val
-            )
-            db.session.add(ticket)
-            db.session.flush()
-
-            for app_data in ticket_data.get("approvals", []):
-                approver = user_lookup.get(app_data["approverEmail"])
-                if approver:
-                    db.session.add(ActionTicketApproval(
-                        action_ticket_id=ticket.id,
-                        approver_id=approver.id,
-                        approval_order=app_data.get("approvalOrder", 1),
-                        approval_role=app_data.get("approvalRole", "REVIEWER"),
-                        status=app_data.get("status", "PENDING"),
-                        remarks=app_data.get("remarks"),
-                        approved_at=datetime.utcnow() if app_data.get("status") in ["APPROVED", "REJECTED", "CHANGES_REQUESTED"] else None
-                    ))
-
-        print("10. Seeding Assignment Tickets...")
+        print("8. Seeding Assignment Tickets...")
         for assign_data in ASSIGNMENT_TICKET_SEED_DATA:
             holder = user_lookup.get(assign_data["holderEmail"])
             granted_by = user_lookup.get(assign_data.get("grantedByEmail"))
@@ -453,8 +365,29 @@ def seed_database(app):
             )
             db.session.add(ticket)
 
-        db.session.commit()
+        # Fallback Module 21 Organizer Ticket for Rahul Sharma
+        ai_club_obj = club_lookup.get("AI Club")
+        rahul_obj = user_lookup.get("rahul@allclub.com")
+        if ai_club_obj and rahul_obj:
+            existing_ticket = AssignmentTicket.query.filter_by(
+                holder_id=rahul_obj.id,
+                reference_type="CLUB",
+                reference_id=ai_club_obj.id,
+                status=AssignmentStatus.ACTIVE
+            ).first()
+            if not existing_ticket:
+                db.session.add(AssignmentTicket(
+                    request_id=1,
+                    holder_id=rahul_obj.id,
+                    assignment_role="ORGANIZER",
+                    reference_type="CLUB",
+                    reference_id=ai_club_obj.id,
+                    duration_type=AssignmentDuration.INDEFINITE,
+                    status=AssignmentStatus.ACTIVE,
+                    granted_by_id=user_admin.id
+                ))
 
+        db.session.commit()
         print("Database successfully seeded with ALL request, ticket, and assignment possibilities!")
 
 if __name__ == '__main__':

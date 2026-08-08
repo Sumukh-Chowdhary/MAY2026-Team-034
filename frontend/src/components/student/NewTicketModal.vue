@@ -2,7 +2,8 @@
 import { ref, watch, onMounted } from 'vue'
 import { createRequest } from '@/api/requests'
 import { createActionTicket } from '@/api/actionTickets'
-import { getClubs } from '@/api/clubs'
+// import { getClubs } from '@/api/clubs'
+import { getClubs } from '@/api/student'
 import { getUserAssignments } from '@/api/assignmentTickets'
 import ApproverPicker from '@/components/common/ApproverPicker.vue'
 import { useToast } from '@/composables/useToast'
@@ -63,8 +64,9 @@ watch(() => props.show, async (newVal) => {
     taggedApprovers.value = []
     errorMessage.value = ''
     try {
-      const clubs = await getClubs()
-      clubsList.value = clubs || []
+      const res = await getClubs()
+      // Safely handle both Array or { success: true, data: [...] } formats
+      clubsList.value = Array.isArray(res) ? res : (res.data || res.clubs || [])
     } catch (e) {
       console.error('Failed to load clubs', e)
     }
