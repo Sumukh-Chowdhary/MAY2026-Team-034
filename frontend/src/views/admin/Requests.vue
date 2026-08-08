@@ -11,6 +11,7 @@ import { reseedDatabase } from '@/api/admin'
 import { useRealtimeTickets } from '@/composables/useRealtimeTickets'
 
 import { getClubs } from '@/api/clubs'
+import { getRequestPreview, formatRequestPreview } from '@/utils/requestFormatter'
 
 // Active Tabs: 'requests' | 'action-tickets' | 'assignments'
 const mainTab = ref('requests')
@@ -348,18 +349,27 @@ function badgeClass(status) {
                     <span class="ms-1 text-muted">v{{ req.version || 1 }}</span>
                   </span>
                   <span class="badge" :class="badgeClass(req.workflowStatus || req.status)">
-                    {{ req.workflowStatus || req.status || 'PENDING' }}
+                    {{ formatRequestPreview(req).status }}
                   </span>
                 </div>
 
-                <h5 class="card-title fw-bold text-dark mb-1">{{ req.title || req.subject }}</h5>
-                <p class="card-text text-secondary text-sm mb-3">
-                  Reference: <strong>{{ req.referenceName || req.club || 'General' }}</strong>
+                <h5 class="card-title fw-bold text-dark mb-1">{{ formatRequestPreview(req).title }}</h5>
+                <p class="text-sm text-primary font-semibold m-0 mb-1" v-if="formatRequestPreview(req).club">
+                  {{ formatRequestPreview(req).club }}
+                </p>
+                <p class="text-xs text-secondary m-0 mb-1" v-if="formatRequestPreview(req).venue">
+                  📍 {{ formatRequestPreview(req).venue }}
+                </p>
+                <p class="text-xs text-muted m-0 mb-1" v-if="formatRequestPreview(req).date">
+                  📅 {{ formatRequestPreview(req).date }}
+                </p>
+                <p class="text-xs text-muted m-0 mb-2" v-if="formatRequestPreview(req).capacity">
+                  👥 Expected Capacity: {{ formatRequestPreview(req).capacity }}
                 </p>
 
                 <div class="mt-auto pt-3 border-top d-flex justify-content-between align-items-center">
                   <small class="text-muted">
-                    <i class="bi bi-person me-1"></i> {{ req.requester?.name || req.requestedBy || 'Student' }}
+                    <i class="bi bi-person me-1"></i> {{ req.requester?.name || req.requestedBy || 'Requester' }}
                   </small>
 
                   <button class="btn btn-sm btn-primary rounded-pill px-3" @click="openDetails(req)">
@@ -398,10 +408,24 @@ function badgeClass(status) {
                   </span>
                 </div>
 
-                <h5 class="card-title fw-bold text-dark mb-1">{{ ticket.title }}</h5>
-                <p class="card-text text-secondary text-sm mb-3" v-if="ticket.description">
-                  {{ ticket.description.length > 80 ? ticket.description.substring(0, 80) + '...' : ticket.description }}
-                </p>
+                <div>
+                  <h5 class="card-title fw-bold text-dark mb-1">{{ getRequestPreview(ticket).title }}</h5>
+                  <p class="text-sm text-primary font-semibold m-0" v-if="getRequestPreview(ticket).subtitle">
+                    {{ getRequestPreview(ticket).subtitle }}
+                  </p>
+                  <p class="text-xs text-secondary m-0" v-if="getRequestPreview(ticket).secondaryLine">
+                    📍 {{ getRequestPreview(ticket).secondaryLine }}
+                  </p>
+                  <p class="text-xs text-muted m-0" v-if="getRequestPreview(ticket).date">
+                    📅 {{ getRequestPreview(ticket).date }}
+                  </p>
+                  <p class="text-xs text-muted m-0" v-if="getRequestPreview(ticket).capacity">
+                    👥 Expected Capacity: {{ getRequestPreview(ticket).capacity }}
+                  </p>
+                  <p class="text-secondary text-sm mt-1 mb-0" v-if="!getRequestPreview(ticket).isStructured && getRequestPreview(ticket).rawDescription">
+                    {{ getRequestPreview(ticket).rawDescription.length > 80 ? getRequestPreview(ticket).rawDescription.substring(0, 80) + '...' : getRequestPreview(ticket).rawDescription }}
+                  </p>
+                </div>
 
                 <div class="mt-auto pt-3 border-top d-flex justify-content-between align-items-center">
                   <div>

@@ -1,7 +1,6 @@
 from datetime import datetime, timedelta
 import os
 import sys
-from datetime import datetime
 
 BACKEND_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
 if BACKEND_ROOT not in sys.path:
@@ -33,7 +32,8 @@ from app.utils.seed_data import (
     CLUB_DATA,
     VENUE_DATA,
     EVENT_DATA,
-    MEMBERSHIP_SEED_DATA
+    MEMBERSHIP_SEED_DATA,
+    ASSIGNMENT_TICKET_SEED_DATA
 )
 
 def seed_database(app):
@@ -147,8 +147,6 @@ def seed_database(app):
 
         club_lookup = {}
 
-        club_lookup = {}
-
         for club in CLUB_DATA:
             if "category" not in club or "faculty" not in club:
                 continue
@@ -246,17 +244,19 @@ def seed_database(app):
         }
 
         for event_data in EVENT_DATA:
-            club = club_lookup.get(event_data["clubName"])
-            creator = user_lookup.get(event_data["createdByEmail"])
-            venue = venue_lookup.get(event_data["venueName"])
+            club = club_lookup.get(event_data.get("clubName"))
+            creator = user_lookup.get(event_data.get("createdByEmail"))
+            venue = venue_lookup.get(event_data.get("venueName"))
+            org_type = event_data.get("organizerType") or ("GENERAL" if not club else "CLUB")
 
-            if not club or not creator:
+            if not creator:
                 continue
 
             event = Event(
-                club_id=club.id,
+                club_id=club.id if club else None,
                 created_by=creator.id,
                 venue_id=venue.id if venue else None,
+                organizer_type=org_type,
                 event_name=event_data["name"],
                 event_description=event_data["description"],
                 event_status=event_data["status"],
@@ -328,35 +328,66 @@ def seed_database(app):
                         volunteer_status="PENDING"
                     ))
 
+        # Build event_lookup dictionary safely from existing Events
+        event_lookup = {e.event_name: e for e in Event.query.all()}
 
-            # app/utils/seed.py me Event Seeding ke baad add karein:
-            print("8. Seeding Assignment Tickets for Organizers...")
-            ai_club_obj = club_lookup.get("AI Club")
-            rahul_obj = user_lookup.get("rahul@allclub.com")
+        print("8. Seeding Assignment Tickets...")
+        for assign_data in ASSIGNMENT_TICKET_SEED_DATA:
+            holder = user_lookup.get(assign_data["holderEmail"])
+            granted_by = user_lookup.get(assign_data.get("grantedByEmail"))
+            if not holder:
+                continue
 
-            if ai_club_obj and rahul_obj:
-                existing_ticket = AssignmentTicket.query.filter_by(
+            ref_id = None
+            if assign_data.get("referenceType") == "CLUB":
+                c = club_lookup.get(assign_data.get("clubName"))
+                ref_id = c.id if c else None
+            elif assign_data.get("referenceType") == "EVENT":
+                e = event_lookup.get(assign_data.get("eventName"))
+                ref_id = e.id if e else None
+
+            req_obj = Request.query.filter_by(requester_id=holder.id).first()
+
+            starts_at_val = datetime.fromisoformat(assign_data["startsAt"]) if assign_data.get("startsAt") else datetime.utcnow()
+            ends_at_val = datetime.fromisoformat(assign_data["endsAt"]) if assign_data.get("endsAt") else None
+
+            ticket = AssignmentTicket(
+                request_id=req_obj.id if req_obj else 1,
+                holder_id=holder.id,
+                assignment_role=assign_data["assignmentRole"],
+                reference_type=assign_data.get("referenceType"),
+                reference_id=ref_id,
+                duration_type=assign_data.get("durationType", "INDEFINITE"),
+                starts_at=starts_at_val,
+                ends_at=ends_at_val,
+                status=assign_data.get("status", "ACTIVE"),
+                granted_by_id=granted_by.id if granted_by else None
+            )
+            db.session.add(ticket)
+
+        # Fallback Module 21 Organizer Ticket for Rahul Sharma
+        ai_club_obj = club_lookup.get("AI Club")
+        rahul_obj = user_lookup.get("rahul@allclub.com")
+        if ai_club_obj and rahul_obj:
+            existing_ticket = AssignmentTicket.query.filter_by(
+                holder_id=rahul_obj.id,
+                reference_type="CLUB",
+                reference_id=ai_club_obj.id,
+                status=AssignmentStatus.ACTIVE
+            ).first()
+            if not existing_ticket:
+                db.session.add(AssignmentTicket(
+                    request_id=1,
                     holder_id=rahul_obj.id,
+                    assignment_role="ORGANIZER",
                     reference_type="CLUB",
                     reference_id=ai_club_obj.id,
-                    status=AssignmentStatus.ACTIVE
-                ).first()
-                
-                if not existing_ticket:
-                    db.session.add(AssignmentTicket(
-                        request_id=1,
-                        holder_id=rahul_obj.id,
-                        assignment_role="ORGANIZER",
-                        reference_type="CLUB",
-                        reference_id=ai_club_obj.id,
-                        duration_type=AssignmentDuration.INDEFINITE,
-                        status=AssignmentStatus.ACTIVE,
-                        granted_by_id=user_admin.id
-                    ))
-        db.session.commit()
+                    duration_type=AssignmentDuration.INDEFINITE,
+                    status=AssignmentStatus.ACTIVE,
+                    granted_by_id=user_admin.id
+                ))
 
         db.session.commit()
-
         print("Database successfully seeded with ALL request, ticket, and assignment possibilities!")
 
 if __name__ == '__main__':
