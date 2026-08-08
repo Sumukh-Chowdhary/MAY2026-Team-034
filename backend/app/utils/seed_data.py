@@ -229,6 +229,35 @@ VENUE_DATA = [
 
 EVENT_DATA = [
     {
+        "organizerType": "CLUB",
+        "clubName": "AI Club",
+        "createdByEmail": "meena@allclub.com",
+        "name": "AI Hack Sprint",
+        "description": "A full-day coding sprint focused on AI prototypes and demos.",
+        "status": "LIVE",
+        "startDate": "2026-08-07",
+        "endDate": "2026-08-09",
+        "startTime": "09:00:00",
+        "endTime": "17:00:00",
+        "capacity": 80,
+        "venueName": "Innovation Lab",
+        "schedule": [
+            {"time": "09:00", "activity": "Registration and setup"},
+            {"time": "10:00", "activity": "Opening keynote"},
+            {"time": "13:00", "activity": "Hackathon round 1"}
+        ],
+        "announcements": [
+            {"title": "Bring your laptop", "message": "Please carry your laptop and charger for the sprint."}
+        ],
+        "registrations": ["rahul@allclub.com", "ananya@allclub.com", "aditya@allclub.com"],
+        "attendance": ["rahul@allclub.com", "ananya@allclub.com"],
+        "prizes": [
+            {"title": "Best Innovation", "winnerEmail": "aditya@allclub.com", "description": "Most practical AI prototype"}
+        ],
+        "organizers": ["rahul@allclub.com"],
+        "volunteers": ["sneha@allclub.com", "karthik@allclub.com"]
+    },
+    {
         "organizerType": "GENERAL",
         "clubName": None,
         "createdByEmail": "meena@allclub.com",
@@ -319,35 +348,6 @@ EVENT_DATA = [
         "prizes": [],
         "organizers": [],
         "volunteers": []
-    },
-    {
-        "organizerType": "CLUB",
-        "clubName": "AI Club",
-        "createdByEmail": "meena@allclub.com",
-        "name": "AI Hack Sprint",
-        "description": "A full-day coding sprint focused on AI prototypes and demos.",
-        "status": "LIVE",
-        "startDate": "2026-08-07",
-        "endDate": "2026-08-09",
-        "startTime": "09:00:00",
-        "endTime": "17:00:00",
-        "capacity": 80,
-        "venueName": "Innovation Lab",
-        "schedule": [
-            {"time": "09:00", "activity": "Registration and setup"},
-            {"time": "10:00", "activity": "Opening keynote"},
-            {"time": "13:00", "activity": "Hackathon round 1"}
-        ],
-        "announcements": [
-            {"title": "Bring your laptop", "message": "Please carry your laptop and charger for the sprint."}
-        ],
-        "registrations": ["rahul@allclub.com", "ananya@allclub.com", "aditya@allclub.com"],
-        "attendance": ["rahul@allclub.com", "ananya@allclub.com"],
-        "prizes": [
-            {"title": "Best Innovation", "winnerEmail": "aditya@allclub.com", "description": "Most practical AI prototype"}
-        ],
-        "organizers": ["rahul@allclub.com"],
-        "volunteers": ["sneha@allclub.com", "karthik@allclub.com"]
     },
     {
         "clubName": "Drama Club",

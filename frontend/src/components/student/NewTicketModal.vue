@@ -23,6 +23,7 @@ const userActiveClubs = ref([])
 const clubsList = ref([])
 
 const ticketType = ref('BECOME_VOLUNTEER')
+const targetRole = ref('ORGANIZER') // 'ORGANIZER' or 'COORDINATOR'
 const title = ref('')
 const description = ref('')
 const priority = ref('MEDIUM')
@@ -173,6 +174,21 @@ async function handleSubmit() {
                 <option value="CREATE_EVENT_GENERAL">Propose General Open Event</option>
               </optgroup>
             </select>
+          </div>
+
+          <!-- Target Recipient Role (Sprint 2) -->
+          <div class="mb-3">
+            <label class="form-label text-sm fw-bold">Target Recipient</label>
+            <div class="d-flex gap-2">
+              <div class="form-check flex-fill p-2 border rounded-3 text-xs" :class="{ 'bg-primary-subtle border-primary': targetRole === 'ORGANIZER' }">
+                <input class="form-check-input" type="radio" id="tgtOrg" value="ORGANIZER" v-model="targetRole" />
+                <label class="form-check-label fw-bold" for="tgtOrg">Student Organizer</label>
+              </div>
+              <div class="form-check flex-fill p-2 border rounded-3 text-xs" :class="{ 'bg-primary-subtle border-primary': targetRole === 'COORDINATOR' }">
+                <input class="form-check-input" type="radio" id="tgtCoord" value="COORDINATOR" v-model="targetRole" />
+                <label class="form-check-label fw-bold" for="tgtCoord">Faculty Coordinator</label>
+              </div>
+            </div>
           </div>
 
           <!-- Title -->

@@ -212,7 +212,7 @@ def test_replace_attendance(client, admin_headers):
 
 def test_student_cannot_assign_venue(client, student_headers):
     response = client.post(
-        f"/api/events/{EVENT_ID}/venue",
+        "/api/events/2/venue",
         headers=student_headers,
         json={
             "venueId": 1
@@ -225,7 +225,7 @@ def test_student_cannot_assign_venue(client, student_headers):
 
 def test_student_cannot_manage_schedule(client, student_headers):
     response = client.post(
-        f"/api/events/{EVENT_ID}/schedule",
+        "/api/events/2/schedule",
         headers=student_headers,
         json={
             "time": "09:00",

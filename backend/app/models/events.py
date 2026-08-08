@@ -89,7 +89,9 @@ class Event(db.Model):
     @property
     def computed_status(self):
         status_upper = (self.event_status or '').upper()
-        if status_upper in ['COMPLETED', 'CLOSED', 'CANCELLED']:
+        if status_upper == 'CANCELLED':
+            return 'Cancelled'
+        if status_upper in ['COMPLETED', 'CLOSED']:
             return 'Completed'
         
         today = datetime.utcnow().date()
