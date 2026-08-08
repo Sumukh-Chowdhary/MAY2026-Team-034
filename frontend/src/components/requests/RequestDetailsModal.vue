@@ -184,11 +184,21 @@ const emit = defineEmits([
 
 const remarks = ref("")
 
-const format = value =>
-  value
-    ?.replaceAll("_", " ")
-    .toLowerCase()
-    .replace(/\b\w/g, c => c.toUpperCase())
+const format = value => {
+  if (!value) return "-"
+  const mapping = {
+    'CREATE_EVENT_AS_ORGANIZER': 'Create Club Event',
+    'EDIT_EVENT_AS_ORGANIZER': 'Edit Event Request',
+    'BECOME_ORGANIZER': 'Club Organizer Application',
+    'BECOME_VOLUNTEER': 'Volunteer Application',
+    'EDIT_CLUB_AS_COORDINATOR': 'Update Club Info',
+    'BECOME_FACULTY_COORDINATOR': 'Faculty Coordinator Request',
+    'VENUE_REQUEST': 'Venue Reservation Request',
+    'BUDGET_REQUEST': 'Budget Approval Request',
+    'SCHEDULE_REQUEST': 'Schedule Request'
+  }
+  return mapping[value] || value.replaceAll("_", " ").toLowerCase().replace(/\b\w/g, c => c.toUpperCase())
+}
 </script>
 
 <style scoped>

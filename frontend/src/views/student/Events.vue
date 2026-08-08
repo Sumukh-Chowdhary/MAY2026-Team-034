@@ -45,25 +45,29 @@ onMounted(async () => {
   }
 })
 
+import { getEventStatus, sortEventsByStatusOrder } from '@/utils/eventUtils'
+
 const counts = computed(() => ({
   all: eventList.value.length,
-  live: eventList.value.filter((event) => event.status.toLowerCase() === 'live').length,
-  completed: eventList.value.filter((event) => event.status.toLowerCase() === 'completed').length
+  live: eventList.value.filter((event) => getEventStatus(event) === 'Live').length,
+  completed: eventList.value.filter((event) => getEventStatus(event) === 'Completed').length
 }))
 
 const filteredEvents = computed(() => {
   const query = search.value.trim().toLowerCase()
 
-  return eventList.value.filter((event) => {
+  const list = eventList.value.filter((event) => {
     const title = String(event.name || '').toLowerCase()
     const clubName = String(event.club || '').toLowerCase()
-    const status = String(event.status || '').toLowerCase()
+    const status = getEventStatus(event)
 
     const matchesQuery = !query || title.includes(query) || clubName.includes(query)
-    const matchesStatus = statusFilter.value === 'all' || status === statusFilter.value
+    const matchesStatus = statusFilter.value === 'all' || status.toLowerCase() === statusFilter.value.toLowerCase()
 
     return matchesQuery && matchesStatus
   })
+
+  return sortEventsByStatusOrder(list)
 })
 
 async function handleRegister(event) {

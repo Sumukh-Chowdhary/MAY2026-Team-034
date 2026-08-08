@@ -8,7 +8,6 @@ const router = useRouter()
 const auth = useAuthStore()
 
 async function logout() {
-
     try {
         await logoutService()
     } catch (e) {
@@ -18,11 +17,18 @@ async function logout() {
     auth.logout()
 
     const modalElement = document.getElementById('logoutModal')
-    const modal = Modal.getInstance(modalElement)
-
-    if (modal) {
-        modal.hide()
+    if (modalElement) {
+        const modal = Modal.getInstance(modalElement)
+        if (modal) {
+            modal.hide()
+        }
     }
+
+    // Clean up any remaining Bootstrap backdrop element
+    document.querySelectorAll('.modal-backdrop').forEach(el => el.remove())
+    document.body.classList.remove('modal-open')
+    document.body.style.removeProperty('overflow')
+    document.body.style.removeProperty('padding-right')
 
     router.replace('/login')
 }

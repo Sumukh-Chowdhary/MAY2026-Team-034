@@ -6,17 +6,56 @@ import AdminLayout from '@/layouts/AdminLayout.vue'
 import {
   getEvent,
   updateEvent,
+  updateEventStatus,
   manageEventSchedule,
   manageEventAnnouncements,
   manageEventAttendance,
   assignVenue
 } from '@/api/events'
+import { getEventStatus } from '@/utils/eventUtils'
 
 const route = useRoute()
 const router = useRouter()
 const activeTab = ref('schedule')
 const event = ref(null)
 const loading = ref(false)
+
+const computedEventStatus = computed(() => {
+  return getEventStatus(event.value)
+})
+
+const isCompletedOrClosed = computed(() => {
+  if (!event.value) return false
+  const s = String(event.value.rawStatus || event.value.status || '').toUpperCase()
+  return s === 'COMPLETED' || s === 'CLOSED' || computedEventStatus.value === 'Completed'
+})
+
+async function toggleCloseEvent() {
+  if (!event.value) return
+  const isClosed = isCompletedOrClosed.value
+  const targetStatus = isClosed ? 'SCHEDULED' : 'COMPLETED'
+  const actionText = isClosed ? 'reopen' : 'close'
+
+  if (!confirm(`Are you sure you want to ${actionText} "${event.value.name || 'this event'}"?`)) {
+    return
+  }
+
+  try {
+    loading.value = true
+    const updatedEvent = await updateEventStatus(event.value.id, targetStatus)
+    event.value = {
+      ...updatedEvent,
+      club: updatedEvent.clubName || updatedEvent.club || 'Unknown Club'
+    }
+    showEditEventModal.value = false
+    alert(`Event ${isClosed ? 'reopened' : 'closed'} successfully!`)
+  } catch (error) {
+    console.error(error)
+    alert(`Failed to ${actionText} event.`)
+  } finally {
+    loading.value = false
+  }
+}
 
 onMounted(async () => {
   try {
@@ -215,9 +254,9 @@ async function postAttendance() {
 
               <span
                 class="status-badge"
-                :class="(event.status || 'Live').toLowerCase()"
+                :class="computedEventStatus.toLowerCase()"
               >
-                {{ event.status || 'Live' }}
+                {{ computedEventStatus }}
               </span>
             </div>
           </div>
@@ -465,20 +504,41 @@ async function postAttendance() {
             </div>
           </div>
 
-          <div class="d-flex justify-content-end gap-2 mt-4">
-            <button
-              class="btn btn-secondary"
-              @click="showEditEventModal = false"
-            >
-              Cancel
-            </button>
+          <div class="d-flex justify-content-between align-items-center mt-4">
+            <div>
+              <button
+                v-if="isCompletedOrClosed"
+                type="button"
+                class="btn btn-outline-success font-semibold"
+                @click="toggleCloseEvent"
+              >
+                🔓 Reopen Event
+              </button>
+              <button
+                v-else
+                type="button"
+                class="btn btn-outline-danger font-semibold"
+                @click="toggleCloseEvent"
+              >
+                🔒 Close Event
+              </button>
+            </div>
 
-            <button
-              class="btn btn-primary"
-              @click="saveEventChanges"
-            >
-              Save Changes
-            </button>
+            <div class="d-flex gap-2">
+              <button
+                class="btn btn-secondary"
+                @click="showEditEventModal = false"
+              >
+                Cancel
+              </button>
+
+              <button
+                class="btn btn-primary"
+                @click="saveEventChanges"
+              >
+                Save Changes
+              </button>
+            </div>
           </div>
         </div>
       </div>

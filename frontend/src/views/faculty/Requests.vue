@@ -6,6 +6,7 @@ import NewTicketModal from '@/components/faculty/NewTicketModal.vue'
 
 import { getFacultyRequestsDashboard } from '@/api/requests'
 import { useRealtimeTickets } from '@/composables/useRealtimeTickets'
+import { getRequestPreview, formatRequestPreview } from '@/utils/requestFormatter'
 
 const activeTab = ref('my-tickets') // 'my-tickets' | 'incoming'
 const filter = ref('open') // 'open' | 'closed' | 'all'
@@ -188,26 +189,39 @@ function badgeClass(status) {
             :key="ticket.id" 
             class="card shadow-sm border-0 ticket-card h-100"
           >
-            <div class="card-body d-flex flex-column">
-              <div class="d-flex justify-content-between align-items-start mb-2">
+            <div class="card-body d-flex flex-column gap-2">
+              <div class="d-flex justify-content-between align-items-start">
                 <span class="badge bg-light text-dark border">
                   {{ ticket.requestType || ticket.ticketType || 'TICKET' }}
                   <span class="ms-1 text-muted">v{{ ticket.version || 1 }}</span>
                 </span>
                 <span class="badge" :class="badgeClass(ticket.workflowStatus || ticket.approvalStatus || ticket.status)">
-                  {{ ticket.workflowStatus || ticket.approvalStatus || ticket.status }}
+                  {{ getRequestPreview(ticket).status }}
                 </span>
               </div>
 
-              <h5 class="fw-bold text-dark mb-2">{{ ticket.title || ticket.subject }}</h5>
-              <p class="text-secondary text-sm mb-3" v-if="ticket.description">
-                {{ ticket.description.length > 90 ? ticket.description.substring(0, 90) + '...' : ticket.description }}
-              </p>
+              <div>
+                <h5 class="fw-bold text-dark mb-1">{{ getRequestPreview(ticket).title }}</h5>
+                <p class="text-sm text-primary font-semibold m-0" v-if="getRequestPreview(ticket).subtitle">
+                  {{ getRequestPreview(ticket).subtitle }}
+                </p>
+                <p class="text-xs text-secondary m-0" v-if="getRequestPreview(ticket).secondaryLine">
+                  📍 {{ getRequestPreview(ticket).secondaryLine }}
+                </p>
+                <p class="text-xs text-muted m-0" v-if="getRequestPreview(ticket).date">
+                  📅 {{ getRequestPreview(ticket).date }}
+                </p>
+                <p class="text-xs text-muted m-0" v-if="getRequestPreview(ticket).capacity">
+                  👥 Expected Capacity: {{ getRequestPreview(ticket).capacity }}
+                </p>
+                <p class="text-secondary text-sm mt-1 mb-0" v-if="!getRequestPreview(ticket).isStructured && getRequestPreview(ticket).rawDescription">
+                  {{ getRequestPreview(ticket).rawDescription.length > 90 ? getRequestPreview(ticket).rawDescription.substring(0, 90) + '...' : getRequestPreview(ticket).rawDescription }}
+                </p>
+              </div>
 
               <div class="mt-auto pt-3 border-top d-flex justify-content-between align-items-center">
                 <small class="text-muted">
-                  <i class="bi bi-calendar3 me-1"></i>
-                  {{ new Date(ticket.createdAt || ticket.date || Date.now()).toLocaleDateString() }}
+                  <i class="bi bi-clock me-1"></i> {{ getRequestPreview(ticket).date || 'Submitted' }}
                 </small>
 
                 <button class="btn btn-sm btn-primary rounded-pill px-3" @click="openTicket(ticket)">
@@ -233,25 +247,38 @@ function badgeClass(status) {
             :key="req.id" 
             class="card shadow-sm border-0 ticket-card incoming-card-accent h-100"
           >
-            <div class="card-body d-flex flex-column">
-              <div class="d-flex justify-content-between align-items-start mb-2">
+            <div class="card-body d-flex flex-column gap-2">
+              <div class="d-flex justify-content-between align-items-start">
                 <span class="badge bg-amber text-dark">
                   <i class="bi bi-tag-fill me-1"></i> Tagged Approver
                 </span>
                 <span class="badge" :class="badgeClass(req.workflowStatus || req.approvalStatus || req.status)">
-                  {{ req.workflowStatus || req.approvalStatus || req.status }}
+                  {{ getRequestPreview(req).status }}
                 </span>
               </div>
 
-              <h5 class="fw-bold text-dark mb-1">{{ req.title || req.subject }}</h5>
-              <p class="text-sm text-primary font-medium mb-2">
-                <i class="bi bi-person-fill me-1"></i>
-                Requester: {{ req.requester?.name || req.raisedBy?.name || 'Student/Faculty' }}
-              </p>
+              <div>
+                <h5 class="fw-bold text-dark mb-1">{{ getRequestPreview(req).title }}</h5>
+                <p class="text-sm text-primary font-semibold m-0" v-if="getRequestPreview(req).subtitle">
+                  {{ getRequestPreview(req).subtitle }}
+                </p>
+                <p class="text-xs text-secondary m-0" v-if="getRequestPreview(req).secondaryLine">
+                  📍 {{ getRequestPreview(req).secondaryLine }}
+                </p>
+                <p class="text-xs text-muted m-0" v-if="getRequestPreview(req).date">
+                  📅 {{ getRequestPreview(req).date }}
+                </p>
+                <p class="text-xs text-muted m-0" v-if="getRequestPreview(req).capacity">
+                  👥 Expected Capacity: {{ getRequestPreview(req).capacity }}
+                </p>
+                <p class="text-secondary text-sm mt-1 mb-0" v-if="!getRequestPreview(req).isStructured && getRequestPreview(req).rawDescription">
+                  {{ getRequestPreview(req).rawDescription.length > 90 ? getRequestPreview(req).rawDescription.substring(0, 90) + '...' : getRequestPreview(req).rawDescription }}
+                </p>
+              </div>
 
               <div class="mt-auto pt-3 border-top d-flex justify-content-between align-items-center">
                 <small class="text-muted">
-                  Ref: <strong>{{ req.referenceName || req.club || 'General' }}</strong>
+                  By: <strong>{{ req.requester?.name || req.raisedBy?.name || 'Faculty Coordinator' }}</strong>
                 </small>
 
                 <button class="btn btn-sm btn-warning font-semibold rounded-pill px-3" @click="openTicket(req)">

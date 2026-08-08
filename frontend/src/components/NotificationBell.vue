@@ -50,7 +50,7 @@
         </div>
 
         <div class="nb-dropdown-footer">
-          <router-link to="/notifications" class="nb-view-all" @click="isOpen = false">
+          <router-link :to="notificationsPath" class="nb-view-all" @click="isOpen = false">
             View all notifications
           </router-link>
         </div>
@@ -60,7 +60,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted, onUnmounted } from 'vue';
+import { ref, computed, onMounted, onUnmounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { storeToRefs } from 'pinia';
 import { useNotifications } from '../stores/useNotifications';
@@ -73,6 +73,13 @@ const { notifications, unreadCount } = storeToRefs(notificationStore);
 
 const isOpen = ref(false);
 const dropdownRef = ref(null);
+
+const notificationsPath = computed(() => {
+  const role = authStore.user?.role
+  if (role === 'ADMIN') return '/admin/requests'
+  if (role === 'FACULTY') return '/faculty/requests'
+  return '/student/requests'
+})
 
 const toggleDropdown = () => {
   isOpen.value = !isOpen.value;

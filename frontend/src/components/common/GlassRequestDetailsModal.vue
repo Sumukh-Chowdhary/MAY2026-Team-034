@@ -1,10 +1,12 @@
 <script setup>
 import { ref, computed, watch } from 'vue'
+import UserAvatar from '@/components/profile/UserAvatar.vue'
 import UserProfileModal from '@/components/common/UserProfileModal.vue'
 import { approveRequest, rejectRequest, requestChanges, resubmitRequest } from '@/api/requests'
 import { approveActionTicket, rejectActionTicket, requestChangesActionTicket, updateTaskStatus, resubmitActionTicket } from '@/api/actionTickets'
 import ApproverPicker from '@/components/common/ApproverPicker.vue'
 import { useToast } from '@/composables/useToast'
+import { formatEventCreationRequest } from '@/utils/requestFormatter'
 
 const showProfileModal = ref(false)
 const selectedProfileUserId = ref(null)
@@ -98,13 +100,49 @@ const createdAt = computed(() => {
   return new Date(val).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })
 })
 
-// Tagged Approvers list
+// User-friendly Request Type Formatter (Requirement 4)
+function formatRequestType(rawType) {
+  if (!rawType) return 'Request'
+  const mapping = {
+    'CREATE_EVENT_AS_ORGANIZER': 'Create Club Event',
+    'EDIT_EVENT_AS_ORGANIZER': 'Edit Event Request',
+    'BECOME_ORGANIZER': 'Club Organizer Application',
+    'BECOME_VOLUNTEER': 'Volunteer Application',
+    'EDIT_CLUB_AS_COORDINATOR': 'Update Club Info',
+    'BECOME_FACULTY_COORDINATOR': 'Faculty Coordinator Request',
+    'VENUE_REQUEST': 'Venue Reservation Request',
+    'BUDGET_REQUEST': 'Budget Approval Request',
+    'SCHEDULE_REQUEST': 'Schedule Request'
+  }
+  return mapping[rawType] || rawType.replace(/_/g, ' ')
+}
+
+// User-friendly Priority Formatter (Requirement 5)
+const displayPriority = computed(() => {
+  const p = itemPriority.value
+  if (p === 'HIGH' || p === 'URGENT') return 'High Priority'
+  if (p === 'LOW') return 'Low Priority'
+  return 'Normal'
+})
+
+// Parsed Event Summary object (Requirement 3: Replaces raw JSON)
+const parsedEventData = computed(() => {
+  if (!props.item) return null
+  return formatEventCreationRequest(props.item)
+})
+
+// Tagged Approvers list (Requirement 2: Requester should NEVER appear as an approver)
 const approvalsList = computed(() => {
   if (!props.item) return []
+  let list = []
   if (props.item.approvals && Array.isArray(props.item.approvals)) {
-    return props.item.approvals
+    list = props.item.approvals
   }
-  return []
+  const reqId = props.item.requesterId || props.item.raisedById
+  if (reqId) {
+    list = list.filter(a => String(a.approverId || a.approver?.id) !== String(reqId))
+  }
+  return list
 })
 
 // Current user approval step check
@@ -311,13 +349,17 @@ async function handleTaskAction(actionType) {
             <div class="meta-row">
               <span class="meta-item">
                 <i class="bi bi-tag-fill me-1 text-primary"></i>
-                <strong>Type:</strong> {{ itemType }}
+                <strong>Type:</strong> {{ formatRequestType(itemType) }}
               </span>
-              <span class="meta-item">
-                <i class="bi bi-flag-fill me-1"></i>
-                <span class="badge-priority" :class="priorityBadgeClass(itemPriority)">
-                  {{ itemPriority }} Priority
+              <span class="meta-item" v-if="itemPriority === 'HIGH' || itemPriority === 'URGENT'">
+                <i class="bi bi-flag-fill me-1 text-danger"></i>
+                <span class="badge-priority badge-priority-high">
+                  High Priority
                 </span>
+              </span>
+              <span class="meta-item" v-else>
+                <i class="bi bi-flag me-1 text-secondary"></i>
+                Normal Priority
               </span>
               <span class="meta-item">
                 <i class="bi bi-calendar3 me-1 text-secondary"></i>
@@ -368,15 +410,15 @@ async function handleTaskAction(actionType) {
             </div>
           </div>
 
-          <!-- Reference / Requester Info Card -->
-          <div v-else class="info-card mb-4">
+          <!-- Requester Card (Requirement 2: Requester displayed separately) -->
+          <div v-if="!resubmitMode" class="info-card mb-4">
             <div class="row g-3">
               <div class="col-md-6" v-if="item?.requester || item?.raisedBy">
-                <span class="info-label">Raised By</span>
+                <span class="info-label">Requester</span>
                 <div class="d-flex align-items-center justify-content-between">
                   <p class="info-val mb-0">
                     <i class="bi bi-person-circle me-1 text-primary"></i>
-                    {{ item.requester?.name || item.raisedBy?.name || 'User #' + (item.requesterId || item.raisedById) }}
+                    {{ item.requester?.name || item.raisedBy?.name || 'Faculty Coordinator' }}
                     <small v-if="item.requester?.email" class="text-muted d-block">{{ item.requester.email }}</small>
                   </p>
                   <button 
@@ -389,16 +431,103 @@ async function handleTaskAction(actionType) {
                 </div>
               </div>
               <div class="col-md-6" v-if="item?.referenceName">
-                <span class="info-label">Reference</span>
+                <span class="info-label">Club / Reference</span>
                 <p class="info-val">
                   <i class="bi bi-building me-1 text-indigo-500"></i>
                   {{ item.referenceType || 'CLUB' }}: <strong>{{ item.referenceName }}</strong>
                 </p>
               </div>
-              <div class="col-12">
-                <span class="info-label">Description</span>
-                <p class="description-text">{{ itemDescription }}</p>
+            </div>
+          </div>
+
+          <!-- Redesigned Event Creation Request Details (Strict Hierarchy) -->
+          <div v-if="parsedEventData" class="event-details-redesign mb-4">
+            
+            <!-- 1. Club / Reference -->
+            <div class="hierarchy-section mb-3">
+              <div class="section-header d-flex align-items-center gap-2 mb-2">
+                <span class="material-symbols-rounded text-primary fs-5">groups</span>
+                <h6 class="fw-bold m-0 text-dark">Club / Reference</h6>
               </div>
+              <div class="section-body p-3 bg-light rounded-3 border">
+                <span class="text-xs text-uppercase fw-bold text-muted d-block mb-1">Club / Organization</span>
+                <span class="fw-bold text-dark fs-6">{{ parsedEventData.club }}</span>
+              </div>
+            </div>
+
+            <!-- 2. Event Information -->
+            <div class="hierarchy-section mb-3">
+              <div class="section-header d-flex align-items-center gap-2 mb-2">
+                <span class="material-symbols-rounded text-primary fs-5">info</span>
+                <h6 class="fw-bold m-0 text-dark">Event Information</h6>
+              </div>
+              <div class="section-body p-3 bg-light rounded-3 border">
+                <div class="mb-3">
+                  <span class="text-xs text-uppercase fw-bold text-muted d-block mb-1">Event Name</span>
+                  <span class="fw-bold text-primary fs-5">{{ parsedEventData.name }}</span>
+                </div>
+
+                <div class="full-width-desc pt-2 border-top" v-if="parsedEventData.description">
+                  <span class="text-xs text-uppercase fw-bold text-muted d-block mb-1">Description</span>
+                  <p class="text-secondary text-sm m-0 leading-relaxed">{{ parsedEventData.description }}</p>
+                </div>
+              </div>
+            </div>
+
+            <!-- 3. Schedule -->
+            <div class="hierarchy-section mb-3">
+              <div class="section-header d-flex align-items-center gap-2 mb-2">
+                <span class="material-symbols-rounded text-primary fs-5">calendar_month</span>
+                <h6 class="fw-bold m-0 text-dark">Schedule</h6>
+              </div>
+              <div class="section-body p-3 bg-light rounded-3 border">
+                <div class="row g-3">
+                  <div class="col-md-4">
+                    <span class="text-xs text-uppercase fw-bold text-muted d-block mb-1">Start Date</span>
+                    <span class="fw-semibold text-dark">{{ parsedEventData.startDate }} {{ parsedEventData.startTime ? '(' + parsedEventData.startTime + ')' : '' }}</span>
+                  </div>
+                  <div class="col-md-4">
+                    <span class="text-xs text-uppercase fw-bold text-muted d-block mb-1">End Date</span>
+                    <span class="fw-semibold text-dark">{{ parsedEventData.endDate }} {{ parsedEventData.endTime ? '(' + parsedEventData.endTime + ')' : '' }}</span>
+                  </div>
+                  <div class="col-md-4">
+                    <span class="text-xs text-uppercase fw-bold text-muted d-block mb-1">Venue</span>
+                    <span class="fw-semibold text-dark">{{ parsedEventData.venue }}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- 4. Event Details -->
+            <div class="hierarchy-section mb-3">
+              <div class="section-header d-flex align-items-center gap-2 mb-2">
+                <span class="material-symbols-rounded text-primary fs-5">tune</span>
+                <h6 class="fw-bold m-0 text-dark">Event Details</h6>
+              </div>
+              <div class="section-body p-3 bg-light rounded-3 border">
+                <div class="row g-3">
+                  <div class="col-md-4">
+                    <span class="text-xs text-uppercase fw-bold text-muted d-block mb-1">Category / Type</span>
+                    <span class="badge bg-primary-subtle text-primary border px-2.5 py-1 text-xs fw-semibold">{{ parsedEventData.eventType }}</span>
+                  </div>
+                  <div class="col-md-4">
+                    <span class="text-xs text-uppercase fw-bold text-muted d-block mb-1">Expected Capacity</span>
+                    <span class="fw-semibold text-dark">{{ parsedEventData.capacity ? parsedEventData.capacity + ' Attendees' : 'Unlimited' }}</span>
+                  </div>
+                  <div class="col-md-4">
+                    <span class="text-xs text-uppercase fw-bold text-muted d-block mb-1">Event Status</span>
+                    <span class="badge bg-warning-subtle text-warning border px-2.5 py-1 text-xs fw-semibold">{{ parsedEventData.statusDisplay }}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+          </div>
+
+          <div v-else-if="!resubmitMode && !parsedEventData" class="info-card mb-4">
+            <div class="col-12">
+              <span class="info-label">Description</span>
+              <p class="description-text">{{ itemDescription }}</p>
             </div>
           </div>
 
@@ -438,9 +567,7 @@ async function handleTaskAction(actionType) {
                   </div>
 
                   <div class="approver-user-info">
-                    <div class="user-avatar">
-                      {{ (appr.approver?.name || 'A').charAt(0).toUpperCase() }}
-                    </div>
+                    <UserAvatar size="list" :user="appr.approver || { name: 'Approver', role: 'FACULTY' }" />
                     <div class="user-details">
                       <p class="user-name mb-0">{{ appr.approver?.name || 'Approver #' + (appr.approverId || index + 1) }}</p>
                       <small class="text-muted d-block text-xs">{{ appr.approver?.designation || (appr.approvalRole ? appr.approvalRole.replace('_', ' ') : 'Faculty') }}</small>

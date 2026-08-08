@@ -100,7 +100,7 @@ def serialize_event(event):
         "clubId": event.club_id,
         "name": event.event_name,
         "description": event.event_description,
-        "status": event.event_status,
+        "status": event.computed_status.upper() if hasattr(event, 'computed_status') else event.event_status.upper(),
         "venueId": event.venue_id,
         "venueName": (
             event.venue.venue_name
