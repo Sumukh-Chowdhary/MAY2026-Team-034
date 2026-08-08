@@ -1,84 +1,139 @@
 <script setup>
-import { ref, computed } from 'vue'
 import FacultyLayout from '@/layouts/FacultyLayout.vue'
 import ClubSearch from '@/components/admin/club/ClubSearch.vue'
-import ClubGrid from '@/components/admin/club/ClubGrid.vue'
-import EditClubModal from '@/components/admin/club/EditClubModal.vue'
-import DeleteClubModal from '@/components/admin/club/ArchiveClubModal.vue'
-import ClubDetailsModal from '@/components/admin/club/ClubDetailsModal.vue'
-import { clubs } from '@/data/clubs'
+import FacultyClubCard from '@/components/faculty/clubs/FacultyClubCard.vue'
 
+import { useRouter } from "vue-router"
+import { ref, computed, onMounted, watch, nextTick } from 'vue'
+import { getFacultyClubs } from '@/api/clubs'
+import { getMySupervisedClubs } from '@/api/faculty'
+
+const router = useRouter()
+const allClubsList = ref([])
+const myClubsList = ref([])
+const selectedStatus = ref("ALL")
 const search = ref('')
-const clubList = ref([...clubs])
-const selectedClub = ref(null)
-const showDetailsModal = ref(false)
-const showEditModal = ref(false)
-const showDeleteModal = ref(false)
+const currentPage = ref(1)
+const itemsPerPage = 9
+const editingPage = ref(false)
+const pageInput = ref(1)
+const pageInputRef = ref(null)
 
-const filteredClubs = computed(() => {
-  const query = search.value.trim().toLowerCase()
+const fetchClubs = async () => {
+  try {
+    const [all, my] = await Promise.all([
+      getFacultyClubs().catch(() => []),
+      getMySupervisedClubs().catch(() => [])
+    ])
+    allClubsList.value = all || []
+    myClubsList.value = my || []
+  } catch (error) {
+    console.error('Error fetching faculty clubs:', error)
+  }
+}
 
-  if (!query) return clubList.value
+onMounted(() => {
+  fetchClubs()
+})
 
-  return clubList.value.filter((club) =>
-    club.name.toLowerCase().includes(query) ||
-    club.category.toLowerCase().includes(query)
+const myClubIds = computed(() => myClubsList.value.map(c => Number(c.id || c.clubId)))
+
+const filteredMyClubs = computed(() => {
+  let filtered = myClubsList.value
+
+  if (search.value.trim()) {
+    const keyword = search.value.toLowerCase()
+    filtered = filtered.filter(club =>
+      (club.name || club.clubName || club.club_name || '').toLowerCase().includes(keyword) ||
+      (club.category || club.club_category || '').toLowerCase().includes(keyword)
+    )
+  }
+
+  if (selectedStatus.value !== "ALL") {
+    filtered = filtered.filter(club => club.status === selectedStatus.value)
+  }
+
+  return filtered
+})
+
+const filteredAllClubs = computed(() => {
+  let filtered = allClubsList.value
+
+  if (search.value.trim()) {
+    const keyword = search.value.toLowerCase()
+    filtered = filtered.filter(club =>
+      (club.name || club.clubName || club.club_name || '').toLowerCase().includes(keyword) ||
+      (club.category || club.club_category || '').toLowerCase().includes(keyword)
+    )
+  }
+
+  if (selectedStatus.value !== "ALL") {
+    filtered = filtered.filter(club => club.status === selectedStatus.value)
+  }
+
+  return filtered
+})
+
+const activeCount = computed(() =>
+  allClubsList.value.filter(c => c.status === "ACTIVE").length
+)
+
+const legacyCount = computed(() =>
+  allClubsList.value.filter(c => c.status === "INACTIVE").length
+)
+
+watch([search, selectedStatus], () => {
+  currentPage.value = 1
+})
+
+const paginatedAllClubs = computed(() => {
+  const start = (currentPage.value - 1) * itemsPerPage
+  return filteredAllClubs.value.slice(
+    start,
+    start + itemsPerPage
   )
 })
 
-const openDetailsModal = (club) => {
-  selectedClub.value = { ...club }
-  showDetailsModal.value = true
+const totalPages = computed(() =>
+  Math.max(
+    1,
+    Math.ceil(filteredAllClubs.value.length / itemsPerPage)
+  )
+)
+
+function previousPage() {
+  if (currentPage.value > 1) {
+    currentPage.value--
+  }
 }
 
-const closeDetailsModal = () => {
-  showDetailsModal.value = false
-  selectedClub.value = null
+function nextPage() {
+  if (currentPage.value < totalPages.value) {
+    currentPage.value++
+  }
 }
 
-const openEditModal = (club) => {
-  if (!club) return
-  selectedClub.value = { ...club }
-  showEditModal.value = true
+function savePage() {
+  let page = Number(pageInput.value)
+  if (isNaN(page)) {
+    page = currentPage.value
+  }
+
+  page = Math.max(1, Math.min(page, totalPages.value))
+  currentPage.value = page
+  editingPage.value = false
 }
 
-const closeEditModal = () => {
-  showEditModal.value = false
-  selectedClub.value = null
+function cancelEditingPage() {
+  editingPage.value = false
 }
 
-const saveEdit = (updatedClub) => {
-  clubList.value = clubList.value.map((club) => (club.id === updatedClub.id ? updatedClub : club))
-  closeEditModal()
-}
-
-const openDeleteModal = (club) => {
-  if (!club) return
-  selectedClub.value = { ...club }
-  showDeleteModal.value = true
-}
-
-const closeDeleteModal = () => {
-  showDeleteModal.value = false
-  selectedClub.value = null
-}
-
-const handleEditFromDetails = () => {
-  const clubToEdit = selectedClub.value
-  closeDetailsModal()
-  openEditModal(clubToEdit)
-}
-
-const handleDeleteFromDetails = () => {
-  const clubToDelete = selectedClub.value
-  closeDetailsModal()
-  openDeleteModal(clubToDelete)
-}
-
-const confirmDelete = () => {
-  if (!selectedClub.value) return
-  clubList.value = clubList.value.filter((club) => club.id !== selectedClub.value.id)
-  closeDeleteModal()
+async function startEditingPage() {
+  editingPage.value = true
+  pageInput.value = currentPage.value
+  await nextTick()
+  pageInputRef.value.focus()
+  pageInputRef.value.select()
 }
 </script>
 
@@ -88,45 +143,108 @@ const confirmDelete = () => {
       <div class="page-top">
         <div>
           <p class="eyebrow">Faculty Dashboard</p>
-          <h2 class="fw-bold mb-2">Clubs Management</h2>
+          <h2 class="fw-bold mb-2">Faculty Clubs</h2>
           <p class="subtitle">
-            Manage your student club, its members, and club activities from one place.
+            Supervise your assigned clubs and explore all campus student clubs from one place.
           </p>
         </div>
       </div>
 
-      <div class="toolbar">
+      <div class="toolbar mb-4">
         <div class="search-wrap">
           <ClubSearch v-model="search" />
         </div>
+        <div class="status-tabs">
+          <button
+            :class="{ active: selectedStatus === 'ALL' }"
+            @click="selectedStatus = 'ALL'"
+          >
+            All
+            <span>{{ allClubsList.length }}</span>
+          </button>
+
+          <button
+            :class="{ active: selectedStatus === 'ACTIVE' }"
+            @click="selectedStatus = 'ACTIVE'"
+          >
+            Live
+            <span>{{ activeCount }}</span>
+          </button>
+
+          <button
+            :class="{ active: selectedStatus === 'INACTIVE' }"
+            @click="selectedStatus = 'INACTIVE'"
+          >
+            Legacy
+            <span>{{ legacyCount }}</span>
+          </button>
+        </div>
       </div>
 
-      <div class="grid-panel">
-        <ClubGrid
-          :clubs="filteredClubs"
-          :isFaculty="true"
-          @view="openDetailsModal"
-        />
+      <!-- SECTION 1: My Clubs (Coordinated Clubs) -->
+      <div class="club-section mb-5" v-if="filteredMyClubs.length > 0">
+        <div class="d-flex align-items-center gap-2 mb-3">
+          <span class="material-symbols-rounded text-primary fs-4">verified_user</span>
+          <h4 class="fw-bold m-0 text-dark">My Clubs</h4>
+          <span class="badge bg-primary-subtle text-primary border rounded-pill px-2.5 py-1 text-xs">
+            {{ filteredMyClubs.length }} Coordinated / Assigned
+          </span>
+        </div>
+
+        <div class="cards-grid">
+          <FacultyClubCard
+            v-for="club in filteredMyClubs"
+            :key="club.id || club.clubId"
+            :club="club"
+            :isMyClub="true"
+          />
+        </div>
       </div>
 
-      <div v-if="filteredClubs.length === 0" class="empty-state">
-        <h3>No clubs matched your search.</h3>
-        <p>Try searching with another keyword.</p>
-      </div>
+      <!-- SECTION 2: All Clubs -->
+      <div class="club-section">
+        <div class="d-flex align-items-center gap-2 mb-3">
+          <span class="material-symbols-rounded text-secondary fs-4">account_balance</span>
+          <h4 class="fw-bold m-0 text-dark">All Clubs</h4>
+          <span class="badge bg-secondary-subtle text-secondary border rounded-pill px-2.5 py-1 text-xs">
+            {{ filteredAllClubs.length }} Total
+          </span>
+        </div>
 
-      <AddClubModal v-if="showAddModal" @close="closeAddModal" @submit="addClub" />
-      <ClubDetailsModal
-        v-if="showDetailsModal && selectedClub"
-        :club="selectedClub"
-        :isAdmin="false"
-        :isFaculty="true"
-        @close="closeDetailsModal"
-        @visit="closeDetailsModal"
-        @edit="handleEditFromDetails"
-        @delete="handleDeleteFromDetails"
-      />
-      <EditClubModal v-if="showEditModal && selectedClub" :club="selectedClub" @close="closeEditModal" @submit="saveEdit" />
-      <DeleteClubModal v-if="showDeleteModal && selectedClub" :club="selectedClub" @close="closeDeleteModal" @confirm="confirmDelete" />
+        <div class="cards-grid">
+          <FacultyClubCard
+            v-for="club in paginatedAllClubs"
+            :key="club.id || club.clubId"
+            :club="club"
+            :isMyClub="false"
+          />
+        </div>
+
+        <div v-if="filteredAllClubs.length" class="pagination-bar">
+          <button @click="previousPage" :disabled="currentPage === 1">← Previous</button>
+          <div class="page-indicator" @dblclick="startEditingPage">
+            <span v-if="!editingPage">{{ currentPage }}</span>
+            <input
+                v-else
+                ref="pageInputRef"
+                v-model.number="pageInput"
+                class="page-input"
+                type="number"
+                min="1"
+                :max="totalPages"
+                @keyup.enter="savePage"
+                @keyup.esc="cancelEditingPage"
+                @blur="savePage"
+            />
+          </div>
+          <button @click="nextPage" :disabled="currentPage === totalPages">Next →</button>
+        </div>
+
+        <div v-if="filteredAllClubs.length === 0" class="empty-state">
+          <h3>No clubs matched your search.</h3>
+          <p>Try searching with another keyword.</p>
+        </div>
+      </div>
     </section>
   </FacultyLayout>
 </template>
@@ -134,6 +252,12 @@ const confirmDelete = () => {
 <style scoped>
 .faculty-clubs-page {
   width: 100%;
+}
+
+.cards-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 24px;
 }
 
 .page-top {
@@ -175,21 +299,28 @@ const confirmDelete = () => {
   cursor: pointer;
 }
 
-.toolbar {
-  display: flex;
-  align-items: center;
-  margin-bottom: 20px;
+.toolbar{
+    display:grid;
+    grid-template-columns:minmax(0, 1fr) auto;
+    align-items:center;
+    gap:24px;
+    margin-bottom:32px;
 }
 
-.search-wrap {
-  flex: 1;
+.search-wrap{
+    width:100%;
+    max-width:850px;
 }
 
-.grid-panel {
-  background: #ffffff;
-  border-radius: 24px;
-  padding: 24px;
-  box-shadow: 0 10px 30px rgba(15, 23, 42, 0.06);
+.status-tabs{
+    display:inline-flex;
+    align-items:center;
+    gap:6px;
+    padding:6px;
+    background:#fff;
+    border:1px solid #e5e7eb;
+    border-radius:18px;
+    justify-self:end;
 }
 
 .empty-state {
@@ -203,6 +334,115 @@ const confirmDelete = () => {
   margin-bottom: 10px;
 }
 
+.status-tabs button{
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    gap:10px;
+    min-width:88px;
+    height:50px;
+    border:none;
+    border-radius:14px;
+    background:transparent;
+    font-weight:600;
+    color:#475569;
+    cursor:pointer;
+    transition:.2s;
+}
+
+.status-tabs button span{
+    width:28px;
+    height:28px;
+    display:grid;
+    place-items:center;
+    border-radius:50%;
+    background:#eef2ff;
+    color:#2563eb;
+    font-size:13px;
+    font-weight:700;
+}
+
+.status-tabs button.active{
+    background:#2563eb;
+    color:white;
+}
+
+.status-tabs button.active span{
+    background:white;
+    color:#2563eb;
+}
+
+.pagination-bar{
+    display:flex;
+    justify-content:center;
+    align-items:center;
+    gap:18px;
+    margin-top:40px;
+}
+
+.pagination-bar button{
+    border:none;
+    background:#fff;
+    border:1px solid #e5e7eb;
+    border-radius:14px;
+    padding:12px 18px;
+    font-weight:600;
+    cursor:pointer;
+    transition:.2s;
+}
+
+.pagination-bar button:hover:not(:disabled){
+    background:#2563eb;
+    color:#fff;
+}
+
+.pagination-bar button:disabled{
+    opacity:.5;
+    cursor:not-allowed;
+}
+
+.page-indicator{
+    width:64px;
+    height:56px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    border-radius:16px;
+    background:#eff6ff;
+    color:#2563eb;
+    font-size:20px;
+    font-weight:700;
+    cursor:pointer;
+    transition:.2s;
+}
+
+.page-indicator:hover{
+    background:#dbeafe;
+}
+
+.page-input{
+    width:100%;
+    height:100%;
+    border:none;
+    outline:none;
+    background:transparent;
+    color:#2563eb;
+    text-align:center;
+    font-size:20px;
+    font-weight:700;
+}
+
+.page-input::-webkit-outer-spin-button,
+.page-input::-webkit-inner-spin-button{
+    -webkit-appearance:none;
+    margin:0;
+}
+
+.page-input{
+    appearance:textfield;
+    -moz-appearance:textfield;
+}
+
 @media (max-width: 768px) {
   .page-top {
     flex-direction: column;
@@ -212,5 +452,19 @@ const confirmDelete = () => {
   .add-btn {
     width: 100%;
   }
+}
+
+@media (max-width:900px){
+    .toolbar{
+        grid-template-columns:1fr;
+    }
+
+    .search-wrap{
+        max-width:100%;
+    }
+
+    .status-tabs{
+        justify-self:start;
+    }
 }
 </style>

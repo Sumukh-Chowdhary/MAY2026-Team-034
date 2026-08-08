@@ -33,9 +33,12 @@ class Event(db.Model):
     __tablename__ = 'events'
 
     id = db.Column(db.Integer, primary_key=True)
-    club_id = db.Column(db.Integer, db.ForeignKey('clubs.id'), nullable=False)
+    club_id = db.Column(db.Integer, db.ForeignKey('clubs.id'), nullable=True)
     venue_id = db.Column(db.Integer, db.ForeignKey('venues.id'), nullable=True)
     created_by = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    organizer_type = db.Column(db.String(20), nullable=False, default='CLUB') # 'CLUB' or 'GENERAL'
+    reservation_status = db.Column(db.String(30), nullable=False, default='RESERVED') # 'RESERVED', 'PENDING', 'RELEASED', 'NONE'
+    reserved_at = db.Column(db.DateTime, default=datetime.utcnow)
     event_name = db.Column(db.String(150), nullable=False)
     event_description = db.Column(db.Text, nullable=True)
     event_status = db.Column(db.String(40), nullable=False, default='SCHEDULED')
@@ -64,16 +67,60 @@ class Event(db.Model):
             return self.creator.faculty_profile.full_name
         return None
 
+    @property
+    def computed_organizer_type(self):
+        if self.organizer_type:
+            return self.organizer_type.upper()
+        return 'CLUB' if self.club_id else 'GENERAL'
+
+    @property
+    def event_type(self):
+        return 'CLUB_EVENT' if self.computed_organizer_type == 'CLUB' else 'GENERAL_EVENT'
+
+    @property
+    def computed_reservation_status(self):
+        status_upper = (self.event_status or '').upper()
+        if status_upper in ['CANCELLED', 'CLOSED']:
+            return 'RELEASED'
+        if not self.venue_id:
+            return 'NONE'
+        return (self.reservation_status or 'RESERVED').upper()
+
+    @property
+    def computed_status(self):
+        status_upper = (self.event_status or '').upper()
+        if status_upper == 'CANCELLED':
+            return 'Cancelled'
+        if status_upper in ['COMPLETED', 'CLOSED']:
+            return 'Completed'
+        
+        today = datetime.utcnow().date()
+        if self.end_date and today > self.end_date:
+            return 'Completed'
+        elif self.start_date and today < self.start_date:
+            return 'Scheduled'
+        else:
+            return 'Live'
+
     def to_dict(self):
         return {
             'id': self.id,
             'name': self.event_name,
             'description': self.event_description,
-            'status': self.event_status,
+            'status': self.computed_status.upper() if self.computed_status else (self.event_status.upper() if self.event_status else 'SCHEDULED'),
+            'rawStatus': self.event_status,
+            'organizerType': self.computed_organizer_type,
+            'eventType': self.event_type,
+            'reservationStatus': self.computed_reservation_status,
+            'reservedAt': self.reserved_at.isoformat() if self.reserved_at else None,
             'clubId': self.club_id,
-            'clubName': self.club.club_name if self.club else None,
+            'clubName': self.club.club_name if self.club else 'General / Institutional',
+            'club': self.club.club_name if self.club else 'General / Institutional',
             'venueId': self.venue_id,
             'venueName': self.venue.venue_name if self.venue else None,
+            'venueLocation': self.venue.venue_location if self.venue else None,
+            'venueCapacity': self.venue.capacity if self.venue else None,
+            'venueType': self.venue.venue_type if self.venue else None,
             'createdBy': self.created_by,
             'createdByName': self._creator_name(),
             'startDate': self.start_date.isoformat() if self.start_date else None,

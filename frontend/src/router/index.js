@@ -87,6 +87,18 @@ const routes = [
     component: () => import('@/views/admin/EventDetails.vue'),
     meta: { requiresAuth: true, role: 'ADMIN' }
   },
+  {
+    path: '/admin/venues',
+    name: 'AdminVenues',
+    component: () => import('@/views/admin/Venues.vue'),
+    meta: { requiresAuth: true, role: 'ADMIN' }
+  },
+  {
+    path: '/admin/profile',
+    name: 'AdminProfile',
+    component: () => import('@/views/admin/Profile.vue'),
+    meta: { requiresAuth: true, role: 'ADMIN' }
+  },
 
   // --- Faculty Routes ---
   {
@@ -114,6 +126,12 @@ const routes = [
     meta: { requiresAuth: true, role: 'FACULTY' }
   },
   {
+    path: '/faculty/roles/history',
+    name: 'FacultyRoleHistory',
+    component: () => import('@/views/faculty/RoleHistory.vue'),
+    meta: { requiresAuth: true, role: 'FACULTY' }
+  },
+  {
     path: '/faculty/events',
     name: 'FacultyEvents',
     component: () => import('@/views/faculty/Events.vue'),
@@ -123,6 +141,12 @@ const routes = [
     path: '/faculty/events/:id',
     name: 'FacultyEventDetail',
     component: () => import('@/views/faculty/EventDetails.vue'),
+    meta: { requiresAuth: true, role: 'FACULTY' }
+  },
+  {
+    path: '/faculty/profile',
+    name: 'FacultyProfile',
+    component: () => import('@/views/faculty/Profile.vue'),
     meta: { requiresAuth: true, role: 'FACULTY' }
   },
 

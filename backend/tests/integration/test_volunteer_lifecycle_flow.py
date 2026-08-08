@@ -1,7 +1,7 @@
 import pytest
 
 def test_volunteer_lifecycle_integration(client, student_headers, admin_headers):
-    event_id = 1 # AI Hack Sprint
+    event_id = 2 # Freshers Campus Orientation 2026 (Student is non-organizer participant)
     
     # 1. Student registers as a volunteer for the event
     register_resp = client.post(

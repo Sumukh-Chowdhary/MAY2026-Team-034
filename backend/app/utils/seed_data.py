@@ -195,7 +195,7 @@ VENUE_DATA = [
         "location": "Block C, Lab 3",
         "type": "Lab",
         "capacity": 80,
-        "availabilityStatus": "AVAILABLE"
+        "availabilityStatus": "OCCUPIED"
     },
     {
         "name": "Open Air Ground",
@@ -206,25 +206,40 @@ VENUE_DATA = [
     },
     {
         "name": "Studio Hall",
-        "location": "Arts Block",
+        "location": "Arts Block, Floor 1",
         "type": "Hall",
         "capacity": 120,
         "availabilityStatus": "AVAILABLE"
+    },
+    {
+        "name": "Seminar Room 101",
+        "location": "Block B, Floor 1",
+        "type": "Classroom",
+        "capacity": 60,
+        "availabilityStatus": "AVAILABLE"
+    },
+    {
+        "name": "Conference Hall Alpha",
+        "location": "Admin Block, Floor 3",
+        "type": "Conference Room",
+        "capacity": 150,
+        "availabilityStatus": "ARCHIVED"
     }
 ]
 
 EVENT_DATA = [
     {
+        "organizerType": "CLUB",
         "clubName": "AI Club",
         "createdByEmail": "meena@allclub.com",
         "name": "AI Hack Sprint",
         "description": "A full-day coding sprint focused on AI prototypes and demos.",
         "status": "LIVE",
-        "startDate": "2026-08-10",
-        "endDate": "2026-08-10",
+        "startDate": "2026-08-07",
+        "endDate": "2026-08-09",
         "startTime": "09:00:00",
         "endTime": "17:00:00",
-        "capacity": 120,
+        "capacity": 80,
         "venueName": "Innovation Lab",
         "schedule": [
             {"time": "09:00", "activity": "Registration and setup"},
@@ -243,6 +258,98 @@ EVENT_DATA = [
         "volunteers": ["sneha@allclub.com", "karthik@allclub.com"]
     },
     {
+        "organizerType": "GENERAL",
+        "clubName": None,
+        "createdByEmail": "meena@allclub.com",
+        "name": "Freshers Campus Orientation 2026",
+        "description": "Welcome ceremony and campus orientation for the incoming batch of 2026.",
+        "status": "SCHEDULED",
+        "startDate": "2026-08-15",
+        "endDate": "2026-08-15",
+        "startTime": "09:30:00",
+        "endTime": "13:00:00",
+        "capacity": 500,
+        "venueName": "Main Auditorium",
+        "schedule": [
+            {"time": "09:30", "activity": "Welcome speech by Principal"},
+            {"time": "11:00", "activity": "Academic orientation and campus tour"}
+        ],
+        "announcements": [
+            {"title": "Welcome Students", "message": "All first-year students must attend in formal attire."}
+        ],
+        "registrations": ["rahul@allclub.com", "ananya@allclub.com"],
+        "attendance": ["rahul@allclub.com"],
+        "prizes": [],
+        "organizers": [],
+        "volunteers": []
+    },
+    {
+        "organizerType": "GENERAL",
+        "clubName": None,
+        "createdByEmail": "principal@allclub.com",
+        "name": "15th Annual College Convocation",
+        "description": "Graduation ceremony honoring the graduating class of 2026.",
+        "status": "SCHEDULED",
+        "startDate": "2026-09-10",
+        "endDate": "2026-09-10",
+        "startTime": "10:00:00",
+        "endTime": "16:00:00",
+        "capacity": 800,
+        "venueName": "Main Auditorium",
+        "schedule": [
+            {"time": "10:00", "activity": "Procession and Commencement Speech"},
+            {"time": "12:30", "activity": "Degree Distribution"}
+        ],
+        "announcements": [],
+        "registrations": [],
+        "attendance": [],
+        "prizes": [],
+        "organizers": [],
+        "volunteers": []
+    },
+    {
+        "organizerType": "GENERAL",
+        "clubName": None,
+        "createdByEmail": "arjun@allclub.com",
+        "name": "Mega Campus Placement Drive 2026",
+        "description": "Annual placement drive connecting top technology firms with graduating students.",
+        "status": "SCHEDULED",
+        "startDate": "2026-09-25",
+        "endDate": "2026-09-27",
+        "startTime": "09:00:00",
+        "endTime": "17:30:00",
+        "capacity": 600,
+        "venueName": "Seminar Hall A",
+        "schedule": [],
+        "announcements": [],
+        "registrations": ["rahul@allclub.com"],
+        "attendance": [],
+        "prizes": [],
+        "organizers": [],
+        "volunteers": []
+    },
+    {
+        "organizerType": "GENERAL",
+        "clubName": None,
+        "createdByEmail": "priya@allclub.com",
+        "name": "Annual Campus Blood Donation Drive",
+        "description": "College-wide blood donation camp organized in partnership with Red Cross.",
+        "status": "SCHEDULED",
+        "startDate": "2026-08-28",
+        "endDate": "2026-08-28",
+        "startTime": "09:00:00",
+        "endTime": "16:00:00",
+        "capacity": 300,
+        "venueName": "Open Air Ground",
+        "schedule": [],
+        "announcements": [],
+        "registrations": [],
+        "attendance": [],
+        "prizes": [],
+        "organizers": [],
+        "volunteers": []
+    },
+    {
         "clubName": "Drama Club",
         "createdByEmail": "priya@allclub.com",
         "name": "Stagecraft Workshop",
@@ -252,7 +359,7 @@ EVENT_DATA = [
         "endDate": "2026-08-20",
         "startTime": "14:00:00",
         "endTime": "18:00:00",
-        "capacity": 80,
+        "capacity": 120,
         "venueName": "Studio Hall",
         "schedule": [
             {"time": "14:00", "activity": "Welcome and icebreaker"},
@@ -278,7 +385,7 @@ EVENT_DATA = [
         "endDate": "2026-09-06",
         "startTime": "08:00:00",
         "endTime": "18:00:00",
-        "capacity": 300,
+        "capacity": 400,
         "venueName": "Open Air Ground",
         "schedule": [
             {"time": "08:00", "activity": "Opening ceremony"},
@@ -295,6 +402,77 @@ EVENT_DATA = [
         ],
         "organizers": ["aman@allclub.com"],
         "volunteers": ["vikram@allclub.com", "ishita@allclub.com"]
+    },
+    {
+        "clubName": "Robotics Club",
+        "createdByEmail": "arjun@allclub.com",
+        "name": "Robotics Hardware Expo",
+        "description": "Exhibition of autonomous rovers and IoT hardware prototypes.",
+        "status": "SCHEDULED",
+        "startDate": "2026-09-12",
+        "endDate": "2026-09-14",
+        "startTime": "10:00:00",
+        "endTime": "16:00:00",
+        "capacity": 80,
+        "venueName": "Innovation Lab",
+        "schedule": [
+            {"time": "10:00", "activity": "Project Demonstration"},
+            {"time": "14:00", "activity": "Hardware Testing"}
+        ],
+        "announcements": [],
+        "registrations": ["vikram@allclub.com"],
+        "attendance": [],
+        "prizes": [],
+        "organizers": ["vikram@allclub.com"],
+        "volunteers": []
+    },
+    {
+        "clubName": "Photography Club",
+        "createdByEmail": "meena@allclub.com",
+        "name": "Campus Gallery Exhibition",
+        "description": "Exhibition showcasing winning photographs from campus photo walks.",
+        "status": "SCHEDULED",
+        "startDate": "2026-10-02",
+        "endDate": "2026-10-03",
+        "startTime": "11:00:00",
+        "endTime": "17:00:00",
+        "capacity": 120,
+        "venueName": "Studio Hall",
+        "schedule": [],
+        "announcements": [],
+        "registrations": ["meera@allclub.com"],
+        "attendance": [],
+        "prizes": [],
+        "organizers": ["meera@allclub.com"],
+        "volunteers": []
+    },
+    {
+        "clubName": "Coding Club",
+        "createdByEmail": "karthik@allclub.com",
+        "name": "Summer Code Sprint 2026",
+        "description": "Completed algorithm speedrun and competitive programming challenge.",
+        "status": "COMPLETED",
+        "startDate": "2026-07-15",
+        "endDate": "2026-07-16",
+        "startTime": "10:00:00",
+        "endTime": "16:00:00",
+        "capacity": 250,
+        "venueName": "Main Auditorium",
+        "schedule": [
+            {"time": "10:00", "activity": "Contest Kickoff"},
+            {"time": "15:00", "activity": "Leaderboard Freeze"},
+            {"time": "16:00", "activity": "Prize Distribution"}
+        ],
+        "announcements": [
+            {"title": "Sprint Completed", "message": "Thanks to all participants for competing!"}
+        ],
+        "registrations": ["karthik@allclub.com", "rahul@allclub.com"],
+        "attendance": ["karthik@allclub.com", "rahul@allclub.com"],
+        "prizes": [
+            {"title": "1st Place", "winnerEmail": "karthik@allclub.com", "description": "Champion programmer"}
+        ],
+        "organizers": ["karthik@allclub.com"],
+        "volunteers": []
     }
 ]
 
@@ -311,4 +489,304 @@ MEMBERSHIP_SEED_DATA = [
     {"club_id": 4, "user_id": 8, "membership_role": "PRESIDENT", "membership_status": "ACTIVE"},
     {"club_id": 4, "user_id": 10, "membership_role": "VOLUNTEER", "membership_status": "ACTIVE"},
     {"club_id": 4, "user_id": 11, "membership_role": "MEMBER", "membership_status": "ACTIVE"}
+]
+
+REQUEST_SEED_DATA = [
+    {
+        "requesterEmail": "rahul@allclub.com",
+        "requestType": "CREATE_EVENT_AS_ORGANIZER",
+        "title": "AI Ethics & Governance Panel",
+        "description": "Panel discussion on responsible AI and policy frameworks in tech.",
+        "referenceType": "CLUB",
+        "referenceName": "AI Club",
+        "priority": "HIGH",
+        "workflowStatus": "APPROVED",
+        "approvals": [
+            {"approverEmail": "meena@allclub.com", "approvalRole": "CLUB_FACULTY", "approvalOrder": 1, "status": "APPROVED", "remarks": "Approved. Important topic."}
+        ]
+    },
+    {
+        "requesterEmail": "ananya@allclub.com",
+        "requestType": "BECOME_ORGANIZER",
+        "title": "Apply for Music Club Event Lead",
+        "description": "Requesting organizer permissions to coordinate weekend jam sessions.",
+        "referenceType": "CLUB",
+        "referenceName": "Music Club",
+        "priority": "MEDIUM",
+        "workflowStatus": "PENDING",
+        "approvals": [
+            {"approverEmail": "priya@allclub.com", "approvalRole": "CLUB_FACULTY", "approvalOrder": 1, "status": "APPROVED", "remarks": "Strong candidate."},
+            {"approverEmail": "admin@allclub.com", "approvalRole": "ADMIN", "approvalOrder": 2, "status": "PENDING", "remarks": None}
+        ]
+    },
+    {
+        "requesterEmail": "vikram@allclub.com",
+        "requestType": "VENUE_REQUEST",
+        "title": "Robotics Arena Ground Reservation",
+        "description": "Requesting Open Air Ground for outdoor drone testing.",
+        "referenceType": "CLUB",
+        "referenceName": "Robotics Club",
+        "priority": "HIGH",
+        "workflowStatus": "CHANGES_REQUESTED",
+        "approvals": [
+            {"approverEmail": "arjun@allclub.com", "approvalRole": "CLUB_FACULTY", "approvalOrder": 1, "status": "CHANGES_REQUESTED", "remarks": "Please select an indoor venue or adjust date due to rain forecast."}
+        ]
+    },
+    {
+        "requesterEmail": "sneha@allclub.com",
+        "requestType": "BECOME_VOLUNTEER",
+        "title": "Volunteer Application for Drama Club",
+        "description": "Application to join as stage management and lighting volunteer.",
+        "referenceType": "CLUB",
+        "referenceName": "Drama Club",
+        "priority": "LOW",
+        "workflowStatus": "APPROVED",
+        "approvals": [
+            {"approverEmail": "priya@allclub.com", "approvalRole": "CLUB_FACULTY", "approvalOrder": 1, "status": "APPROVED", "remarks": "Welcome to the team!"}
+        ]
+    },
+    {
+        "requesterEmail": "arjun@allclub.com",
+        "requestType": "EDIT_CLUB_AS_COORDINATOR",
+        "title": "Sports Club Description and Asset Update",
+        "description": "Update sports club banners, training hours, and equipment details.",
+        "referenceType": "CLUB",
+        "referenceName": "Sports Club",
+        "priority": "MEDIUM",
+        "workflowStatus": "APPROVED",
+        "approvals": [
+            {"approverEmail": "admin@allclub.com", "approvalRole": "ADMIN", "approvalOrder": 1, "status": "APPROVED", "remarks": "Updated successfully."}
+        ]
+    },
+    {
+        "requesterEmail": "karthik@allclub.com",
+        "requestType": "BUDGET_REQUEST",
+        "title": "Hackathon Prize Pool Funding Request",
+        "description": "Requesting $500 sponsorship for national coding challenge prizes.",
+        "referenceType": "CLUB",
+        "referenceName": "Coding Club",
+        "priority": "HIGH",
+        "workflowStatus": "REJECTED",
+        "approvals": [
+            {"approverEmail": "principal@allclub.com", "approvalRole": "PRINCIPAL", "approvalOrder": 1, "status": "REJECTED", "remarks": "Budget request exceeds departmental limit for Q3."}
+        ]
+    },
+    {
+        "requesterEmail": "meena@allclub.com",
+        "requestType": "BECOME_FACULTY_COORDINATOR",
+        "title": "Faculty Coordinator Application for Science Club",
+        "description": "Faculty advisor nomination to lead student research projects.",
+        "referenceType": "CLUB",
+        "referenceName": "Science Club",
+        "priority": "MEDIUM",
+        "workflowStatus": "APPROVED",
+        "approvals": [
+            {"approverEmail": "admin@allclub.com", "approvalRole": "ADMIN", "approvalOrder": 1, "status": "APPROVED", "remarks": "Assigned as coordinator."}
+        ]
+    },
+    {
+        "requesterEmail": "meera@allclub.com",
+        "requestType": "SCHEDULE_REQUEST",
+        "title": "Night Photography Expedition Schedule Approval",
+        "description": "Proposing campus night walk for long-exposure photography tutorial.",
+        "referenceType": "CLUB",
+        "referenceName": "Photography Club",
+        "priority": "MEDIUM",
+        "workflowStatus": "PENDING",
+        "approvals": [
+            {"approverEmail": "meena@allclub.com", "approvalRole": "CLUB_FACULTY", "approvalOrder": 1, "status": "PENDING", "remarks": None}
+        ]
+    }
+]
+
+ACTION_TICKET_SEED_DATA = [
+    {
+        "raisedByEmail": "rahul@allclub.com",
+        "ticketType": "CREATE_CLUB",
+        "title": "Propose CyberSecurity & Ethical Hacking Guild",
+        "description": "Requesting creation of a student guild dedicated to CTFs and security research.",
+        "priority": "HIGH",
+        "approvalStatus": "APPROVED",
+        "assignedToEmail": "admin@allclub.com",
+        "taskStatus": "IN_PROGRESS",
+        "dueDate": "2026-08-25",
+        "completionRemarks": None,
+        "approvals": [
+            {"approverEmail": "meena@allclub.com", "approvalRole": "FACULTY_COORDINATOR", "approvalOrder": 1, "status": "APPROVED", "remarks": "Great initiative."},
+            {"approverEmail": "admin@allclub.com", "approvalRole": "ADMIN", "approvalOrder": 2, "status": "APPROVED", "remarks": "Approved for creation."}
+        ]
+    },
+    {
+        "raisedByEmail": "arjun@allclub.com",
+        "ticketType": "CREATE_EVENT_GENERAL",
+        "title": "Annual Inter-College Tech Fest 2026",
+        "description": "Proposal for institution-wide mega technology symposium.",
+        "priority": "HIGH",
+        "approvalStatus": "APPROVED",
+        "assignedToEmail": "admin@allclub.com",
+        "taskStatus": "OPEN",
+        "dueDate": "2026-09-01",
+        "completionRemarks": None,
+        "approvals": [
+            {"approverEmail": "principal@allclub.com", "approvalRole": "PRINCIPAL", "approvalOrder": 1, "status": "APPROVED", "remarks": "Approved at administrative level."},
+            {"approverEmail": "admin@allclub.com", "approvalRole": "ADMIN", "approvalOrder": 2, "status": "APPROVED", "remarks": "Scheduled."}
+        ]
+    },
+    {
+        "raisedByEmail": "ananya@allclub.com",
+        "ticketType": "CREATE_EVENT_FOR_CLUB",
+        "title": "Acoustic Unplugged Evening",
+        "description": "Inter-department acoustic music performance on student lounge lawn.",
+        "priority": "MEDIUM",
+        "approvalStatus": "PENDING",
+        "assignedToEmail": None,
+        "taskStatus": None,
+        "dueDate": None,
+        "completionRemarks": None,
+        "approvals": [
+            {"approverEmail": "priya@allclub.com", "approvalRole": "CLUB_FACULTY", "approvalOrder": 1, "status": "PENDING", "remarks": None}
+        ]
+    },
+    {
+        "raisedByEmail": "vikram@allclub.com",
+        "ticketType": "EDIT_CLUB_ADMIN",
+        "title": "Update Robotics Club Logo & Equipment Bio",
+        "description": "Action item to update logo icon to smart_toy and list new 3D printers.",
+        "priority": "LOW",
+        "approvalStatus": "APPROVED",
+        "assignedToEmail": "admin@allclub.com",
+        "taskStatus": "COMPLETED",
+        "dueDate": "2026-08-05",
+        "completionRemarks": "Updated club profile details successfully.",
+        "closedAt": "2026-08-05T14:30:00",
+        "approvals": [
+            {"approverEmail": "admin@allclub.com", "approvalRole": "ADMIN", "approvalOrder": 1, "status": "APPROVED", "remarks": "Completed."}
+        ]
+    },
+    {
+        "raisedByEmail": "sneha@allclub.com",
+        "ticketType": "CREATE_CLUB",
+        "title": "Propose Literary & Debate Society",
+        "description": "Establish a formal parliamentary debate and creative writing society.",
+        "priority": "MEDIUM",
+        "approvalStatus": "CHANGES_REQUESTED",
+        "assignedToEmail": None,
+        "taskStatus": None,
+        "dueDate": None,
+        "completionRemarks": None,
+        "approvals": [
+            {"approverEmail": "priya@allclub.com", "approvalRole": "FACULTY_COORDINATOR", "approvalOrder": 1, "status": "CHANGES_REQUESTED", "remarks": "Need detailed faculty endorsement letter and budget outline."}
+        ]
+    },
+    {
+        "raisedByEmail": "priya@allclub.com",
+        "ticketType": "EDIT_EVENT_ADMIN",
+        "title": "Reschedule Stagecraft Workshop Venue",
+        "description": "Re-allocate Stagecraft Workshop from Main Hall to Studio Hall.",
+        "priority": "HIGH",
+        "approvalStatus": "APPROVED",
+        "assignedToEmail": "admin@allclub.com",
+        "taskStatus": "COMPLETED",
+        "dueDate": "2026-08-06",
+        "completionRemarks": "Venue re-allocated to Studio Hall.",
+        "closedAt": "2026-08-06T11:00:00",
+        "approvals": [
+            {"approverEmail": "admin@allclub.com", "approvalRole": "ADMIN", "approvalOrder": 1, "status": "APPROVED", "remarks": "Re-allocated."}
+        ]
+    },
+    {
+        "raisedByEmail": "karthik@allclub.com",
+        "ticketType": "CREATE_EVENT_GENERAL",
+        "title": "Campus Open Source Hack Sprint",
+        "description": "General non-club hackathon open to all engineering departments.",
+        "priority": "MEDIUM",
+        "approvalStatus": "REJECTED",
+        "assignedToEmail": None,
+        "taskStatus": None,
+        "dueDate": None,
+        "completionRemarks": None,
+        "approvals": [
+            {"approverEmail": "admin@allclub.com", "approvalRole": "ADMIN", "approvalOrder": 1, "status": "REJECTED", "remarks": "Conflicts with semester mid-term exam schedule."}
+        ]
+    }
+]
+
+ASSIGNMENT_TICKET_SEED_DATA = [
+    {
+        "holderEmail": "rahul@allclub.com",
+        "assignmentRole": "ORGANIZER",
+        "referenceType": "CLUB",
+        "clubName": "AI Club",
+        "durationType": "INDEFINITE",
+        "startsAt": "2026-01-01T00:00:00",
+        "endsAt": None,
+        "status": "ACTIVE",
+        "grantedByEmail": "admin@allclub.com"
+    },
+    {
+        "holderEmail": "sneha@allclub.com",
+        "assignmentRole": "VOLUNTEER",
+        "referenceType": "CLUB",
+        "clubName": "Drama Club",
+        "durationType": "DATE_RANGE",
+        "startsAt": "2026-08-01T00:00:00",
+        "endsAt": "2026-12-31T23:59:59",
+        "status": "ACTIVE",
+        "grantedByEmail": "priya@allclub.com"
+    },
+    {
+        "holderEmail": "meena@allclub.com",
+        "assignmentRole": "FACULTY_COORDINATOR",
+        "referenceType": "CLUB",
+        "clubName": "Science Club",
+        "durationType": "INDEFINITE",
+        "startsAt": "2026-02-15T00:00:00",
+        "endsAt": None,
+        "status": "ACTIVE",
+        "grantedByEmail": "admin@allclub.com"
+    },
+    {
+        "holderEmail": "ananya@allclub.com",
+        "assignmentRole": "EVENT_ORGANIZER",
+        "referenceType": "EVENT",
+        "eventName": "Stagecraft Workshop",
+        "durationType": "DATE_RANGE",
+        "startsAt": "2026-08-15T00:00:00",
+        "endsAt": "2026-08-25T23:59:59",
+        "status": "ACTIVE",
+        "grantedByEmail": "priya@allclub.com"
+    },
+    {
+        "holderEmail": "vikram@allclub.com",
+        "assignmentRole": "VOLUNTEER",
+        "referenceType": "CLUB",
+        "clubName": "Sports Club",
+        "durationType": "DATE_RANGE",
+        "startsAt": "2026-05-01T00:00:00",
+        "endsAt": "2026-07-01T00:00:00",
+        "status": "EXPIRED",
+        "grantedByEmail": "arjun@allclub.com"
+    },
+    {
+        "holderEmail": "karthik@allclub.com",
+        "assignmentRole": "ORGANIZER",
+        "referenceType": "CLUB",
+        "clubName": "Coding Club",
+        "durationType": "INDEFINITE",
+        "startsAt": "2026-03-01T00:00:00",
+        "endsAt": None,
+        "status": "SUSPENDED",
+        "grantedByEmail": "admin@allclub.com"
+    },
+    {
+        "holderEmail": "meera@allclub.com",
+        "assignmentRole": "VOLUNTEER",
+        "referenceType": "CLUB",
+        "clubName": "Photography Club",
+        "durationType": "DATE_RANGE",
+        "startsAt": "2026-04-01T00:00:00",
+        "endsAt": "2026-06-01T00:00:00",
+        "status": "TERMINATED",
+        "grantedByEmail": "admin@allclub.com"
+    }
 ]

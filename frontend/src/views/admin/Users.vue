@@ -3,9 +3,12 @@ import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import AdminLayout from '@/layouts/AdminLayout.vue'
 import { getUsers, updateUserStatus } from '@/api/users'
+import { getCurrentUser } from '@/services/authService'
+import UserAvatar from '@/components/profile/UserAvatar.vue'
 import '@/assets/css/Users.css'
 
 const router = useRouter()
+const currentAdminId = computed(() => getCurrentUser()?.id)
 
 // ── State ──────────────────────────────────────────
 const search     = ref('')
@@ -35,11 +38,13 @@ function roleBadge(role) {
 }
 
 function roleLabel(role) {
-  return role.charAt(0) + role.slice(1).toLowerCase()
+  return role ? (role.charAt(0) + role.slice(1).toLowerCase()) : 'User'
 }
 
-function initial(name) {
-  return name ? name.charAt(0).toUpperCase() : '?'
+function getAvatarUrl(user) {
+  const style = user.avatarStyle || 'adventurer'
+  const seed = user.avatarSeed || user.name || user.email || 'User'
+  return `https://api.dicebear.com/7.x/${style}/svg?seed=${encodeURIComponent(seed)}`
 }
 
 // ── Stats ──────────────────────────────────────────
@@ -48,24 +53,31 @@ const totalStudents = computed(() => userList.value.filter(u => u.role === 'STUD
 const totalFaculty  = computed(() => userList.value.filter(u => u.role === 'FACULTY').length)
 const activeUsers   = computed(() => userList.value.filter(u => u.status === 'ACTIVE').length)
 
-// ── Filtered List ──────────────────────────────────
+// ── Filtered List (Logged-in admin appears LAST) ────
 const filteredUsers = computed(() => {
   const q = search.value.trim().toLowerCase()
+  const myId = currentAdminId.value
 
-  return userList.value.filter(u => {
-    // Tab filter: ALL shows every role, STUDENT/FACULTY filter by role
+  const list = userList.value.filter(u => {
     const matchTab =
       activeTab.value === 'ALL' ||
       u.role === activeTab.value
 
     const matchSearch =
       !q ||
-      u.name.toLowerCase().includes(q) ||
-      u.email.toLowerCase().includes(q) ||
-      u.registerNumber.toLowerCase().includes(q) ||
+      (u.name && u.name.toLowerCase().includes(q)) ||
+      (u.email && u.email.toLowerCase().includes(q)) ||
+      (u.registerNumber && u.registerNumber.toLowerCase().includes(q)) ||
       (u.department && u.department.toLowerCase().includes(q))
 
     return matchTab && matchSearch
+  })
+
+  // Sort list so current logged-in admin appears LAST
+  return list.sort((a, b) => {
+    if (a.id === myId) return 1
+    if (b.id === myId) return -1
+    return 0
   })
 })
 
@@ -203,17 +215,19 @@ const blockBtnLabel = computed(() =>
             <tr
               v-for="user in filteredUsers"
               :key="user.id"
+              :class="{ 'bg-light border-start border-primary border-4': user.id === currentAdminId }"
               @click="viewUser(user)"
             >
               <!-- Avatar + Name + Reg -->
               <td>
-                <div class="user-cell">
-                  <div class="avatar" :style="{ background: user.avatarColor }">
-                    {{ initial(user.name) }}
-                  </div>
+                <div class="user-cell align-items-center gap-2">
+                  <UserAvatar size="table" :user="user" />
                   <div>
-                    <div class="user-name">{{ user.name }}</div>
-                    <div class="user-reg">{{ user.registerNumber }}</div>
+                    <div class="user-name fw-bold d-flex align-items-center gap-1">
+                      {{ user.name }}
+                      <span class="badge bg-primary-subtle text-primary border text-xs ms-1" v-if="user.id === currentAdminId">My Account</span>
+                    </div>
+                    <div class="user-reg text-xs text-muted">{{ user.registerNumber }}</div>
                   </div>
                 </div>
               </td>

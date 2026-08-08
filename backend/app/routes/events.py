@@ -1,15 +1,18 @@
 from datetime import datetime, time
 from flask import Blueprint, request, jsonify, g
 from app.models import db
-from app.models.club import Club
+from app.models.club import Club, ClubOrganizer, ClubFaculty
 from app.models.events import (
     Event, Venue,
     EventScheduleItem, EventAnnouncement,
     EventRegistration, EventAttendance,
     EventPrize, EventOrganizer, EventVolunteer,
 )
+from app.models.tickets import ActionTicket, ActionTicketType
 from app.utils.auth_jwt import jwt_required, roles_required
-
+from app.services.event_service import EventService
+from app.models.club import ClubOrganizer
+from app.models.tickets import AssignmentTicket, AssignmentStatus, AssignmentRole
 
 events_bp = Blueprint('events', __name__, url_prefix='/api/events')
 
@@ -36,13 +39,54 @@ def _parse_time(value):
 
 
 def _can_manage_event(event, user):
-    if not user:
+    if not user or user.account_status != 'ACTIVE':
         return False
-    if user.role and user.role.name == 'ADMIN':
+
+    role_name = user.role.name.upper() if user.role else ''
+
+    # 1. Admin & Faculty always have management rights
+    if role_name in ['ADMIN', 'FACULTY']:
+        if role_name == 'FACULTY' and event.club_id:
+            from app.models.club import ClubFaculty
+            if ClubFaculty.query.filter_by(faculty_id=user.id, club_id=event.club_id).first() is not None:
+                return True
+            if event.created_by == user.id:
+                return True
+        else:
+            return True
+
+    # 2. Check Event Creator
+    if event.created_by == user.id:
         return True
-    if user.role and user.role.name == 'FACULTY':
+
+    # 3. Check Event Organizer assignment
+    if EventOrganizer.query.filter_by(event_id=event.id, user_id=user.id).first():
         return True
-    return event.created_by == user.id
+
+    # 4. Check Club Organizer assignment (Module 21)
+    if event.club_id and ClubOrganizer.query.filter_by(club_id=event.club_id, user_id=user.id).first():
+        return True
+
+    # 5. Check Active Assignment Tickets for Club (Module 21)
+    if event.club_id:
+        active_assignment = AssignmentTicket.query.filter_by(
+            holder_id=user.id,
+            reference_type='CLUB',
+            reference_id=event.club_id,
+            status=AssignmentStatus.ACTIVE
+        ).filter(
+            AssignmentTicket.assignment_role.in_([AssignmentRole.ORGANIZER, 'PRESIDENT'])
+        ).first()
+
+        if active_assignment:
+            return True
+
+    # 6. Check Approved Event Volunteer access (Module 22)
+    vol = EventVolunteer.query.filter_by(event_id=event.id, user_id=user.id, volunteer_status='APPROVED').first()
+    if vol:
+        return True
+
+    return False
 
 
 @events_bp.route('', methods=['GET'])
@@ -260,6 +304,13 @@ def assign_venue(event_id):
     return jsonify(event.to_dict()), 200
 
 
+@events_bp.route('/calendar', methods=['GET'])
+@jwt_required
+def get_calendar_events():
+    calendar_items = EventService.get_calendar_events(g.current_user)
+    return jsonify(calendar_items), 200
+
+
 @events_bp.route('/<int:event_id>/register', methods=['POST'])
 @jwt_required
 def register_for_event(event_id):
@@ -282,10 +333,14 @@ def get_registrations(event_id):
     return jsonify([item.to_dict() for item in registrations]), 200
 
 
-@events_bp.route('/<int:event_id>/schedule', methods=['POST', 'PUT'])
+@events_bp.route('/<int:event_id>/schedule', methods=['GET', 'POST', 'PUT'])
 @jwt_required
 def manage_schedule(event_id):
     event = Event.query.get_or_404(event_id)
+
+    if request.method == 'GET':
+        return jsonify([item.to_dict() for item in event.schedules]), 200
+
     if not _can_manage_event(event, g.current_user):
         return jsonify({'error': 'You do not have permission to manage schedule.'}), 403
 
@@ -306,10 +361,14 @@ def manage_schedule(event_id):
     return jsonify(event.to_dict()), 200
 
 
-@events_bp.route('/<int:event_id>/announcements', methods=['POST', 'PUT'])
+@events_bp.route('/<int:event_id>/announcements', methods=['GET', 'POST', 'PUT'])
 @jwt_required
 def manage_announcements(event_id):
     event = Event.query.get_or_404(event_id)
+
+    if request.method == 'GET':
+        return jsonify([item.to_dict() for item in event.announcements]), 200
+
     if not _can_manage_event(event, g.current_user):
         return jsonify({'error': 'You do not have permission to manage announcements.'}), 403
 
@@ -328,6 +387,69 @@ def manage_announcements(event_id):
 
     db.session.commit()
     return jsonify(event.to_dict()), 200
+
+
+@events_bp.route('/<int:event_id>/tickets', methods=['POST'])
+@jwt_required
+def create_event_ticket(event_id):
+    event = Event.query.get_or_404(event_id)
+    data = request.get_json() or {}
+
+    title = (data.get('title') or '').strip()
+    description = (data.get('description') or '').strip()
+    target_role = (data.get('targetRole') or 'ORGANIZER').upper() # 'ORGANIZER' or 'COORDINATOR'
+
+    if not title:
+        return jsonify({'success': False, 'error': 'Title is required.'}), 400
+
+    ticket = ActionTicket(
+        raised_by_id=g.current_user.id,
+        ticket_type=ActionTicketType.CREATE_EVENT_FOR_CLUB,
+        title=f"[{target_role}] {title}",
+        description=f"Target Recipient: {target_role}\n\n{description}",
+        priority=(data.get('priority') or 'MEDIUM').upper(),
+        reference_type='EVENT',
+        reference_id=event.id,
+        reference_name=event.event_name,
+    )
+    db.session.add(ticket)
+    db.session.flush()
+
+    approver_user = None
+    role_label = 'CLUB_ORGANIZER'
+
+    if target_role == 'COORDINATOR' and event.club_id:
+        from app.models.tickets import resolve_club_faculty
+        approver_user = resolve_club_faculty(event.club_id)
+        role_label = 'CLUB_FACULTY'
+    elif event.club_id:
+        from app.models.tickets import resolve_club_organizer
+        approver_user = resolve_club_organizer(event.club_id)
+        role_label = 'CLUB_ORGANIZER'
+
+    if not approver_user and event.creator:
+        approver_user = event.creator
+        role_label = 'EVENT_ORGANIZER'
+
+    if approver_user:
+        ticket.add_approval_step(approver_id=approver_user.id, approval_role=role_label, order=1)
+        from app.services.notification_service import NotificationService
+        NotificationService.create(
+            user_id=approver_user.id,
+            title="New Student Event Query",
+            message=f"Student ticket raised for '{event.event_name}': {title}",
+            notification_type="TICKET",
+            entity_id=ticket.id,
+            reference_url="/notifications"
+        )
+    else:
+        from app.models.tickets import resolve_admin
+        admin = resolve_admin()
+        if admin:
+            ticket.add_approval_step(approver_id=admin.id, approval_role='ADMIN', order=1)
+
+    db.session.commit()
+    return jsonify({'success': True, 'message': f'Ticket raised successfully to {target_role.title()}.', 'data': ticket.to_dict()}), 201
 
 
 @events_bp.route('/<int:event_id>/attendance', methods=['GET', 'POST', 'PUT'])
@@ -455,3 +577,18 @@ def update_volunteer_status(event_id, volunteer_id):
     volunteer.volunteer_status = (data.get('status') or 'PENDING').upper()
     db.session.commit()
     return jsonify(volunteer.to_dict()), 200
+
+
+
+
+
+@events_bp.route('/organizer/my-events', methods=['GET'])
+@jwt_required
+def get_my_managed_events():
+    user = g.current_user
+
+    events = Event.query.join(EventOrganizer).filter(
+        EventOrganizer.user_id == user.id
+    ).all()
+
+    return jsonify([e.to_dict() for e in events]), 200

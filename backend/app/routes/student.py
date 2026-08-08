@@ -216,3 +216,32 @@ def get_club_events(club_id):
         return jsonify({
             "error": e.description
         }), 404
+
+
+
+
+# app/routes/student.py me add karein:
+
+from app.models.club import ClubOrganizer
+
+@student_bp.route("/clubs/<int:club_id>/details", methods=["PUT"])
+@jwt_required
+@roles_required("STUDENT")
+def update_my_club_details(club_id):
+    current_user = g.current_user
+    
+    # Verify student is a Club Organizer for this club
+    is_org = ClubOrganizer.query.filter_by(club_id=club_id, user_id=current_user.id).first()
+    if not is_org:
+        return jsonify({"error": "You do not have permission to edit this club's details."}), 403
+
+    club = Club.query.get_or_404(club_id)
+    data = request.get_json() or {}
+
+    if "description" in data:
+        club.club_description = (data.get("description") or "").strip()
+    if "logo" in data:
+        club.club_logo = data.get("logo")
+
+    db.session.commit()
+    return jsonify(club.to_dict()), 200

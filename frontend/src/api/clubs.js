@@ -31,6 +31,20 @@ export const updateClub = async (id, clubData) => {
     return response.data
 }
 
+// Faculty APIs
+export const getFacultyClubs = async () => {
+  const response = await api.get('/faculty/clubs')
+  return response.data
+}
+
+export const updateFacultyClub = async (id, clubData) => {
+    const response = await api.put(
+        `/faculty/clubs/${id}/edit`,
+        clubData
+    )
+    return response.data
+}
+
 // Student APIs
 export const getStudentClubs = async () => {
   const response = await api.get('/student/clubs')

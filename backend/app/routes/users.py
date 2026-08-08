@@ -65,7 +65,9 @@ def update_user(user_id):
             'year': 'year_of_study',
             'yearOfStudy': 'year_of_study',
             'designation': 'designation',
-            'bio': 'bio'
+            'bio': 'bio',
+            'avatarStyle': 'avatar_style',
+            'avatarSeed': 'avatar_seed'
         }
         for key, attr in field_mapping.items():
             if key in data and hasattr(profile, attr):

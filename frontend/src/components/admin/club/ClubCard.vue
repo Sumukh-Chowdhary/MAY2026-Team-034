@@ -173,6 +173,18 @@ const isStudent =
     color:#a16207;
 }
 
+.status-badge {
+    width:6px;
+    height:6px;
+    min-width:6px;
+    min-height:6px;
+    border-radius:50%;
+    background:currentColor;
+    display:inline-block;
+    flex-shrink:0;
+    margin-right:6px;
+}
+
 .description{
     margin:0;
     color:#6b7280;

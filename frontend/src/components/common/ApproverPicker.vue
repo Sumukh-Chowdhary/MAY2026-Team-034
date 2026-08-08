@@ -1,6 +1,7 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { getUsers } from '@/api/users'
+import UserAvatar from '@/components/profile/UserAvatar.vue'
 
 const props = defineProps({
   modelValue: {
@@ -141,9 +142,7 @@ function moveDown(index) {
         >
           <div class="d-flex align-items-center gap-2">
             <span class="step-num">Step {{ index + 1 }}</span>
-            <div class="user-avatar-sm">
-              {{ (item.name || 'A').charAt(0).toUpperCase() }}
-            </div>
+            <UserAvatar size="list" :user="item" />
             <div>
               <strong class="user-name-text">{{ item.name || 'User #' + item.approverId }}</strong>
               <span class="badge ms-2" :class="item.role === 'PRINCIPAL' ? 'role-badge-principal' : 'role-badge-default'">

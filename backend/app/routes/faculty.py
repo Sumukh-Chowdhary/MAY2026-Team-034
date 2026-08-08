@@ -1,5 +1,5 @@
 from app.services.club_service import (
-    deactivate_club_member as deactivate_club_member_service,
+    update_club_member_status as update_club_member_status_service,
     get_all_clubs as get_all_clubs_service,
     get_club_by_id as get_club_by_id_service,
     update_club as update_club_service,
@@ -10,6 +10,7 @@ from app.services.club_service import (
 
 from app.models import db
 from app.models.club import Club, ClubFaculty
+from app.models.tickets import Request, ApprovalStatus
 from flask import Blueprint, jsonify, request, g
 from app.utils.auth_jwt import jwt_required, roles_required
 from app.utils.auth_jwt import faculty_club_access_required
@@ -113,9 +114,10 @@ def deactivate_club_member(club_id, user_id):
 
     try:
 
-        member = deactivate_club_member_service(
+        member = update_club_member_status_service(
             club_id,
-            user_id
+            user_id,
+            active=False
         )
 
         return jsonify(member), 200
@@ -137,6 +139,42 @@ def deactivate_club_member(club_id, user_id):
 
         return jsonify({
             "error": "Failed to deactivate member.",
+            "details": str(e)
+        }), 500
+
+@faculty_bp.patch("/clubs/<int:club_id>/members/<int:user_id>/reactivate")
+@jwt_required
+@roles_required("FACULTY")
+@faculty_club_access_required
+def reactivate_club_member(club_id, user_id):
+
+    try:
+
+        member = update_club_member_status_service(
+            club_id,
+            user_id,
+            active=True
+        )
+
+        return jsonify(member), 200
+
+    except ValueError as e:
+
+        return jsonify({
+            "error": str(e)
+        }), 400
+
+    except NotFound as e:
+        return jsonify({
+            "error": e.description
+        }), 404
+
+    except Exception as e:
+
+        db.session.rollback()
+
+        return jsonify({
+            "error": "Failed to reactivate member.",
             "details": str(e)
         }), 500
 
@@ -178,10 +216,24 @@ def get_my_supervised_clubs():
             for ev in club.events
         ]
         
+        # Pending requests count for this club
+        pending_requests_count = Request.query.filter_by(
+            reference_type="CLUB",
+            reference_id=club.id,
+            workflow_status=ApprovalStatus.PENDING
+        ).count()
+
         my_clubs.append({
             "id": club.id,
             "clubName": club.club_name,
-            "roleTitle": entry.faculty_role,
+            "roleTitle": entry.faculty_role.replace("_", " ").title() if entry.faculty_role else "Faculty Coordinator",
+            "status": club.club_status or "ACTIVE",
+            "memberCount": club.total_members or len(club.memberships) or 1,
+            "totalMembers": club.total_members or len(club.memberships) or 1,
+            "eventCount": len(club.events),
+            "pendingRequestsCount": pending_requests_count,
+            "logo": club.club_logo or "groups",
+            "category": club.club_category or "General",
             "assignedStudents": assigned_students,
             "events": events_list
         })
@@ -208,5 +260,16 @@ def step_down_from_club(club_id):
     except Exception as e:
         db.session.rollback()
         return jsonify({"error": "Failed to step down", "details": str(e)}), 500
+
+
+@faculty_bp.get('/general-events')
+@jwt_required
+@roles_required('FACULTY')
+def get_my_general_events():
+    from app.models.events import Event
+    events = Event.query.filter(
+        Event.organizer_type == 'GENERAL'
+    ).all()
+    return jsonify([e.to_dict() for e in events]), 200
 
 

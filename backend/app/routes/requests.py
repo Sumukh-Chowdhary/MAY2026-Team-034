@@ -69,10 +69,21 @@ def build_request_approval_chain(req):
     raw_approvers = get_approvers_for_request(req)
     final_approvers = flatten_approvers(raw_approvers)
     
-    if not final_approvers:
+    # REQUIREMENT 2: Exclude requester so creator NEVER appears as an approver in their own workflow
+    filtered_approvers = [
+        (appr, role) for (appr, role) in final_approvers
+        if appr and getattr(appr, 'id', None) != req.requester_id
+    ]
+
+    if not filtered_approvers:
+        admin_user = resolve_admin()
+        if admin_user and getattr(admin_user, 'id', None) != req.requester_id:
+            filtered_approvers = [(admin_user, "ADMIN")]
+
+    if not filtered_approvers:
         return False
 
-    for order, (approver, role) in enumerate(final_approvers, start=1):
+    for order, (approver, role) in enumerate(filtered_approvers, start=1):
         req.add_approval_step(approver_id=approver.id, approval_role=role, order=order)
         
     return True
@@ -102,6 +113,10 @@ def get_approvers_for_request(req):
     if req.request_type in {RequestType.BECOME_ORGANIZER, RequestType.BECOME_VOLUNTEER, RequestType.EDIT_CLUB_AS_COORDINATOR, RequestType.CREATE_EVENT_AS_ORGANIZER, RequestType.EDIT_EVENT_AS_ORGANIZER}:
         club_faculty = resolve_club_faculty(req.reference_id) if req.reference_id else None
         if club_faculty:
+            # If club faculty is the requester, escalate to Principal -> Admin
+            fac_id = getattr(club_faculty, 'id', None)
+            if fac_id and fac_id == req.requester_id:
+                return [(resolve_principal(), "PRINCIPAL"), (resolve_admin(), "ADMIN")]
             return [(club_faculty, "CLUB_FACULTY")]
 
     # Default fallback
@@ -123,6 +138,8 @@ def validate_request_permission(user, request_type, reference_id=None):
         return ClubFaculty.query.filter_by(faculty_id=user.id, club_id=reference_id, faculty_role="FACULTY_COORDINATOR").first() is not None
 
     if request_type in {RequestType.CREATE_EVENT_AS_ORGANIZER, RequestType.EDIT_EVENT_AS_ORGANIZER, RequestType.VENUE_REQUEST, RequestType.BUDGET_REQUEST, RequestType.SCHEDULE_REQUEST}:
+        if role == "FACULTY":
+            return ClubFaculty.query.filter_by(faculty_id=user.id, club_id=reference_id).first() is not None
         return ClubOrganizer.query.filter_by(user_id=user.id, club_id=reference_id).first() is not None or ClubFaculty.query.filter_by(faculty_id=user.id, club_id=reference_id).first() is not None
 
     return False
@@ -348,6 +365,37 @@ def approve_request(request_id):
                         mem = ClubMembership.query.filter_by(club_id=req.reference_id, user_id=req.requester_id).first()
                         if not mem:
                             db.session.add(ClubMembership(club_id=req.reference_id, user_id=req.requester_id, membership_role="VOLUNTEER", membership_status="ACTIVE"))
+
+            elif req.request_type == RequestType.CREATE_EVENT_AS_ORGANIZER:
+                import json
+                from app.models.events import Event
+                try:
+                    payload = json.loads(req.description)
+                    event_name = payload.get('name')
+                    if event_name:
+                        start_date = datetime.strptime(payload['startDate'], '%Y-%m-%d').date()
+                        end_date = datetime.strptime(payload['endDate'], '%Y-%m-%d').date()
+                        start_time = datetime.strptime(payload['startTime'], '%H:%M:%S').time() if payload.get('startTime') else None
+                        end_time = datetime.strptime(payload['endTime'], '%H:%M:%S').time() if payload.get('endTime') else None
+
+                        org_type = payload.get('organizerType') or ('GENERAL' if not payload.get('clubId') else 'CLUB')
+                        event = Event(
+                            club_id=payload.get('clubId'),
+                            venue_id=payload.get('venueId'),
+                            created_by=req.requester_id,
+                            organizer_type=org_type,
+                            event_name=event_name,
+                            event_description=payload.get('description'),
+                            event_status=payload.get('status', 'SCHEDULED'),
+                            start_date=start_date,
+                            end_date=end_date,
+                            start_time=start_time,
+                            end_time=end_time,
+                            capacity=payload.get('capacity', 0)
+                        )
+                        db.session.add(event)
+                except Exception as err:
+                    print("Error creating event upon request approval:", err)
 
         db.session.commit()
         

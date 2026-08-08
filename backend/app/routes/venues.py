@@ -102,3 +102,49 @@ def update_venue_status(venue_id):
     venue.availability_status = status.upper()
     db.session.commit()
     return jsonify(venue.to_dict()), 200
+
+
+@venues_bp.route('/<int:venue_id>/availability', methods=['GET'])
+@jwt_required
+def check_venue_availability(venue_id):
+    venue = Venue.query.get_or_404(venue_id)
+    if venue.availability_status == 'ARCHIVED':
+        return jsonify({'available': False, 'reason': 'ARCHIVED', 'conflictingEvent': None}), 200
+
+    start_date_str = request.args.get('startDate')
+    end_date_str = request.args.get('endDate')
+
+    if not start_date_str or not end_date_str:
+        return jsonify({'available': True, 'conflictingEvent': None}), 200
+
+    from app.routes.events import _parse_date
+    start_d = _parse_date(start_date_str)
+    end_d = _parse_date(end_date_str)
+
+    if not start_d or not end_d:
+        return jsonify({'available': True, 'conflictingEvent': None}), 200
+
+    from app.models.events import Event
+    conflicting_event = Event.query.filter(
+        Event.venue_id == venue_id,
+        Event.event_status.notin_(['CANCELLED', 'COMPLETED', 'CLOSED']),
+        Event.start_date <= end_d,
+        Event.end_date >= start_d
+    ).first()
+
+    if conflicting_event:
+        return jsonify({
+            'available': False,
+            'conflictingEvent': {
+                'id': conflicting_event.id,
+                'name': conflicting_event.event_name,
+                'club': conflicting_event.club.club_name if conflicting_event.club else 'General',
+                'clubName': conflicting_event.club.club_name if conflicting_event.club else 'General',
+                'startDate': str(conflicting_event.start_date),
+                'endDate': str(conflicting_event.end_date),
+                'startTime': str(conflicting_event.start_time) if conflicting_event.start_time else '09:00',
+                'endTime': str(conflicting_event.end_time) if conflicting_event.end_time else '17:00'
+            }
+        }), 200
+
+    return jsonify({'available': True, 'conflictingEvent': None}), 200
