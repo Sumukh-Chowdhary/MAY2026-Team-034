@@ -1,9 +1,17 @@
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 
 import FacultyLayout from '@/layouts/FacultyLayout.vue'
-import { getEvent, updateEventStatus, manageEventSchedule, manageEventAnnouncements, manageEventAttendance, assignVenue } from '@/api/events'
+import {
+  getEvent,
+  updateEventStatus,
+  manageEventSchedule,
+  manageEventAnnouncements,
+  manageEventAttendance,
+  assignVenue,
+  updateVolunteerStatus
+} from '@/api/events'
 import { getVenues } from '@/api/venues'
 
 const route = useRoute()
@@ -17,6 +25,10 @@ const scheduleInput = ref({ time: '', activity: '' })
 const announcementInput = ref({ title: '', message: '' })
 const isSaving = ref(false)
 
+// Attendance Sheet filter & search
+const attendanceSearch = ref('')
+const attendanceStatusFilter = ref('ALL') // 'ALL' | 'PRESENT' | 'ABSENT'
+
 const normalizeEvent = (data) => ({
   ...data,
   emoji: data.emoji || '🎉',
@@ -26,10 +38,11 @@ const normalizeEvent = (data) => ({
   description: data.description || data.eventDescription || data.event_description || 'No description available.',
   schedule: Array.isArray(data.schedule) ? data.schedule.map((item) => ({ time: item.time || item.scheduleTime || '', activity: item.activity || item.title || '' })) : [],
   announcements: Array.isArray(data.announcements) ? data.announcements : [],
+  volunteers: Array.isArray(data.volunteers) ? data.volunteers : [],
   registrations: Array.isArray(data.registrations)
     ? data.registrations.map((entry) => ({
         id: entry.id,
-        userId: entry.userId,
+        userId: entry.userId || entry.id,
         name: entry.userName || entry.name || 'Participant',
         registerNumber: entry.registerNumber || entry.userId || 'N/A',
         branch: entry.branch || 'N/A',
@@ -39,7 +52,7 @@ const normalizeEvent = (data) => ({
   attendance: Array.isArray(data.attendance)
     ? data.attendance.map((entry) => ({
         id: entry.id,
-        userId: entry.userId,
+        userId: entry.userId || entry.id,
         name: entry.userName || entry.name || 'Participant',
         registerNumber: entry.registerNumber || entry.userId || 'N/A',
         status: entry.status || 'PRESENT'
@@ -62,6 +75,47 @@ onMounted(async () => {
   } finally {
     loading.value = false
   }
+})
+
+// Full Attendance Sheet Computations
+const combinedAttendanceSheet = computed(() => {
+  if (!event.value) return []
+  const regs = event.value.registrations || []
+  const attMap = new Map((event.value.attendance || []).map(a => [a.userId, a.status]))
+
+  return regs.map(r => ({
+    userId: r.userId,
+    name: r.name,
+    registerNumber: r.registerNumber,
+    branch: r.branch,
+    attendanceStatus: attMap.get(r.userId) || 'ABSENT'
+  }))
+})
+
+const attendanceStats = computed(() => {
+  const total = combinedAttendanceSheet.value.length
+  const present = combinedAttendanceSheet.value.filter(s => s.attendanceStatus === 'PRESENT').length
+  const absent = total - present
+  const rate = total > 0 ? Math.round((present / total) * 100) : 0
+  return { total, present, absent, rate }
+})
+
+const filteredAttendanceSheet = computed(() => {
+  return combinedAttendanceSheet.value.filter(item => {
+    const q = attendanceSearch.value.trim().toLowerCase()
+    const matchesQuery = !q ||
+      item.name.toLowerCase().includes(q) ||
+      String(item.registerNumber).toLowerCase().includes(q)
+
+    let matchesFilter = true
+    if (attendanceStatusFilter.value === 'PRESENT') {
+      matchesFilter = item.attendanceStatus === 'PRESENT'
+    } else if (attendanceStatusFilter.value === 'ABSENT') {
+      matchesFilter = item.attendanceStatus === 'ABSENT'
+    }
+
+    return matchesQuery && matchesFilter
+  })
 })
 
 async function saveStatus() {
@@ -105,15 +159,66 @@ async function saveAnnouncement() {
   }
 }
 
-async function saveAttendance() {
+async function markAllAttendance(status) {
   if (!event.value) return
   isSaving.value = true
   try {
-    const payload = (event.value.registrations || []).map((entry) => ({ userId: entry.userId || entry.id, status: 'PRESENT' }))
+    const payload = (event.value.registrations || []).map((entry) => ({ userId: entry.userId || entry.id, status }))
     const updated = await manageEventAttendance(event.value.id, payload, true)
     event.value = normalizeEvent(updated)
   } catch (error) {
-    console.error('Failed to mark attendance', error)
+    console.error('Failed to update attendance', error)
+  } finally {
+    isSaving.value = false
+  }
+}
+
+async function toggleStudentAttendance(userId, status) {
+  if (!event.value) return
+  isSaving.value = true
+  try {
+    const updated = await manageEventAttendance(event.value.id, { userId, status })
+    event.value = normalizeEvent(updated)
+  } catch (error) {
+    console.error('Failed to update student attendance', error)
+  } finally {
+    isSaving.value = false
+  }
+}
+
+function exportAttendanceCSV() {
+  if (!event.value) return
+  const rows = [
+    ['Event Name', event.value.name],
+    ['Club', event.value.club],
+    ['Date', event.value.startDate],
+    [],
+    ['Student Name', 'Register Number / User ID', 'Branch', 'Attendance Status']
+  ]
+
+  combinedAttendanceSheet.value.forEach(item => {
+    rows.push([item.name, item.registerNumber, item.branch, item.attendanceStatus])
+  })
+
+  const csvContent = 'data:text/csv;charset=utf-8,' + rows.map(e => e.map(x => `"${x}"`).join(',')).join('\n')
+  const encodedUri = encodeURI(csvContent)
+  const link = document.createElement('a')
+  link.setAttribute('href', encodedUri)
+  link.setAttribute('download', `${event.value.name.replace(/\s+/g, '_')}_Attendance_Sheet.csv`)
+  document.body.appendChild(link)
+  link.click()
+  document.body.removeChild(link)
+}
+
+async function handleVolunteerStatus(volunteerId, status) {
+  if (!event.value) return
+  isSaving.value = true
+  try {
+    await updateVolunteerStatus(event.value.id, volunteerId, status)
+    const data = await getEvent(event.value.id)
+    event.value = normalizeEvent(data)
+  } catch (err) {
+    console.error('Failed to update volunteer status', err)
   } finally {
     isSaving.value = false
   }
@@ -136,7 +241,8 @@ const tabs = [
   { key: 'schedule', label: 'Schedule' },
   { key: 'announcements', label: 'Announcements' },
   { key: 'registrations', label: 'Registrations' },
-  { key: 'attendance', label: 'Attendance' }
+  { key: 'attendance', label: 'Entire Attendance Sheet' },
+  { key: 'volunteers', label: 'Event Volunteers (Module 22)' }
 ]
 </script>
 
@@ -161,7 +267,7 @@ const tabs = [
                 <option value="LIVE">Live</option>
                 <option value="COMPLETED">Completed</option>
               </select>
-              <button class="btn btn-sm btn-primary" @click="saveStatus" :disabled="isSaving">Update</button>
+              <button class="btn btn-sm btn-primary rounded-pill px-3" @click="saveStatus" :disabled="isSaving">Update</button>
             </div>
           </div>
 
@@ -183,15 +289,16 @@ const tabs = [
 
           <div class="toolbar">
             <div class="venue-box">
-              <label class="form-label">Assign Venue</label>
+              <label class="form-label text-sm fw-bold">Assign Venue</label>
               <select v-model="selectedVenueId" class="form-select">
                 <option value="">Choose venue</option>
                 <option v-for="venue in venues" :key="venue.id" :value="venue.id">{{ venue.name }} — {{ venue.location }}</option>
               </select>
             </div>
-            <button class="btn btn-outline-primary" @click="saveVenue" :disabled="isSaving">Assign Venue</button>
+            <button class="btn btn-outline-primary rounded-pill" @click="saveVenue" :disabled="isSaving">Assign Venue</button>
           </div>
 
+          <!-- Tabs -->
           <div class="detail-tabs">
             <button v-for="tab in tabs" :key="tab.key" class="tab-option" :class="{ active: activeTab === tab.key }" @click="activeTab = tab.key">
               {{ tab.label }}
@@ -199,13 +306,15 @@ const tabs = [
           </div>
 
           <div class="tab-content">
+            
+            <!-- Schedule -->
             <div v-if="activeTab === 'schedule'">
               <div class="mb-3">
-                <label class="form-label">Add schedule item</label>
+                <label class="form-label text-sm fw-bold">Add schedule item</label>
                 <div class="d-flex gap-2">
                   <input v-model="scheduleInput.time" class="form-control" placeholder="Time" />
                   <input v-model="scheduleInput.activity" class="form-control" placeholder="Activity" />
-                  <button class="btn btn-primary" @click="saveSchedule" :disabled="isSaving">Save</button>
+                  <button class="btn btn-primary rounded-pill px-4" @click="saveSchedule" :disabled="isSaving">Save</button>
                 </div>
               </div>
               <div v-for="(item, index) in event.schedule" :key="index" class="schedule-row">
@@ -215,12 +324,13 @@ const tabs = [
               <p v-if="event.schedule.length === 0" class="empty-tab">No schedule added yet.</p>
             </div>
 
+            <!-- Announcements -->
             <div v-else-if="activeTab === 'announcements'">
               <div class="mb-3">
-                <label class="form-label">Publish announcement</label>
+                <label class="form-label text-sm fw-bold">Publish announcement</label>
                 <input v-model="announcementInput.title" class="form-control mb-2" placeholder="Title" />
                 <textarea v-model="announcementInput.message" class="form-control" rows="3" placeholder="Message"></textarea>
-                <button class="btn btn-success mt-2" @click="saveAnnouncement" :disabled="isSaving">Publish</button>
+                <button class="btn btn-success mt-2 rounded-pill px-4" @click="saveAnnouncement" :disabled="isSaving">Publish</button>
               </div>
               <div v-for="(item, index) in event.announcements" :key="index" class="announcement-row">
                 <h5>{{ item.title }}</h5>
@@ -229,6 +339,7 @@ const tabs = [
               <p v-if="event.announcements.length === 0" class="empty-tab">No announcements yet.</p>
             </div>
 
+            <!-- Registrations -->
             <div v-else-if="activeTab === 'registrations'">
               <table class="table" v-if="event.registrations.length">
                 <thead>
@@ -245,24 +356,133 @@ const tabs = [
               <p v-else class="empty-tab">No registrations yet.</p>
             </div>
 
+            <!-- ENTIRE ATTENDANCE SHEET (Sprint 2 Requirement) -->
             <div v-else-if="activeTab === 'attendance'">
-              <div class="mb-3">
-                <button class="btn btn-outline-primary" @click="saveAttendance" :disabled="isSaving">Mark all registered as present</button>
+              
+              <!-- Attendance Stats Summary Bar -->
+              <div class="stats-summary-card mb-4 p-3 bg-light rounded-4 border d-flex justify-content-around align-items-center flex-wrap gap-3">
+                <div class="stat-box text-center">
+                  <span class="stat-number text-primary display-6 fw-bold">{{ attendanceStats.total }}</span>
+                  <label class="d-block text-xs text-muted font-semibold uppercase">Total Registered</label>
+                </div>
+                <div class="stat-box text-center">
+                  <span class="stat-number text-success display-6 fw-bold">{{ attendanceStats.present }}</span>
+                  <label class="d-block text-xs text-muted font-semibold uppercase">Present Count</label>
+                </div>
+                <div class="stat-box text-center">
+                  <span class="stat-number text-danger display-6 fw-bold">{{ attendanceStats.absent }}</span>
+                  <label class="d-block text-xs text-muted font-semibold uppercase">Absent Count</label>
+                </div>
+                <div class="stat-box text-center">
+                  <span class="stat-number text-info display-6 fw-bold">{{ attendanceStats.rate }}%</span>
+                  <label class="d-block text-xs text-muted font-semibold uppercase">Attendance Rate</label>
+                </div>
               </div>
-              <table class="table" v-if="event.attendance.length">
+
+              <!-- Controls Toolbar -->
+              <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
+                <div class="search-box flex-grow-1" style="max-width: 400px;">
+                  <input v-model="attendanceSearch" class="form-control form-control-sm" placeholder="Search by student name or roll number..." />
+                </div>
+
+                <div class="d-flex align-items-center gap-2">
+                  <div class="btn-group btn-group-sm">
+                    <button class="btn btn-outline-secondary btn-xs" :class="{ active: attendanceStatusFilter === 'ALL' }" @click="attendanceStatusFilter = 'ALL'">All</button>
+                    <button class="btn btn-outline-success btn-xs" :class="{ active: attendanceStatusFilter === 'PRESENT' }" @click="attendanceStatusFilter = 'PRESENT'">Present</button>
+                    <button class="btn btn-outline-danger btn-xs" :class="{ active: attendanceStatusFilter === 'ABSENT' }" @click="attendanceStatusFilter = 'ABSENT'">Absent</button>
+                  </div>
+
+                  <div class="btn-group btn-group-sm">
+                    <button class="btn btn-outline-success btn-xs" @click="markAllAttendance('PRESENT')" :disabled="isSaving">Mark All Present</button>
+                    <button class="btn btn-outline-danger btn-xs" @click="markAllAttendance('ABSENT')" :disabled="isSaving">Mark All Absent</button>
+                  </div>
+
+                  <button class="btn btn-sm btn-dark rounded-pill px-3 text-xs fw-semibold" @click="exportAttendanceCSV">
+                    <i class="bi bi-file-earmark-spreadsheet me-1"></i> Export CSV
+                  </button>
+                </div>
+              </div>
+
+              <!-- Full Attendance Table -->
+              <table class="table align-middle" v-if="filteredAttendanceSheet.length">
                 <thead>
-                  <tr><th>Name</th><th>Register Number</th><th>Status</th></tr>
+                  <tr>
+                    <th>Student Name</th>
+                    <th>Register Number</th>
+                    <th>Branch</th>
+                    <th>Status</th>
+                    <th>Action Toggle</th>
+                  </tr>
                 </thead>
                 <tbody>
-                  <tr v-for="(student, index) in event.attendance" :key="index">
-                    <td>{{ student.name }}</td>
+                  <tr v-for="student in filteredAttendanceSheet" :key="student.userId">
+                    <td class="fw-semibold text-slate-800">{{ student.name }}</td>
                     <td>{{ student.registerNumber }}</td>
-                    <td><span class="attendance-badge" :class="(student.status || 'present').toLowerCase()">{{ student.status }}</span></td>
+                    <td>{{ student.branch }}</td>
+                    <td>
+                      <span class="attendance-badge" :class="student.attendanceStatus.toLowerCase()">
+                        {{ student.attendanceStatus }}
+                      </span>
+                    </td>
+                    <td>
+                      <div class="btn-group btn-group-sm">
+                        <button 
+                          class="btn btn-xs" 
+                          :class="student.attendanceStatus === 'PRESENT' ? 'btn-success' : 'btn-outline-success'" 
+                          @click="toggleStudentAttendance(student.userId, 'PRESENT')"
+                        >
+                          Present
+                        </button>
+                        <button 
+                          class="btn btn-xs" 
+                          :class="student.attendanceStatus === 'ABSENT' ? 'btn-danger' : 'btn-outline-danger'" 
+                          @click="toggleStudentAttendance(student.userId, 'ABSENT')"
+                        >
+                          Absent
+                        </button>
+                      </div>
+                    </td>
                   </tr>
                 </tbody>
               </table>
-              <p v-else class="empty-tab">Attendance has not been recorded yet.</p>
+
+              <p v-else class="empty-tab">No student records match the filter.</p>
             </div>
+
+            <!-- Module 22: Event Volunteers -->
+            <div v-else-if="activeTab === 'volunteers'">
+              <h6 class="fw-bold text-slate-800 mb-3">Event Volunteers Applications & Assignments</h6>
+              
+              <table class="table align-middle" v-if="event.volunteers && event.volunteers.length">
+                <thead>
+                  <tr>
+                    <th>Volunteer Name</th>
+                    <th>Status</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr v-for="vol in event.volunteers" :key="vol.id">
+                    <td class="fw-semibold">{{ vol.userName }}</td>
+                    <td>
+                      <span class="badge" :class="vol.status === 'APPROVED' ? 'bg-success' : (vol.status === 'REJECTED' ? 'bg-danger' : 'bg-warning text-dark')">
+                        {{ vol.status }}
+                      </span>
+                    </td>
+                    <td>
+                      <div class="btn-group btn-group-sm" v-if="vol.status !== 'APPROVED'">
+                        <button class="btn btn-sm btn-success" @click="handleVolunteerStatus(vol.id, 'APPROVED')">Approve</button>
+                        <button class="btn btn-sm btn-danger" @click="handleVolunteerStatus(vol.id, 'REJECTED')">Reject</button>
+                      </div>
+                      <span v-else class="text-xs text-muted">Approved Volunteer</span>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+
+              <p v-else class="empty-tab">No volunteer applications submitted for this event yet.</p>
+            </div>
+
           </div>
         </div>
       </div>
@@ -297,8 +517,8 @@ const tabs = [
 .description-box p { line-height: 1.7; color: #374151; }
 .toolbar { display: flex; gap: 12px; align-items: end; margin-bottom: 24px; }
 .venue-box { flex: 1; }
-.detail-tabs { display: flex; width: 100%; gap: 6px; background: #f8fafc; border: 1px solid #d1d5db; border-radius: 16px; padding: 6px; margin-bottom: 28px; }
-.tab-option { flex: 1; border: none; background: transparent; padding: 12px; border-radius: 10px; font-weight: 600; text-align: center; transition: 0.25s; }
+.detail-tabs { display: flex; width: 100%; gap: 6px; background: #f8fafc; border: 1px solid #d1d5db; border-radius: 16px; padding: 6px; margin-bottom: 28px; flex-wrap: wrap; }
+.tab-option { flex: 1; border: none; background: transparent; padding: 12px; border-radius: 10px; font-weight: 600; text-align: center; transition: 0.25s; min-width: 120px; }
 .tab-option.active { background: #2563eb; color: white; }
 .schedule-row { display: flex; gap: 20px; padding: 14px 0; border-bottom: 1px solid #f1f5f9; }
 .schedule-row .time { color: #2563eb; font-weight: 600; min-width: 90px; }

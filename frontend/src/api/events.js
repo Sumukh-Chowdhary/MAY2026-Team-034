@@ -40,6 +40,16 @@ export const registerForEvent = async (id) => {
   return response.data
 }
 
+export const getCalendarEvents = async () => {
+  const response = await api.get('/events/calendar')
+  return response.data
+}
+
+export const createEventTicket = async (id, data) => {
+  const response = await api.post(`/events/${id}/tickets`, data)
+  return response.data
+}
+
 export const manageEventSchedule = async (id, data, replace = false) => {
   const method = replace ? 'put' : 'post'
   const response = await api[method](`/events/${id}/schedule`, data)
@@ -71,5 +81,10 @@ export const manageEventOrganizers = async (id, data) => {
 
 export const manageEventVolunteers = async (id, data) => {
   const response = await api.post(`/events/${id}/volunteers`, data)
+  return response.data
+}
+
+export const updateVolunteerStatus = async (id, volunteerId, status) => {
+  const response = await api.patch(`/events/${id}/volunteers/${volunteerId}`, { status })
   return response.data
 }
