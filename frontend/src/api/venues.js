@@ -24,3 +24,10 @@ export const updateVenueStatus = async (id, status) => {
   const response = await api.patch(`/venues/${id}/status`, { status })
   return response.data
 }
+
+export const checkVenueAvailability = async (venueId, startDate, endDate) => {
+  const response = await api.get(`/venues/${venueId}/availability`, {
+    params: { startDate, endDate }
+  })
+  return response.data
+}

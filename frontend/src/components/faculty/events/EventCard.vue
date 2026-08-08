@@ -4,11 +4,11 @@
     <div class="event-header">
 
       <div class="event-image">
-        {{ event.emoji }}
+        {{ event.emoji || '🎉' }}
       </div>
 
-      <span class="status-badge" :class="event.status.toLowerCase()">
-        {{ event.status }}
+      <span class="status-badge" :class="statusText.toLowerCase()">
+        {{ statusText }}
       </span>
 
     </div>
@@ -46,14 +46,19 @@
 </template>
 
 <script setup>
+import { computed } from 'vue'
+import { getEventStatus } from '@/utils/eventUtils'
 
-defineProps({
+const props = defineProps({
   event: {
     type: Object,
     required: true
   }
 })
 
+const statusText = computed(() => {
+  return getEventStatus(props.event)
+})
 </script>
 
 <style scoped>

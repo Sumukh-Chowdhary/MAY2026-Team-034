@@ -27,27 +27,32 @@ onMounted(async () => {
   }
 })
 
+import { getEventStatus, sortEventsByStatusOrder } from '@/utils/eventUtils'
+
 const counts = computed(() => ({
   all: eventList.value.length,
-  live: eventList.value.filter((event) => event.status === 'Live').length,
-  completed: eventList.value.filter((event) => event.status === 'Completed').length
+  live: eventList.value.filter((event) => getEventStatus(event) === 'Live').length,
+  completed: eventList.value.filter((event) => getEventStatus(event) === 'Completed').length
 }))
 
 const filteredEvents = computed(() => {
   const query = search.value.trim().toLowerCase()
 
-  return eventList.value.filter((event) => {
+  const list = eventList.value.filter((event) => {
+    const status = getEventStatus(event)
     const matchesQuery =
       !query ||
-      event.name.toLowerCase().includes(query) ||
-      event.club.toLowerCase().includes(query)
+      (event.name && event.name.toLowerCase().includes(query)) ||
+      (event.club && event.club.toLowerCase().includes(query))
 
     const matchesStatus =
       statusFilter.value === 'all' ||
-      event.status.toLowerCase() === statusFilter.value
+      status.toLowerCase() === statusFilter.value.toLowerCase()
 
     return matchesQuery && matchesStatus
   })
+
+  return sortEventsByStatusOrder(list)
 })
 </script>
 

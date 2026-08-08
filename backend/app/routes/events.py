@@ -103,6 +103,11 @@ def get_event(event_id):
 @jwt_required
 @roles_required('ADMIN', 'FACULTY')
 def create_event():
+    import json
+    from app.models.tickets import Request, RequestType, ApprovalStatus
+    from app.models.club import ClubFaculty, ClubOrganizer
+    from app.routes.requests import build_request_approval_chain
+
     data = request.get_json() or {}
     club_id = data.get('clubId') or data.get('club_id')
     if not club_id and data.get('club'):
@@ -122,16 +127,14 @@ def create_event():
     end_time = data.get('endTime')
     capacity = data.get('capacity') or 0
 
-    if not club_id:
-        return jsonify({'error': 'clubId is required.'}), 400
     if not name:
         return jsonify({'error': 'Event name is required.'}), 400
     if not start_date or not end_date:
         return jsonify({'error': 'Event startDate and endDate are required.'}), 400
 
-    club = Club.query.get(club_id)
-    if not club:
-        return jsonify({'error': 'Club not found.'}), 404
+    club = None
+    if club_id:
+        club = Club.query.get(club_id)
 
     venue = None
     if venue_id:
@@ -144,13 +147,79 @@ def create_event():
     if not parsed_start_date or not parsed_end_date:
         return jsonify({'error': 'startDate and endDate must be ISO format YYYY-MM-DD.'}), 400
 
+    if parsed_end_date < parsed_start_date:
+        return jsonify({'error': 'endDate cannot be before startDate.'}), 400
+
     parsed_start_time = _parse_time(start_time)
     parsed_end_time = _parse_time(end_time)
 
+    # Check venue availability
+    if venue_id:
+        conflicting_event = Event.query.filter(
+            Event.venue_id == venue_id,
+            Event.event_status.notin_(['CANCELLED', 'COMPLETED', 'CLOSED']),
+            Event.start_date <= parsed_end_date,
+            Event.end_date >= parsed_start_date
+        ).first()
+
+        if conflicting_event:
+            return jsonify({'error': f'Venue is already booked for these dates by event "{conflicting_event.event_name}".'}), 400
+
+    user_role = g.current_user.role.name.upper()
+    organizer_type = (data.get('organizerType') or ('GENERAL' if not club_id else 'CLUB')).upper()
+
+    # Faculty workflow: Must belong to club (if club event) and submit Request
+    if user_role == 'FACULTY':
+        if club_id:
+            is_fac_member = ClubFaculty.query.filter_by(faculty_id=g.current_user.id, club_id=club_id).first() is not None
+            is_org_member = ClubOrganizer.query.filter_by(user_id=g.current_user.id, club_id=club_id).first() is not None
+            if not is_fac_member and not is_org_member:
+                return jsonify({'error': 'Faculty must belong to the selected club to create an event for it.'}), 403
+
+        event_payload = {
+            'name': name,
+            'description': description,
+            'status': status,
+            'organizerType': organizer_type,
+            'startDate': parsed_start_date.strftime('%Y-%m-%d'),
+            'endDate': parsed_end_date.strftime('%Y-%m-%d'),
+            'startTime': parsed_start_time.strftime('%H:%M:%S') if parsed_start_time else None,
+            'endTime': parsed_end_time.strftime('%H:%M:%S') if parsed_end_time else None,
+            'clubId': club_id,
+            'venueId': venue_id,
+            'capacity': capacity
+        }
+
+        req = Request(
+            requester_id=g.current_user.id,
+            request_type=RequestType.CREATE_EVENT_AS_ORGANIZER,
+            title=f"Create Event: {name}",
+            description=json.dumps(event_payload),
+            reference_type="CLUB" if club_id else None,
+            reference_id=club_id,
+            reference_name=club.club_name if club else "General / Institutional",
+            priority="MEDIUM",
+            workflow_status=ApprovalStatus.PENDING
+        )
+        db.session.add(req)
+        db.session.flush()
+
+        build_request_approval_chain(req)
+        db.session.commit()
+
+        return jsonify({
+            'isRequest': True,
+            'message': 'Event request created successfully and sent for approval.',
+            'request': req.to_dict(),
+            'name': name
+        }), 201
+
+    # Admin workflow: Immediate event creation & venue reservation
     event = Event(
-        club_id=club.id,
+        club_id=club.id if club else None,
         venue_id=venue.id if venue else None,
         created_by=g.current_user.id,
+        organizer_type=organizer_type,
         event_name=name,
         event_description=description,
         event_status=status,
@@ -184,6 +253,25 @@ def update_event(event_id):
     end_time = data.get('endTime')
     capacity = data.get('capacity')
 
+    target_venue_id = venue_id if venue_id is not None else event.venue_id
+    target_start_date = _parse_date(start_date) if start_date is not None else event.start_date
+    target_end_date = _parse_date(end_date) if end_date is not None else event.end_date
+
+    if target_start_date and target_end_date and target_end_date < target_start_date:
+        return jsonify({'error': 'endDate cannot be before startDate.'}), 400
+
+    if target_venue_id and (venue_id is not None or start_date is not None or end_date is not None):
+        conflicting_event = Event.query.filter(
+            Event.id != event.id,
+            Event.venue_id == target_venue_id,
+            Event.event_status.notin_(['CANCELLED', 'COMPLETED', 'CLOSED']),
+            Event.start_date <= target_end_date,
+            Event.end_date >= target_start_date
+        ).first()
+
+        if conflicting_event:
+            return jsonify({'error': f'Venue is already booked for these dates by event "{conflicting_event.event_name}".'}), 400
+
     if name is not None:
         event.event_name = name.strip()
     if description is not None:
@@ -193,8 +281,12 @@ def update_event(event_id):
         if not venue:
             return jsonify({'error': 'Venue not found.'}), 404
         event.venue_id = venue.id
+        event.reservation_status = 'RESERVED'
+        event.reserved_at = datetime.utcnow()
     if status is not None:
         event.event_status = status.upper()
+        if event.event_status in ['CANCELLED', 'CLOSED']:
+            event.reservation_status = 'RELEASED'
     if start_date is not None:
         parsed = _parse_date(start_date)
         if not parsed:

@@ -27,59 +27,31 @@ onMounted(async () => {
   }
 })
 
+import CreateEventModal from '@/components/admin/events/CreateEventModal.vue'
+import { getEventStatus, sortEventsByStatusOrder } from '@/utils/eventUtils'
+
 const showCreateEventModal = ref(false)
-const newEventForm = ref({
-  name: '',
-  club: '',
-  emoji: '🎉',
-  startDate: '',
-  endDate: '',
-  description: ''
-})
 
-function submitCreateEvent() {
-  if (!newEventForm.value.name.trim() || !newEventForm.value.club.trim()) {
-    alert('Please provide Event Name and Club Name.')
-    return
-  }
-
-  const payload = {
-    name: newEventForm.value.name,
-    description: newEventForm.value.description,
-    status: 'SCHEDULED',
-    startDate: newEventForm.value.startDate,
-    endDate: newEventForm.value.endDate,
-    capacity: 0
-  }
-
-  createEvent(payload)
-    .then((createdEvent) => {
-      eventList.value.unshift({
-        ...createdEvent,
-        club: createdEvent.clubName || createdEvent.club || 'Unknown Club'
-      })
-      alert(`Event "${createdEvent.name}" created successfully!`)
-      showCreateEventModal.value = false
-      newEventForm.value = { name: '', club: '', emoji: '🎉', startDate: '', endDate: '', description: '' }
-    })
-    .catch(() => {
-      alert('Failed to create event. Please try again.')
-    })
+function handleEventCreated(createdEvent) {
+  eventList.value.unshift({
+    ...createdEvent,
+    club: createdEvent.clubName || createdEvent.club || 'Unknown Club'
+  })
 }
 
 const counts = computed(() => ({
   all: eventList.value.length,
-  live: eventList.value.filter((event) => event.status === 'Live').length,
-  completed: eventList.value.filter((event) => event.status === 'Completed').length
+  live: eventList.value.filter((event) => getEventStatus(event) === 'Live').length,
+  completed: eventList.value.filter((event) => getEventStatus(event) === 'Completed').length
 }))
 
 const filteredEvents = computed(() => {
   const query = search.value.trim().toLowerCase()
 
-  return eventList.value.filter((event) => {
+  const list = eventList.value.filter((event) => {
     const clubName = String(event.club || event.clubName || '')
     const eventName = String(event.name || event.eventName || '')
-    const status = String(event.status || event.event_status || '')
+    const status = getEventStatus(event)
 
     const matchesQuery =
       !query ||
@@ -88,64 +60,44 @@ const filteredEvents = computed(() => {
 
     const matchesStatus =
       statusFilter.value === 'all' ||
-      status.toLowerCase() === statusFilter.value
+      status.toLowerCase() === statusFilter.value.toLowerCase()
 
     return matchesQuery && matchesStatus
   })
+
+  return sortEventsByStatusOrder(list)
 })
 </script>
 
 <template>
   <AdminLayout>
-    <section class="hero">
-      <div class="d-flex justify-content-between align-items-center mb-3">
-        <div></div>
-        <button class="btn btn-success px-4 py-2 fw-bold rounded-3 shadow-sm" @click="showCreateEventModal = true">
-          + Create Event
-        </button>
+    <section class="page-header">
+      <div class="header-left">
+        <h1>Explore Club Events</h1>
+        <p>Browse events across every club, check schedules, and manage events.</p>
       </div>
-      <h1>Explore Club Events</h1>
-      <p>
-        Browse events across every club, check schedules, and manage events.
-      </p>
+      <button class="create-event-btn" @click="showCreateEventModal = true">
+        <span class="material-symbols-rounded">add</span>
+        Create Event
+      </button>
     </section>
 
     <!-- Create Event Modal -->
-    <div v-if="showCreateEventModal" class="modal-backdrop" @click.self="showCreateEventModal = false">
-      <div class="modal-dialog-custom">
-        <h4 class="fw-bold mb-3 text-dark">+ Create New Event</h4>
-        <div class="mb-3">
-          <label class="form-label font-semibold">Event Name</label>
-          <input v-model="newEventForm.name" type="text" class="form-control" placeholder="e.g. AI & Machine Learning Workshop" />
-        </div>
-        <div class="mb-3">
-          <label class="form-label font-semibold">Club Name</label>
-          <input v-model="newEventForm.club" type="text" class="form-control" placeholder="e.g. AI Club" />
-        </div>
-        <div class="row g-2 mb-3">
-          <div class="col-6">
-            <label class="form-label font-semibold">Start Date</label>
-            <input v-model="newEventForm.startDate" type="text" class="form-control" placeholder="e.g. 25 Jul 2026" />
-          </div>
-          <div class="col-6">
-            <label class="form-label font-semibold">End Date</label>
-            <input v-model="newEventForm.endDate" type="text" class="form-control" placeholder="e.g. 27 Jul 2026" />
-          </div>
-        </div>
-        <div class="mb-3">
-          <label class="form-label font-semibold">Description</label>
-          <textarea v-model="newEventForm.description" class="form-control" rows="3" placeholder="Enter event details..."></textarea>
-        </div>
-        <div class="d-flex justify-content-end gap-2">
-          <button class="btn btn-secondary" @click="showCreateEventModal = false">Cancel</button>
-          <button class="btn btn-success" @click="submitCreateEvent">Create Event</button>
-        </div>
+    <CreateEventModal
+      v-if="showCreateEventModal"
+      @close="showCreateEventModal = false"
+      @created="handleEventCreated"
+    />
+
+    <div class="toolbar">
+      <div class="search-wrap">
+        <EventSearch v-model="search" />
+      </div>
+      <div class="status-tabs">
+        <EventStatusTabs v-model="statusFilter" :counts="counts" />
       </div>
     </div>
 
-    <EventSearch v-model="search" />
-
-    <div class="tabs-wrapper"><EventStatusTabs v-model="statusFilter" :counts="counts" /></div>
     <EventGrid :events="filteredEvents" />
     <div v-if="filteredEvents.length === 0" class="empty-state">
       <h3>No events matched your search.</h3>
@@ -155,62 +107,111 @@ const filteredEvents = computed(() => {
 </template>
 <style scoped>
 
-.hero{
-    text-align:center;
-    margin-bottom:40px;
-}
-
-.hero h1{
-    color:#1f2937;
-    font-size:3rem;
-    font-weight:800;
-}
-
-.hero p{
-    max-width:720px;
-    margin:18px auto 0;
-    color:#6b7280;
-    font-size:1.1rem;
-    line-height:1.8;
-}
-
-.tabs-wrapper{
-    display:flex;
-    justify-content:center;
-}
-
-.empty-state{
-    text-align:center;
-    padding:70px 20px;
-    color:#6b7280;
-}
-
-.empty-state h3{
-    color:#1f2937;
-    margin-bottom:10px;
-}
-
-/* Modal */
-.modal-backdrop {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100vw;
-  height: 100vh;
-  background: rgba(15, 23, 42, 0.5);
+.page-header {
   display: flex;
+  justify-content: space-between;
   align-items: center;
-  justify-content: center;
-  z-index: 9999;
-}
-
-.modal-dialog-custom {
-  background: #fff;
+  gap: 20px;
+  margin-bottom: 24px;
+  padding: 24px 28px;
   border-radius: 20px;
-  width: 90%;
-  max-width: 600px;
-  padding: 24px;
-  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
+  background: linear-gradient(135deg, #eff6ff, #ffffff);
+  border: 1px solid #dbeafe;
+  box-shadow: 0 4px 18px rgba(15, 23, 42, 0.04);
 }
 
+.header-left h1 {
+  color: #0f172a;
+  font-size: 2rem;
+  font-weight: 800;
+  margin: 0 0 6px;
+  letter-spacing: -0.02em;
+}
+
+.header-left p {
+  margin: 0;
+  color: #64748b;
+  font-size: 0.95rem;
+}
+
+.create-event-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: #10b981;
+  color: #ffffff;
+  border: none;
+  border-radius: 12px;
+  padding: 12px 20px;
+  font-weight: 700;
+  font-size: 0.95rem;
+  box-shadow: 0 4px 14px rgba(16, 185, 129, 0.25);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.create-event-btn:hover {
+  background: #059669;
+  transform: translateY(-1px);
+}
+
+.create-event-btn .material-symbols-rounded {
+  font-size: 1.25rem;
+}
+
+.toolbar {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 24px;
+  margin-bottom: 32px;
+}
+
+.search-wrap {
+  width: 100%;
+  max-width: 850px;
+}
+
+.status-tabs {
+  justify-self: end;
+}
+
+.empty-state {
+  text-align: center;
+  padding: 50px 20px;
+  color: #6b7280;
+}
+
+.empty-state h3 {
+  color: #1f2937;
+  margin-bottom: 8px;
+}
+
+@media (max-width: 900px) {
+  .toolbar {
+    grid-template-columns: 1fr;
+  }
+
+  .search-wrap {
+    max-width: 100%;
+  }
+
+  .status-tabs {
+    justify-self: start;
+  }
+}
+
+@media (max-width: 768px) {
+  .page-header {
+    flex-direction: column;
+    align-items: flex-start;
+    padding: 20px;
+  }
+
+  .create-event-btn {
+    width: 100%;
+    justify-content: center;
+  }
+}
 </style>

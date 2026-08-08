@@ -87,6 +87,12 @@ const routes = [
     component: () => import('@/views/admin/EventDetails.vue'),
     meta: { requiresAuth: true, role: 'ADMIN' }
   },
+  {
+    path: '/admin/venues',
+    name: 'AdminVenues',
+    component: () => import('@/views/admin/Venues.vue'),
+    meta: { requiresAuth: true, role: 'ADMIN' }
+  },
 
   // --- Faculty Routes ---
   {

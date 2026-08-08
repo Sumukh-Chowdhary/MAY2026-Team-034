@@ -38,11 +38,9 @@ defineEmits([
 <style scoped>
 
 .search-container{
-
-    max-width:720px;
-
-    margin:0 auto 30px;
-
+    width: 100%;
+    max-width: 100%;
+    margin: 0;
 }
 
 .search-wrapper{

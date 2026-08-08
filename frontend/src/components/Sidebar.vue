@@ -93,6 +93,14 @@ onBeforeUnmount(()=>{
                 <li>
                     <RouterLink
                         class="nav-item"
+                        to="/admin/venues">
+                        <span class="material-symbols-rounded" style="font-size: 1.25rem;">meeting_room</span>
+                        <span v-if="!collapsed">Venues</span>
+                    </RouterLink>
+                </li>
+                <li>
+                    <RouterLink
+                        class="nav-item"
                         to="/admin/requests">
                         <i class="bi bi-file-earmark-text-fill"></i>
                         <span v-if="!collapsed">Requests</span>

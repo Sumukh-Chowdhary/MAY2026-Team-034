@@ -349,6 +349,37 @@ def approve_request(request_id):
                         if not mem:
                             db.session.add(ClubMembership(club_id=req.reference_id, user_id=req.requester_id, membership_role="VOLUNTEER", membership_status="ACTIVE"))
 
+            elif req.request_type == RequestType.CREATE_EVENT_AS_ORGANIZER:
+                import json
+                from app.models.events import Event
+                try:
+                    payload = json.loads(req.description)
+                    event_name = payload.get('name')
+                    if event_name:
+                        start_date = datetime.strptime(payload['startDate'], '%Y-%m-%d').date()
+                        end_date = datetime.strptime(payload['endDate'], '%Y-%m-%d').date()
+                        start_time = datetime.strptime(payload['startTime'], '%H:%M:%S').time() if payload.get('startTime') else None
+                        end_time = datetime.strptime(payload['endTime'], '%H:%M:%S').time() if payload.get('endTime') else None
+
+                        org_type = payload.get('organizerType') or ('GENERAL' if not payload.get('clubId') else 'CLUB')
+                        event = Event(
+                            club_id=payload.get('clubId'),
+                            venue_id=payload.get('venueId'),
+                            created_by=req.requester_id,
+                            organizer_type=org_type,
+                            event_name=event_name,
+                            event_description=payload.get('description'),
+                            event_status=payload.get('status', 'SCHEDULED'),
+                            start_date=start_date,
+                            end_date=end_date,
+                            start_time=start_time,
+                            end_time=end_time,
+                            capacity=payload.get('capacity', 0)
+                        )
+                        db.session.add(event)
+                except Exception as err:
+                    print("Error creating event upon request approval:", err)
+
         db.session.commit()
         
         NotificationService.notify_ticket_approved(

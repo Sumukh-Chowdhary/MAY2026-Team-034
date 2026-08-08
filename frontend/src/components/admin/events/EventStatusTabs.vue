@@ -51,21 +51,13 @@ defineEmits(['update:modelValue'])
 <style scoped>
 
 .status-toggle{
-
     display:inline-flex;
-
     background:white;
-
     border:1px solid #D1D5DB;
-
     border-radius:14px;
-
     padding:5px;
-
     gap:4px;
-
-    margin:0 auto 40px;
-
+    margin:0;
 }
 
 .toggle-option{

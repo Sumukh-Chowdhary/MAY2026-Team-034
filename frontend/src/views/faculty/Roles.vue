@@ -3,13 +3,14 @@ import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import FacultyLayout from '@/layouts/FacultyLayout.vue'
 
-import { getMySupervisedClubs, leaveFacultyRole } from '@/api/faculty'
+import { getMySupervisedClubs, getFacultyGeneralEvents, leaveFacultyRole } from '@/api/faculty'
 import { getFacultyRequestsDashboard, approveRequest as apiApproveRequest, rejectRequest as apiRejectRequest } from '@/api/requests'
 
 const router = useRouter()
 
 // Dynamic Faculty assigned roles & requests
 const facultyRoles = ref([])
+const generalEvents = ref([])
 const incomingRequests = ref([])
 const loading = ref(true)
 
@@ -49,6 +50,9 @@ async function loadFacultyRolesData() {
   try {
     const rolesData = await getMySupervisedClubs().catch(() => [])
     facultyRoles.value = Array.isArray(rolesData) ? rolesData : []
+
+    const genEvents = await getFacultyGeneralEvents().catch(() => [])
+    generalEvents.value = Array.isArray(genEvents) ? genEvents : []
 
     const reqData = await getFacultyRequestsDashboard().catch(() => ({ data: {} }))
     incomingRequests.value = reqData?.data?.incomingRequests || []
@@ -198,40 +202,123 @@ async function confirmRejectRequest() {
         </div>
 
         <div v-else>
-          <!-- Managed Roles Grid -->
-          <h4 class="fw-bold mb-3 text-dark">Assigned Club Roles</h4>
-          
-          <div v-if="facultyRoles.length === 0" class="card p-4 text-center text-muted mb-4 border-0 rounded-4 shadow-sm">
-            You are not currently designated as a Faculty Coordinator for any active clubs.
-          </div>
+          <!-- SECTION 1: Club Coordination -->
+          <div class="assignment-section mb-5">
+            <div class="section-header-bar mb-3">
+              <div class="d-flex align-items-center gap-2">
+                <span class="material-symbols-rounded text-primary icon-md">groups</span>
+                <h4 class="fw-bold m-0 text-dark">Club Coordination</h4>
+              </div>
+              <p class="text-muted text-sm m-0 ms-1">Clubs you currently supervise and manage.</p>
+            </div>
+            
+            <div v-if="facultyRoles.length === 0" class="card p-4 text-center text-muted border-0 rounded-4 shadow-sm">
+              You are not currently designated as a Faculty Coordinator for any active clubs.
+            </div>
 
-          <div v-else class="row g-4 mb-5">
-            <div v-for="role in facultyRoles" :key="role.id" class="col-12 col-md-6">
-              <div class="role-card">
-                <div class="role-card-header">
-                  <div class="role-icon">{{ role.emoji || '📌' }}</div>
-                  <div>
-                    <span class="role-badge">{{ role.roleTitle }}</span>
-                    <h5 class="role-title">{{ role.clubName }}</h5>
-                    <span class="text-secondary text-sm">{{ role.totalMembers }} Enrolled Members</span>
+            <div v-else class="row g-4">
+              <div v-for="role in facultyRoles" :key="role.id" class="col-12 col-md-6 col-xl-4">
+                <div class="compact-assignment-card">
+                  <div class="card-head">
+                    <div class="brand-avatar">
+                      <span class="material-symbols-rounded">groups</span>
+                    </div>
+                    <div>
+                      <h5 class="assignment-title">{{ role.clubName }}</h5>
+                      <div class="badges-group">
+                        <span class="compact-role-badge">
+                          <span class="material-symbols-rounded icon-xs">workspace_premium</span>
+                          {{ role.roleTitle || 'Faculty Coordinator' }}
+                        </span>
+                        <span class="status-pill active">
+                          <span class="status-dot"></span>
+                          ACTIVE
+                        </span>
+                      </div>
+                    </div>
                   </div>
-                </div>
 
-                <p class="role-description">{{ role.description }}</p>
+                  <div class="metrics-row">
+                    <div class="metric-box">
+                      <span class="metric-val">{{ role.memberCount || role.totalMembers || 1 }}</span>
+                      <span class="metric-lbl">Members</span>
+                    </div>
+                    <div class="metric-box">
+                      <span class="metric-val">{{ role.eventCount || (role.events ? role.events.length : 0) }}</span>
+                      <span class="metric-lbl">Events</span>
+                    </div>
+                    <div class="metric-box" :class="{ 'has-pending': (role.pendingRequestsCount || 0) > 0 }">
+                      <span class="metric-val">{{ role.pendingRequestsCount || 0 }}</span>
+                      <span class="metric-lbl">Pending</span>
+                    </div>
+                  </div>
 
-                <div class="role-card-footer">
-                  <button class="btn btn-sm btn-outline-danger me-2 rounded-pill px-3" @click="handleLeaveFacultyRole(role.id)">
-                    Leave Role
-                  </button>
-                  <button class="manage-btn" @click="openFacultyDashboard(role)">
-                    View Management Dashboard
-                  </button>
+                  <div class="card-actions">
+                    <button class="btn btn-sm btn-outline-danger rounded-pill px-3" @click="handleLeaveFacultyRole(role.id)">
+                      Leave Role
+                    </button>
+                    <button class="btn-manage-club-compact" @click="openFacultyDashboard(role)">
+                      Manage Club
+                      <span class="material-symbols-rounded icon-sm">arrow_forward</span>
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>
           </div>
 
+          <!-- SECTION 2: General Event Organization -->
+          <div class="assignment-section mb-5">
+            <div class="section-header-bar mb-3">
+              <div class="d-flex align-items-center gap-2">
+                <span class="material-symbols-rounded text-primary icon-md">account_balance</span>
+                <h4 class="fw-bold m-0 text-dark">General Event Organization</h4>
+              </div>
+              <p class="text-muted text-sm m-0 ms-1">College-wide institutional events (Orientation, Convocation, Placement Drive, Blood Donation Camp).</p>
+            </div>
 
+            <div v-if="generalEvents.length === 0" class="card p-4 text-center text-muted border-0 rounded-4 shadow-sm">
+              No general college events currently organized.
+            </div>
+
+            <div v-else class="row g-4">
+              <div v-for="event in generalEvents" :key="event.id" class="col-12 col-md-6 col-xl-3">
+                <div class="compact-assignment-card">
+                  <div class="card-head">
+                    <div class="brand-avatar general-avatar">
+                      <span class="material-symbols-rounded">campaign</span>
+                    </div>
+                    <div>
+                      <h5 class="assignment-title">{{ event.name }}</h5>
+                      <span class="compact-role-badge">
+                        <span class="material-symbols-rounded icon-xs">event</span>
+                        General Event
+                      </span>
+                    </div>
+                  </div>
+
+                  <div class="compact-meta-block">
+                    <div class="meta-line">
+                      <span class="material-symbols-rounded icon-xs text-primary">location_on</span>
+                      <span>{{ event.venueName || 'Campus Venue' }}</span>
+                    </div>
+                    <div class="meta-line">
+                      <span class="material-symbols-rounded icon-xs text-primary">calendar_today</span>
+                      <span>{{ event.startDate }}</span>
+                    </div>
+                  </div>
+
+                  <div class="card-actions justify-content-between align-items-center border-top pt-2 mt-2">
+                    <span class="badge bg-light text-secondary border">Capacity: {{ event.capacity || 'Unlimited' }}</span>
+                    <span class="status-pill" :class="(event.status || 'Scheduled').toLowerCase()">
+                      <span class="status-dot"></span>
+                      {{ event.status }}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
 
       </div>
@@ -356,9 +443,13 @@ async function confirmRejectRequest() {
               <div class="event-card-item p-3 border rounded-3 bg-white shadow-sm" @click="navigateToEventDetails(ev.id)">
                 <div class="d-flex justify-content-between align-items-start mb-2">
                   <h6 class="m-0 fw-bold text-primary">{{ ev.name || ev.title }}</h6>
-                  <span class="badge bg-success">{{ ev.status || 'Active' }}</span>
+                  <span class="badge" :class="ev.reservationStatus === 'RELEASED' ? 'bg-secondary' : 'bg-success'">
+                    {{ ev.reservationStatus || 'RESERVED' }}
+                  </span>
                 </div>
-                <p class="text-sm text-secondary mb-2 line-clamp-2">{{ ev.description || 'Club event' }}</p>
+                <div class="small text-muted mb-2">
+                  <span>🏛️ {{ ev.venueName || 'Unassigned Venue' }}</span>
+                </div>
                 <div class="d-flex justify-content-between align-items-center pt-2 border-top">
                   <small class="text-muted">🗓️ {{ ev.startDate || 'Upcoming' }}</small>
                   <button class="btn btn-sm btn-outline-primary py-0 px-2" @click.stop="navigateToEventDetails(ev.id)">
@@ -462,14 +553,187 @@ async function confirmRejectRequest() {
   font-size: 0.95rem;
 }
 
-.role-card {
-  background: #fff;
-  border-radius: 20px;
-  padding: 24px;
-  box-shadow: 0 8px 30px rgba(15, 23, 42, 0.05);
+.icon-md {
+  font-size: 24px;
+}
+
+/* Compact Assignment Cards */
+.compact-assignment-card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+  padding: 18px;
   display: flex;
   flex-direction: column;
+  justify-content: space-between;
+  gap: 14px;
+  box-shadow: 0 4px 16px rgba(15, 23, 42, 0.04);
+  transition: all 0.25s ease;
   height: 100%;
+}
+
+.compact-assignment-card:hover {
+  transform: translateY(-3px);
+  border-color: #3b82f6;
+  box-shadow: 0 12px 28px rgba(37, 99, 235, 0.08);
+}
+
+.card-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.brand-avatar {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  background: #eff6ff;
+  color: #2563eb;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 22px;
+  flex-shrink: 0;
+}
+
+.brand-avatar.general-avatar {
+  background: #f0fdf4;
+  color: #16a34a;
+}
+
+.assignment-title {
+  font-size: 1.05rem;
+  font-weight: 800;
+  color: #0f172a;
+  margin: 0 0 4px;
+  line-height: 1.2;
+}
+
+.badges-group {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.compact-role-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: #f1f5f9;
+  color: #334155;
+  padding: 3px 8px;
+  border-radius: 6px;
+  font-size: 0.74rem;
+  font-weight: 700;
+}
+
+.status-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 8px;
+  border-radius: 999px;
+  font-size: 0.7rem;
+  font-weight: 800;
+}
+
+.status-pill.active, .status-pill.live {
+  background: #dcfce7;
+  color: #15803d;
+}
+
+.status-pill.scheduled {
+  background: #eff6ff;
+  color: #2563eb;
+}
+
+.status-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+.metrics-row {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  background: #f8fafc;
+  border: 1px solid #edf2f7;
+  border-radius: 10px;
+  padding: 10px;
+}
+
+.metric-box {
+  text-align: center;
+}
+
+.metric-box.has-pending .metric-val {
+  color: #d97706;
+}
+
+.metric-val {
+  display: block;
+  font-size: 1rem;
+  font-weight: 800;
+  color: #0f172a;
+  line-height: 1;
+}
+
+.metric-lbl {
+  display: block;
+  font-size: 0.7rem;
+  color: #64748b;
+  font-weight: 600;
+  margin-top: 2px;
+}
+
+.compact-meta-block {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  background: #f8fafc;
+  padding: 10px;
+  border-radius: 10px;
+}
+
+.meta-line {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.78rem;
+  color: #475569;
+  font-weight: 600;
+}
+
+.card-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.btn-manage-club-compact {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: #eff6ff;
+  color: #2563eb;
+  border: 1px solid #bfdbfe;
+  border-radius: 8px;
+  padding: 6px 14px;
+  font-weight: 700;
+  font-size: 0.82rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-manage-club-compact:hover {
+  background: #2563eb;
+  color: #ffffff;
+  border-color: #2563eb;
 }
 
 .role-card-header {
