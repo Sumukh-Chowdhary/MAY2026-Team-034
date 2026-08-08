@@ -1,23 +1,28 @@
 <script setup>
-import {ref} from 'vue'
+import { ref } from 'vue'
 import Sidebar from '../components/Sidebar.vue'
 import LogoutModal from '../components/LogoutModal.vue'
 import NotificationBell from '../components/NotificationBell.vue'
+import EventCalendarModal from '../components/common/EventCalendarModal.vue'
 
-const collapsed=ref(false)
+const collapsed = ref(false)
+const showCalendar = ref(false)
 </script>
 
 <template>
-    <div
-        class="dashboard" :class="{collapsed:collapsed}">
-        <Sidebar @toggle="collapsed=$event"/>
+    <div class="dashboard" :class="{ collapsed: collapsed }">
+        <Sidebar @toggle="collapsed = $event" />
         <main class="page-content relative">
-            <div class="absolute top-4 right-6 z-40" style="position: absolute; top: 1rem; right: 1.5rem; z-index: 40;">
+            <div class="header-actions-bar" style="position: absolute; top: 1rem; right: 1.5rem; z-index: 40; display: flex; align-items: center; gap: 12px;">
+                <button class="btn btn-sm btn-white border shadow-sm rounded-pill px-3 fw-semibold text-slate-700" @click="showCalendar = true">
+                    <i class="bi bi-calendar3 text-primary me-1"></i> Campus Calendar
+                </button>
                 <NotificationBell />
             </div>
-            <slot/>
+            <slot />
         </main>
-        <LogoutModal/>
+        <LogoutModal />
+        <EventCalendarModal :show="showCalendar" @close="showCalendar = false" />
     </div>
 </template>
 
@@ -39,7 +44,6 @@ const collapsed=ref(false)
     margin-left:75px;
     width:calc(100% - 75px);
 }
-
 
 @media (max-width: 992px) {
     .page-content,
