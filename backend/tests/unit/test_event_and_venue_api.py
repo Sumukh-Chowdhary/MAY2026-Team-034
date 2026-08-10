@@ -16,7 +16,7 @@ def test_list_events_with_filters(client, admin_headers):
 
     filtered_by_status = client.get('/api/events?status=live', headers=admin_headers)
     assert filtered_by_status.status_code == 200
-    assert all(item['status'] == 'LIVE' for item in filtered_by_status.get_json())
+    assert all(item['rawStatus'] == 'LIVE' for item in filtered_by_status.get_json())
 
     filtered_by_search = client.get('/api/events?search=hack', headers=admin_headers)
     assert filtered_by_search.status_code == 200

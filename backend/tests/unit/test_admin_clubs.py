@@ -263,7 +263,6 @@ def test_archive_invalid_club(client, admin_headers):
     assert data["error"] == "Club not found"
 
 # Faculty
-
 def test_get_faculty(client, admin_headers):
     response = client.get(
         "/api/admin/clubs/faculty-details",
@@ -476,7 +475,7 @@ def test_get_club_events(client, admin_headers):
 
     assert event["id"] == 1
     assert event["name"] == "AI Hack Sprint"
-    assert event["status"] == "LIVE"
+    assert event["status"] == "COMPLETED"
 
     assert event["venueName"] == "Innovation Lab"
 

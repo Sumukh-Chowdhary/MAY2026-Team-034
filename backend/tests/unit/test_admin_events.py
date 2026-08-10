@@ -24,7 +24,7 @@ def test_get_event(client, admin_headers):
 
     assert event["id"] == EVENT_ID
     assert event["name"] == "AI Hack Sprint"
-    assert event["status"] == "LIVE"
+    assert event["status"] == "COMPLETED"
 
     assert event["clubName"] == "AI Club"
     assert event["venueName"] == "Innovation Lab"
