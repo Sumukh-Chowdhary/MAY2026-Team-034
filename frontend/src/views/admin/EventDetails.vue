@@ -3,6 +3,16 @@ import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 
 import AdminLayout from '@/layouts/AdminLayout.vue'
+import UserProfileModal from '@/components/common/UserProfileModal.vue'
+
+const showProfileModal = ref(false)
+const selectedProfileUserId = ref(null)
+
+function openUserProfile(id) {
+  if (!id) return
+  selectedProfileUserId.value = id
+  showProfileModal.value = true
+}
 import {
   getEvent,
   updateEvent,
@@ -542,6 +552,12 @@ async function postAttendance() {
           </div>
         </div>
       </div>
+
+      <UserProfileModal 
+        :show="showProfileModal"
+        :userId="selectedProfileUserId"
+        @close="showProfileModal = false"
+      />
     </section>
   </AdminLayout>
 </template>

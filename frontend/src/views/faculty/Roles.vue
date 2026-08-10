@@ -2,6 +2,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import FacultyLayout from '@/layouts/FacultyLayout.vue'
+import UserProfileModal from '@/components/common/UserProfileModal.vue'
 
 import { getMySupervisedClubs, getFacultyGeneralEvents, leaveFacultyRole } from '@/api/faculty'
 import { getFacultyRequestsDashboard, approveRequest as apiApproveRequest, rejectRequest as apiRejectRequest } from '@/api/requests'
@@ -642,46 +643,12 @@ async function confirmRejectRequest() {
 
       </div>
 
-      <!-- Modals -->
-      <div v-if="showUserProfileModal && selectedUserProfile" class="modal-backdrop" @click.self="showUserProfileModal = false">
-        <div class="modal-dialog-custom">
-          <div class="d-flex justify-content-between align-items-center mb-3 pb-2 border-bottom">
-            <div class="d-flex align-items-center gap-3">
-              <div class="profile-avatar-large">👤</div>
-              <div>
-                <h4 class="m-0 fw-bold text-dark">{{ selectedUserProfile.name }}</h4>
-                <span class="badge bg-primary px-2 py-1 mt-1">{{ selectedUserProfile.role }}</span>
-              </div>
-            </div>
-            <button class="close-btn" @click="showUserProfileModal = false">&times;</button>
-          </div>
-
-          <div class="row g-3">
-            <div class="col-6">
-              <div class="info-box">
-                <label>Roll / Reg Number</label>
-                <p>{{ selectedUserProfile.roll }}</p>
-              </div>
-            </div>
-            <div class="col-6">
-              <div class="info-box">
-                <label>Department / Branch</label>
-                <p>{{ selectedUserProfile.branch }}</p>
-              </div>
-            </div>
-            <div class="col-6">
-              <div class="info-box">
-                <label>Campus Email</label>
-                <p>{{ selectedUserProfile.email }}</p>
-              </div>
-            </div>
-          </div>
-
-          <div class="d-flex justify-content-end mt-4">
-            <button class="btn btn-secondary rounded-pill px-4" @click="showUserProfileModal = false">Close</button>
-          </div>
-        </div>
-      </div>
+      <!-- Shared User Profile View Modal -->
+      <UserProfileModal 
+        :show="showUserProfileModal" 
+        :userId="selectedUserProfile?.userId || selectedUserProfile?.id" 
+        @close="showUserProfileModal = false" 
+      />
 
       <!-- Reject Request Modal -->
       <div v-if="showRejectModal && selectedRequestForReject" class="modal-backdrop" @click.self="showRejectModal = false">

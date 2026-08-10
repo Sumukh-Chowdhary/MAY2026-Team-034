@@ -77,7 +77,8 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
-import notificationService from '../services/notification.service';
+import { storeToRefs } from 'pinia';
+import { useNotifications } from '@/stores/useNotifications';
 import { getCurrentUser } from '@/services/authService';
 
 import AdminLayout from '@/layouts/AdminLayout.vue';
@@ -92,18 +93,14 @@ const layoutComponent = computed(() => {
 });
 
 const router = useRouter();
-const notifications = ref([]);
+const notificationStore = useNotifications();
+const { notifications, unreadCount } = storeToRefs(notificationStore);
 const loading = ref(true);
-
-const unreadCount = computed(() => notifications.value.filter(n => !n.isRead).length);
 
 const fetchNotifications = async () => {
   loading.value = true;
   try {
-    const res = await notificationService.getNotifications();
-    if (res.success) {
-      notifications.value = res.data;
-    }
+    await notificationStore.fetchInitial();
   } catch (error) {
     console.error("Failed to fetch notifications:", error);
   } finally {
@@ -113,10 +110,7 @@ const fetchNotifications = async () => {
 
 const markAllAsRead = async () => {
   try {
-    const res = await notificationService.markAllAsRead();
-    if (res.success) {
-      notifications.value.forEach(n => n.isRead = true);
-    }
+    await notificationStore.markAllAsRead();
   } catch (error) {
     console.error("Failed to mark all as read:", error);
   }
@@ -125,10 +119,7 @@ const markAllAsRead = async () => {
 const markAsRead = async (notification) => {
   if (notification.isRead) return;
   try {
-    const res = await notificationService.markAsRead(notification.id);
-    if (res.success) {
-      notification.isRead = true;
-    }
+    await notificationStore.markAsRead(notification.id);
   } catch (error) {
     console.error("Failed to mark as read:", error);
   }
@@ -138,7 +129,9 @@ const goToLink = async (notification) => {
   if (!notification.isRead) {
     await markAsRead(notification);
   }
-  router.push(notification.referenceUrl);
+  if (notification.referenceUrl) {
+    router.push(notification.referenceUrl);
+  }
 };
 
 const formatDate = (dateString) => {

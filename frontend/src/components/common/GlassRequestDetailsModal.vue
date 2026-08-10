@@ -566,10 +566,10 @@ async function handleTaskAction(actionType) {
                     </span>
                   </div>
 
-                  <div class="approver-user-info">
+                  <div class="approver-user-info" @click="openUserProfile(appr.approverId || appr.approver?.id)" style="cursor: pointer;">
                     <UserAvatar size="list" :user="appr.approver || { name: 'Approver', role: 'FACULTY' }" />
                     <div class="user-details">
-                      <p class="user-name mb-0">{{ appr.approver?.name || 'Approver #' + (appr.approverId || index + 1) }}</p>
+                      <p class="user-name mb-0 text-primary-hover">{{ appr.approver?.name || 'Approver #' + (appr.approverId || index + 1) }}</p>
                       <small class="text-muted d-block text-xs">{{ appr.approver?.designation || (appr.approvalRole ? appr.approvalRole.replace('_', ' ') : 'Faculty') }}</small>
                       <small class="text-secondary text-xs" v-if="appr.approver?.email">{{ appr.approver.email }}</small>
                     </div>

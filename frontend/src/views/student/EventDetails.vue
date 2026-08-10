@@ -3,6 +3,16 @@ import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRoute } from 'vue-router'
 
 import StudentLayout from '@/layouts/StudentLayout.vue'
+import UserProfileModal from '@/components/common/UserProfileModal.vue'
+
+const showProfileModal = ref(false)
+const selectedProfileUserId = ref(null)
+
+function openUserProfile(id) {
+  if (!id) return
+  selectedProfileUserId.value = id
+  showProfileModal.value = true
+}
 import {
   getEvent,
   registerForEvent,
@@ -591,6 +601,12 @@ const tabs = [
         </div>
       </div>
     </Teleport>
+
+    <UserProfileModal 
+      :show="showProfileModal"
+      :userId="selectedProfileUserId"
+      @close="showProfileModal = false"
+    />
 
   </StudentLayout>
 </template>

@@ -3,6 +3,7 @@ import { ref, computed, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 
 import FacultyLayout from '@/layouts/FacultyLayout.vue'
+import UserProfileModal from '@/components/common/UserProfileModal.vue'
 import {
   getEvent,
   updateEventStatus,
@@ -23,6 +24,15 @@ const venues = ref([])
 const selectedVenueId = ref('')
 const scheduleInput = ref({ time: '', activity: '' })
 const announcementInput = ref({ title: '', message: '' })
+
+const showProfileModal = ref(false)
+const selectedProfileUserId = ref(null)
+
+function openUserProfile(id) {
+  if (!id) return
+  selectedProfileUserId.value = id
+  showProfileModal.value = true
+}
 const isSaving = ref(false)
 
 // Attendance Sheet filter & search
@@ -493,6 +503,12 @@ const tabs = [
           <p>The event you are looking for does not exist.</p>
         </div>
       </div>
+
+      <UserProfileModal 
+        :show="showProfileModal"
+        :userId="selectedProfileUserId"
+        @close="showProfileModal = false"
+      />
     </section>
   </FacultyLayout>
 </template>

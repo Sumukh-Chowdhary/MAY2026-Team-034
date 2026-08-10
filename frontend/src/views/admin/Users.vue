@@ -47,18 +47,23 @@ function getAvatarUrl(user) {
   return `https://api.dicebear.com/7.x/${style}/svg?seed=${encodeURIComponent(seed)}`
 }
 
-// ── Stats ──────────────────────────────────────────
-const totalUsers    = computed(() => userList.value.length)
-const totalStudents = computed(() => userList.value.filter(u => u.role === 'STUDENT').length)
-const totalFaculty  = computed(() => userList.value.filter(u => u.role === 'FACULTY').length)
-const activeUsers   = computed(() => userList.value.filter(u => u.status === 'ACTIVE').length)
+// ── Other Users (Logged-in admin completely excluded) ────
+const otherUsers = computed(() => {
+  const myId = String(currentAdminId.value || '')
+  return userList.value.filter(u => String(u.id) !== myId)
+})
 
-// ── Filtered List (Logged-in admin appears LAST) ────
+// ── Stats ──────────────────────────────────────────
+const totalUsers    = computed(() => otherUsers.value.length)
+const totalStudents = computed(() => otherUsers.value.filter(u => u.role === 'STUDENT').length)
+const totalFaculty  = computed(() => otherUsers.value.filter(u => u.role === 'FACULTY').length)
+const activeUsers   = computed(() => otherUsers.value.filter(u => u.status === 'ACTIVE').length)
+
+// ── Filtered List ──────────────────────────────────
 const filteredUsers = computed(() => {
   const q = search.value.trim().toLowerCase()
-  const myId = currentAdminId.value
 
-  const list = userList.value.filter(u => {
+  return otherUsers.value.filter(u => {
     const matchTab =
       activeTab.value === 'ALL' ||
       u.role === activeTab.value
@@ -71,13 +76,6 @@ const filteredUsers = computed(() => {
       (u.department && u.department.toLowerCase().includes(q))
 
     return matchTab && matchSearch
-  })
-
-  // Sort list so current logged-in admin appears LAST
-  return list.sort((a, b) => {
-    if (a.id === myId) return 1
-    if (b.id === myId) return -1
-    return 0
   })
 })
 

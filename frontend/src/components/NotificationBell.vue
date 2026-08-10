@@ -102,6 +102,8 @@ const handleNotificationClick = async (notification) => {
   isOpen.value = false;
   if (notification.referenceUrl) {
     router.push(notification.referenceUrl);
+  } else {
+    router.push(notificationsPath.value);
   }
 };
 

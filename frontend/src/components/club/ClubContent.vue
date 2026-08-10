@@ -3,6 +3,7 @@ import ClubPanel from "./ClubPanel.vue";
 import EditClubModal from "@/components/admin/club/EditClubModal.vue";
 import CreateEventModal from "@/components/admin/events/CreateEventModal.vue";
 import UserAvatar from "@/components/profile/UserAvatar.vue";
+import UserProfileModal from "@/components/common/UserProfileModal.vue";
 import { useRouter } from "vue-router";
 import { ref, computed, onMounted } from "vue";
 import { updateClub, updateFacultyClub } from "@/api/clubs";
@@ -16,6 +17,9 @@ const { showToast } = useToast();
 const router = useRouter()
 const currentUser = getCurrentUser()
 const supervisedClubIds = ref([])
+
+const showProfileModal = ref(false)
+const selectedUserId = ref(null)
 
 const props = defineProps({
     clubId: Number,
@@ -48,7 +52,13 @@ function isImageUrl(url) {
 }
 
 function viewProfile(member) {
-    console.log("TODO profile page", member)
+    const targetId = member?.userId || member?.id || member?.studentId || member?.facultyId
+    if (targetId) {
+        selectedUserId.value = targetId
+        showProfileModal.value = true
+    } else {
+        showToast('User profile ID not available', 'warning')
+    }
 }
 
 function viewRequests() {
@@ -220,9 +230,15 @@ const canManageClub = computed(() => {
             </div>
             
             <div v-if="facultyCoordinators.length" class="faculty-list-chips">
-              <div v-for="coord in facultyCoordinators" :key="coord.id || coord.name" class="faculty-chip">
-                <span class="material-symbols-rounded chip-icon">person</span>
-                <span class="chip-name">{{ coord.name }}</span>
+              <div 
+                v-for="coord in facultyCoordinators" 
+                :key="coord.id || coord.name" 
+                class="faculty-chip cursor-pointer"
+                @click="viewProfile(coord)"
+                style="cursor: pointer;"
+              >
+                <UserAvatar size="list" :user="coord" />
+                <span class="chip-name fw-semibold text-primary-hover ms-1">{{ coord.name }}</span>
               </div>
             </div>
             <div v-else class="empty-faculty-text">
@@ -262,10 +278,12 @@ const canManageClub = computed(() => {
             >
 
                 <div class="member-card d-flex align-items-center gap-2" v-for="member in members" :key="member.id">
-                    <UserAvatar size="list" :user="member" />
-                    <div class="member-info">
-                        <div class="member-name">{{ member.name }}</div>
-                        <div class="member-role">{{ member.membershipRole }}</div>
+                    <div class="d-flex align-items-center gap-2 cursor-pointer" @click="viewProfile(member)" style="cursor: pointer;">
+                      <UserAvatar size="list" :user="member" />
+                      <div class="member-info">
+                          <div class="member-name text-primary-hover fw-bold">{{ member.name }}</div>
+                          <div class="member-role text-muted text-xs">{{ member.membershipRole }}</div>
+                      </div>
                     </div>
 
                     <div
@@ -379,6 +397,12 @@ const canManageClub = computed(() => {
       :fixedClubId="props.clubId"
       @close="showCreateEventModal = false"
       @created="handleEventCreated"
+    />
+
+    <UserProfileModal 
+      :show="showProfileModal"
+      :userId="selectedUserId"
+      @close="showProfileModal = false"
     />
 
   </div>

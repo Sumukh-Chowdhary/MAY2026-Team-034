@@ -99,6 +99,18 @@ const routes = [
     component: () => import('@/views/admin/Profile.vue'),
     meta: { requiresAuth: true, role: 'ADMIN' }
   },
+  {
+    path: '/admin/profile/:id',
+    name: 'AdminUserProfileView',
+    component: () => import('@/views/PublicUserProfile.vue'),
+    meta: { requiresAuth: true, role: 'ADMIN' }
+  },
+  {
+    path: '/admin/notifications',
+    name: 'AdminNotifications',
+    component: () => import('@/views/Notifications.vue'),
+    meta: { requiresAuth: true, role: 'ADMIN' }
+  },
 
   // --- Faculty Routes ---
   {
@@ -149,6 +161,18 @@ const routes = [
     component: () => import('@/views/faculty/Profile.vue'),
     meta: { requiresAuth: true, role: 'FACULTY' }
   },
+  {
+    path: '/faculty/profile/:id',
+    name: 'FacultyUserProfileView',
+    component: () => import('@/views/PublicUserProfile.vue'),
+    meta: { requiresAuth: true, role: 'FACULTY' }
+  },
+  {
+    path: '/faculty/notifications',
+    name: 'FacultyNotifications',
+    component: () => import('@/views/Notifications.vue'),
+    meta: { requiresAuth: true, role: 'FACULTY' }
+  },
 
   // --- Student Routes ---
   {
@@ -193,6 +217,25 @@ const routes = [
     component: () => import('@/views/student/Profile.vue'),
     meta: { requiresAuth: true, role: 'STUDENT' }
   },
+  {
+    path: '/student/profile/:id',
+    name: 'StudentUserProfileView',
+    component: () => import('@/views/PublicUserProfile.vue'),
+    meta: { requiresAuth: true, role: 'STUDENT' }
+  },
+  {
+    path: '/student/notifications',
+    name: 'StudentNotifications',
+    component: () => import('@/views/Notifications.vue'),
+    meta: { requiresAuth: true, role: 'STUDENT' }
+  },
+
+  {
+    path: '/profile/:id',
+    name: 'SharedUserProfileView',
+    component: () => import('@/views/PublicUserProfile.vue'),
+    meta: { requiresAuth: true }
+  },
 
   {
     path: '/notifications',
@@ -200,9 +243,9 @@ const routes = [
     meta: { requiresAuth: true },
     redirect: () => {
       const user = getCurrentUser()
-      if (user?.role === 'ADMIN') return '/admin/requests'
-      if (user?.role === 'FACULTY') return '/faculty/requests'
-      return '/student/requests'
+      if (user?.role === 'ADMIN') return '/admin/notifications'
+      if (user?.role === 'FACULTY') return '/faculty/notifications'
+      return '/student/notifications'
     }
   },
 
