@@ -150,6 +150,13 @@ const routes = [
     meta: { requiresAuth: true, role: 'FACULTY' }
   },
 
+  {
+    path: '/faculty/profile',
+    name: 'FacultyProfile',
+    component: () => import('@/views/faculty/Profile.vue'),
+    meta: { requiresAuth: true, role: 'FACULTY' }
+  },
+
   // --- Student Routes ---
   {
     path: '/student',
@@ -192,18 +199,6 @@ const routes = [
     name: 'StudentProfile',
     component: () => import('@/views/student/Profile.vue'),
     meta: { requiresAuth: true, role: 'STUDENT' }
-  },
-
-  {
-    path: '/notifications',
-    name: 'NotificationsRedirect',
-    meta: { requiresAuth: true },
-    redirect: () => {
-      const user = getCurrentUser()
-      if (user?.role === 'ADMIN') return '/admin/requests'
-      if (user?.role === 'FACULTY') return '/faculty/requests'
-      return '/student/requests'
-    }
   },
 
   {

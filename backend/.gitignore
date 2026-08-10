@@ -1,4 +1,11 @@
 .env
 backend/
+venv/
 __pycache__/
 *.py[cod]
+
+# SQLite database files
+*.db
+*.sqlite
+*.sqlite3
+instance/
