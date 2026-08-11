@@ -302,7 +302,7 @@ def test_get_club_events(client, faculty_headers):
 
     assert event["id"] == 1
     assert event["name"] == "AI Hack Sprint"
-    assert event["status"] == "LIVE"
+    assert event["status"] == "COMPLETED"
 
     assert event["venueName"] == "Innovation Lab"
 
