@@ -2,3 +2,6 @@
 backend/
 __pycache__/
 *.py[cod]
+
+backend/instance/app.db
+backend/instance/

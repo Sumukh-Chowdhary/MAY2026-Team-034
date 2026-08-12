@@ -99,6 +99,13 @@ def update_user(user_id):
     new_status = data.get('accountStatus') or data.get('status')
     if new_status and is_admin:
         user.account_status = new_status
+        if new_status == 'LEGACY':
+            for membership in user.club_memberships:
+                if not membership.ended_at:
+                    membership.ended_at = datetime.utcnow()
+        elif new_status == 'ACTIVE':
+            for membership in user.club_memberships:
+                membership.ended_at = None
 
     db.session.commit()
     return jsonify(user.to_dict()), 200

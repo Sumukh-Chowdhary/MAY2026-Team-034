@@ -12,7 +12,7 @@ const currentAdminId = computed(() => getCurrentUser()?.id)
 
 // ── State ──────────────────────────────────────────
 const search     = ref('')
-const activeTab  = ref('ALL')   // 'ALL' | 'STUDENT' | 'FACULTY'
+const activeTab  = ref('ALL')   // 'ALL' | 'STUDENT' | 'FACULTY' | 'LEGACY'
 const userList   = ref([])
 const loading    = ref(false)
 
@@ -47,33 +47,36 @@ function getAvatarUrl(user) {
   return `https://api.dicebear.com/7.x/${style}/svg?seed=${encodeURIComponent(seed)}`
 }
 
-// ── Other Users (Logged-in admin completely excluded) ────
-const otherUsers = computed(() => {
-  const myId = String(currentAdminId.value || '')
-  return userList.value.filter(u => String(u.id) !== myId)
-})
+// ── All Users List ────
+const allUsers = computed(() => userList.value)
 
 // ── Stats ──────────────────────────────────────────
-const totalUsers    = computed(() => otherUsers.value.length)
-const totalStudents = computed(() => otherUsers.value.filter(u => u.role === 'STUDENT').length)
-const totalFaculty  = computed(() => otherUsers.value.filter(u => u.role === 'FACULTY').length)
-const activeUsers   = computed(() => otherUsers.value.filter(u => u.status === 'ACTIVE').length)
+const totalUsers    = computed(() => allUsers.value.length)
+const totalStudents = computed(() => allUsers.value.filter(u => u.role === 'STUDENT' && u.status !== 'LEGACY').length)
+const totalFaculty  = computed(() => allUsers.value.filter(u => u.role === 'FACULTY').length)
+const totalLegacy   = computed(() => allUsers.value.filter(u => u.status === 'LEGACY').length)
 
 // ── Filtered List ──────────────────────────────────
 const filteredUsers = computed(() => {
   const q = search.value.trim().toLowerCase()
 
-  return otherUsers.value.filter(u => {
-    const matchTab =
-      activeTab.value === 'ALL' ||
-      u.role === activeTab.value
+  return allUsers.value.filter(u => {
+    let matchTab = true
+    if (activeTab.value === 'STUDENT') {
+      matchTab = (u.role === 'STUDENT' && u.status !== 'LEGACY')
+    } else if (activeTab.value === 'FACULTY') {
+      matchTab = (u.role === 'FACULTY')
+    } else if (activeTab.value === 'LEGACY') {
+      matchTab = (u.status === 'LEGACY')
+    }
 
     const matchSearch =
       !q ||
       (u.name && u.name.toLowerCase().includes(q)) ||
       (u.email && u.email.toLowerCase().includes(q)) ||
       (u.registerNumber && u.registerNumber.toLowerCase().includes(q)) ||
-      (u.department && u.department.toLowerCase().includes(q))
+      (u.department && u.department.toLowerCase().includes(q)) ||
+      (u.branchCode && u.branchCode.toLowerCase().includes(q))
 
     return matchTab && matchSearch
   })
@@ -84,11 +87,23 @@ function viewUser(user) {
   router.push({ name: 'AdminUserDetails', params: { id: user.id } })
 }
 
-// ── Block / Unblock ────────────────────────────────
+// ── Block / Unblock / Legacy Toggle ────────────────
 function openBlockModal(event, user) {
   event.stopPropagation()
   userToBlock.value = user
   showBlockModal.value = true
+}
+
+function toggleLegacyStatus(event, user) {
+  event.stopPropagation()
+  const newStatus = user.status === 'LEGACY' ? 'ACTIVE' : 'LEGACY'
+  updateUserStatus(user.id, newStatus)
+    .then(() => {
+      user.status = newStatus
+    })
+    .catch(() => {
+      alert('Failed to update status.')
+    })
 }
 
 function closeBlockModal() {
@@ -152,7 +167,7 @@ const blockBtnLabel = computed(() =>
         <div class="stat-chip">
           <i class="bi bi-mortarboard-fill" style="color:#16a34a;"></i>
           <span class="chip-count">{{ totalStudents }}</span>
-          <span>Students</span>
+          <span>Active Students</span>
         </div>
         <div class="stat-chip">
           <i class="bi bi-person-badge-fill" style="color:#7c3aed;"></i>
@@ -160,9 +175,9 @@ const blockBtnLabel = computed(() =>
           <span>Faculty</span>
         </div>
         <div class="stat-chip">
-          <i class="bi bi-check-circle-fill" style="color:#0891b2;"></i>
-          <span class="chip-count">{{ activeUsers }}</span>
-          <span>Active</span>
+          <i class="bi bi-journal-bookmark-fill" style="color:#d97706;"></i>
+          <span class="chip-count">{{ totalLegacy }}</span>
+          <span>Legacy / Alumni</span>
         </div>
       </div>
 
@@ -173,10 +188,10 @@ const blockBtnLabel = computed(() =>
           <input
             v-model="search"
             type="text"
-            placeholder="Search by name, email, register no, department…"
+            placeholder="Search by name, email, register no, branch, batch…"
           />
         </div>
-        <!-- Role Tab Toggles (as per wireframe) -->
+        <!-- Role Tab Toggles -->
         <div class="tab-group">
           <button
             class="tab-btn"
@@ -187,12 +202,17 @@ const blockBtnLabel = computed(() =>
             class="tab-btn"
             :class="{ active: activeTab === 'STUDENT' }"
             @click="activeTab = 'STUDENT'"
-          >Students</button>
+          >Active Students</button>
           <button
             class="tab-btn"
             :class="{ active: activeTab === 'FACULTY' }"
             @click="activeTab = 'FACULTY'"
           >Faculty</button>
+          <button
+            class="tab-btn"
+            :class="{ active: activeTab === 'LEGACY' }"
+            @click="activeTab = 'LEGACY'"
+          >Legacy Users</button>
         </div>
       </div>
 
@@ -203,7 +223,7 @@ const blockBtnLabel = computed(() =>
             <tr>
               <th>User</th>
               <th>Role</th>
-              <th>Department</th>
+              <th>Department / Batch</th>
               <th>Clubs</th>
               <th>Status</th>
               <th>Actions</th>
@@ -237,8 +257,13 @@ const blockBtnLabel = computed(() =>
                 </span>
               </td>
 
-              <!-- Department -->
-              <td>{{ user.department || '—' }}</td>
+              <!-- Department / Batch -->
+              <td>
+                <div>{{ user.department || '—' }}</div>
+                <div v-if="user.batchYear || user.graduationYear" class="text-xs text-muted">
+                  Batch: {{ user.batchYear || '—' }} | Grad: {{ user.graduationYear || '—' }}
+                </div>
+              </td>
 
               <!-- Club Tags -->
               <td>
@@ -255,6 +280,13 @@ const blockBtnLabel = computed(() =>
               <!-- Status -->
               <td>
                 <span
+                  v-if="user.status === 'LEGACY'"
+                  class="badge bg-warning-subtle text-warning border border-warning px-2 py-1 text-xs"
+                >
+                  <i class="bi bi-mortarboard-fill me-1"></i> Legacy / Alumni
+                </span>
+                <span
+                  v-else
                   class="status-badge"
                   :class="user.status === 'ACTIVE' ? 'status-active' : 'status-inactive'"
                 >
@@ -263,7 +295,7 @@ const blockBtnLabel = computed(() =>
                 </span>
               </td>
 
-              <!-- Actions: View + Block -->
+              <!-- Actions: View + Lifecycle Toggle + Block -->
               <td>
                 <div class="action-cell">
                   <button
@@ -274,6 +306,16 @@ const blockBtnLabel = computed(() =>
                     <i class="bi bi-eye-fill"></i> View
                   </button>
                   <button
+                    v-if="user.role === 'STUDENT'"
+                    class="btn-action btn-secondary"
+                    :title="user.status === 'LEGACY' ? 'Reactivate as Active Student' : 'Mark as Graduated / Legacy'"
+                    @click="toggleLegacyStatus($event, user)"
+                  >
+                    <i class="bi bi-award"></i>
+                    {{ user.status === 'LEGACY' ? 'Reactivate' : 'Mark Legacy' }}
+                  </button>
+                  <button
+                    v-if="user.role !== 'ADMIN'"
                     class="btn-action"
                     :class="user.status === 'ACTIVE' ? 'btn-block' : 'btn-unblock'"
                     :title="user.status === 'ACTIVE' ? 'Block User' : 'Unblock User'"

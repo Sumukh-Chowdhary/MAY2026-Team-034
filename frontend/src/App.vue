@@ -16,6 +16,16 @@ const isDashboard = computed(() => {
         return true
     }
 
+    // Authenticated shared routes like /notifications or /profile
+    if (route.path.startsWith('/notifications') || route.path.startsWith('/profile')) {
+        return true
+    }
+
+    // Authenticated routes
+    if (route.meta?.requiresAuth && isLoggedIn()) {
+        return true
+    }
+
     // Club page behaves differently depending on login status
     if (route.path.startsWith("/clubs/")) {
         return isLoggedIn()

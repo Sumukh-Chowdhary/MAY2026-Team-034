@@ -32,6 +32,15 @@ const props = defineProps({
 const club = ref(null);
 const events = ref([]);
 const members = ref([]);
+const showLegacyMembers = ref(true);
+
+const activeMembers = computed(() => {
+    return (members.value || []).filter(m => !m.isLegacy && m.userStatus !== 'LEGACY' && m.membershipStatus === 'ACTIVE')
+});
+
+const legacyMembers = computed(() => {
+    return (members.value || []).filter(m => m.isLegacy || m.userStatus === 'LEGACY' || m.membershipStatus === 'LEGACY' || m.membershipStatus === 'GRADUATED')
+});
 
 const showEditClubModal = ref(false);
 const showCreateEventModal = ref(false);
@@ -196,8 +205,9 @@ const canManageClub = computed(() => {
                 <span class="material-symbols-rounded">groups</span>
               </div>
               <div class="stat-info">
-                <span class="stat-label">Members</span>
-                <span class="stat-count">{{ club?.activeMembers || members.length || 0 }}</span>
+                <span class="stat-label">Active Members</span>
+                <span class="stat-count">{{ activeMembers.length }}</span>
+                <span v-if="legacyMembers.length" class="text-xs text-muted mt-1">({{ legacyMembers.length }} Legacy)</span>
               </div>
             </div>
 
@@ -270,47 +280,49 @@ const canManageClub = computed(() => {
     <!-- Bottom Grid -->
     <div class="club-grid">
 
-        <ClubPanel title="Members">
+        <!-- ── Active Members Section ── -->
+        <ClubPanel title="Active Members">
+            <template #header-actions>
+                <span class="badge bg-primary-subtle text-primary border px-2 py-1 text-xs fw-semibold">{{ activeMembers.length }} Active</span>
+            </template>
 
             <div
-                v-if="members.length"
+                v-if="activeMembers.length"
                 class="member-list"
             >
-
-                <div class="member-card d-flex align-items-center gap-2" v-for="member in members" :key="member.id">
+                <div class="member-card d-flex align-items-center justify-content-between p-2 mb-2 border rounded" v-for="member in activeMembers" :key="member.id">
                     <div class="d-flex align-items-center gap-2 cursor-pointer" @click="viewProfile(member)" style="cursor: pointer;">
                       <UserAvatar size="list" :user="member" />
                       <div class="member-info">
                           <div class="member-name text-primary-hover fw-bold">{{ member.name }}</div>
-                          <div class="member-role text-muted text-xs">{{ member.membershipRole }}</div>
+                          <div class="member-role text-muted text-xs">
+                            <span v-if="member.registerNumber || member.rollNumber" class="fw-semibold text-dark me-1">{{ member.registerNumber || member.rollNumber }} •</span>
+                            <span>{{ member.membershipRole }}</span>
+                          </div>
                       </div>
                     </div>
 
-                    <div
-                        v-if="canManageClub"
-                        class="member-actions"
-                    >
+                    <div class="member-actions d-flex gap-2 align-items-center">
                         <button
-                        class="profile-btn"
-                        @click="viewProfile(member)"
+                          class="profile-btn btn btn-sm btn-outline-secondary"
+                          @click="viewProfile(member)"
                         >
-                        View Profile
+                          View Profile
                         </button>
 
                         <button
-                        :class="member.membershipStatus === 'ACTIVE'
-                            ? 'deactivate-btn'
-                            : 'activate-btn'"
-                        @click="toggleMembership(member)"
+                          v-if="canManageClub"
+                          :class="member.membershipStatus === 'ACTIVE'
+                              ? 'deactivate-btn btn btn-sm btn-outline-danger'
+                              : 'activate-btn btn btn-sm btn-outline-success'"
+                          @click="toggleMembership(member)"
                         >
-                        {{ member.membershipStatus === 'ACTIVE'
-                            ? 'Deactivate'
-                            : 'Activate' }}
+                          {{ member.membershipStatus === 'ACTIVE'
+                              ? 'Deactivate'
+                              : 'Activate' }}
                         </button>
                     </div>
-
                 </div>
-
             </div>
 
             <div
@@ -320,14 +332,69 @@ const canManageClub = computed(() => {
                 <span class="material-symbols-rounded empty-icon members-icon">
                     groups
                 </span>
-
-                <h3>No members yet</h3>
-
-                <p>
-                    Nobody has joined this club yet.
-                </p>
+                <h3>No active members</h3>
+                <p>There are currently no active students in this club.</p>
             </div>
+        </ClubPanel>
 
+        <!-- ── Legacy Members Section ── -->
+        <ClubPanel title="Legacy Members">
+            <template #header-actions>
+                <div class="d-flex align-items-center gap-2">
+                    <span class="badge bg-warning-subtle text-warning border border-warning px-2 py-1 text-xs fw-semibold">{{ legacyMembers.length }} Legacy / Alumni</span>
+                    <button class="btn btn-sm btn-outline-secondary py-0 px-2 text-xs" @click="showLegacyMembers = !showLegacyMembers">
+                        <i class="bi" :class="showLegacyMembers ? 'bi-chevron-up' : 'bi-chevron-down'"></i>
+                        {{ showLegacyMembers ? 'Collapse' : 'Expand' }}
+                    </button>
+                </div>
+            </template>
+
+            <div v-if="showLegacyMembers">
+                <div
+                    v-if="legacyMembers.length"
+                    class="member-list"
+                >
+                    <div class="member-card legacy-member-card d-flex align-items-center justify-content-between p-2 mb-2 border border-warning-subtle rounded bg-light-subtle" v-for="member in legacyMembers" :key="member.id">
+                        <div class="d-flex align-items-center gap-2 cursor-pointer" @click="viewProfile(member)" style="cursor: pointer;">
+                          <UserAvatar size="list" :user="member" />
+                          <div class="member-info">
+                              <div class="member-name fw-bold d-flex align-items-center gap-1">
+                                  {{ member.name }}
+                                  <span class="badge bg-warning-subtle text-warning border border-warning text-xs">Graduated</span>
+                              </div>
+                              <div class="member-details text-xs text-muted">
+                                  <span v-if="member.registerNumber || member.rollNumber" class="fw-semibold text-dark me-1">{{ member.registerNumber || member.rollNumber }}</span>
+                                  <span>• Branch: {{ member.branchCode || member.department || '—' }}</span>
+                                  <span v-if="member.batchYear || member.graduationYear"> • Batch: {{ member.batchYear || '—' }} (Grad: {{ member.graduationYear || '—' }})</span>
+                              </div>
+                              <div class="member-role text-xs text-muted mt-1">
+                                  Former Role: <strong class="text-secondary">{{ member.membershipRole || 'Member' }}</strong>
+                                  <span v-if="member.joinedAt"> • Joined: {{ new Date(member.joinedAt).toLocaleDateString(undefined, { month: 'short', year: 'numeric' }) }}</span>
+                              </div>
+                          </div>
+                        </div>
+
+                        <div class="member-actions">
+                            <button
+                              class="profile-btn btn btn-sm btn-outline-primary"
+                              @click="viewProfile(member)"
+                            >
+                              <i class="bi bi-person-lines-fill me-1"></i> View Profile
+                            </button>
+                            <!-- NO ACTIVE MANAGEMENT CONTROLS FOR LEGACY MEMBERS -->
+                        </div>
+                    </div>
+                </div>
+
+                <div
+                    v-else
+                    class="empty-state py-3"
+                >
+                    <i class="bi bi-mortarboard fs-2 text-muted mb-1"></i>
+                    <h5 class="text-secondary mb-0">No legacy members</h5>
+                    <p class="text-muted text-xs">Graduated/passed-out club members will appear here as historical records.</p>
+                </div>
+            </div>
         </ClubPanel>
 
         <ClubPanel title="Events">

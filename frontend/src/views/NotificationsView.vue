@@ -1,9 +1,12 @@
 <template>
   <div class="notifications-page">
-    <div class="header-section">
-      <h1>Notifications</h1>
-      <button v-if="unreadCount > 0" class="btn btn-outline-primary" @click="markAllAsRead">
-        Mark All as Read
+    <div class="header-section d-flex align-items-center justify-content-between mb-4">
+      <div class="d-flex align-items-center gap-2">
+        <h1 class="m-0 fw-bold fs-3">Notifications</h1>
+        <span v-if="unreadCount > 0" class="badge bg-primary rounded-pill px-3 py-1 text-xs">{{ unreadCount }} New</span>
+      </div>
+      <button v-if="unreadCount > 0" class="btn btn-sm btn-outline-secondary rounded-pill px-3 fw-medium" @click="markAllAsRead">
+        Mark all as read
       </button>
     </div>
 
@@ -18,16 +21,29 @@
         :key="notification.id"
         class="notification-card"
         :class="{ 'unread': !notification.isRead }"
-        @click="handleNotificationClick(notification)"
+        @click="handleCardClick(notification)"
       >
-        <div class="card-content">
-          <div class="card-header">
-            <h3>{{ notification.title }}</h3>
-            <span class="time">{{ formatDate(notification.createdAt) }}</span>
+        <div class="unread-indicator-dot" :class="{ 'is-active': !notification.isRead }"></div>
+        <div class="card-content flex-grow-1">
+          <div class="card-header d-flex justify-content-between align-items-start mb-1">
+            <h3 class="fw-bold fs-6 m-0 text-dark">{{ notification.title }}</h3>
+            <span class="time text-muted text-xs ms-2">{{ formatDate(notification.createdAt) }}</span>
           </div>
-          <p>{{ notification.message }}</p>
+          <p class="text-secondary text-sm mb-2">{{ notification.message }}</p>
+          
+          <div v-if="notification.context" class="context-line text-xs fw-semibold text-slate-600 mb-2">
+            {{ notification.context }}
+          </div>
+
+          <div v-if="getAction(notification)" class="card-actions mt-2">
+            <button 
+              @click.stop="onActionClick(notification)"
+              class="btn btn-sm btn-primary fw-semibold px-3 rounded-2 text-xs"
+            >
+              {{ getAction(notification).label }}
+            </button>
+          </div>
         </div>
-        <div v-if="!notification.isRead" class="unread-indicator"></div>
       </div>
     </div>
   </div>
@@ -38,10 +54,17 @@ import { onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { storeToRefs } from 'pinia';
 import { useNotifications } from '../stores/useNotifications';
+import { handleNotificationDetails, resolveNotificationAction } from '@/utils/notificationNavigation';
+import { getCurrentUser } from '@/services/authService';
 
 const router = useRouter();
 const notificationStore = useNotifications();
 const { notifications, unreadCount } = storeToRefs(notificationStore);
+const currentUser = getCurrentUser();
+
+function getAction(notification) {
+  return resolveNotificationAction(notification, currentUser?.role);
+}
 
 onMounted(() => {
   notificationStore.fetchInitial();
@@ -51,13 +74,17 @@ const markAllAsRead = async () => {
   await notificationStore.markAllAsRead();
 };
 
-const handleNotificationClick = async (notification) => {
+const handleCardClick = async (notification) => {
   if (!notification.isRead) {
     await notificationStore.markAsRead(notification.id);
   }
-  if (notification.referenceUrl) {
-    router.push(notification.referenceUrl);
+};
+
+const onActionClick = async (notification) => {
+  if (!notification.isRead) {
+    await notificationStore.markAsRead(notification.id);
   }
+  await handleNotificationDetails(notification, router, notificationStore);
 };
 
 const formatDate = (dateString) => {

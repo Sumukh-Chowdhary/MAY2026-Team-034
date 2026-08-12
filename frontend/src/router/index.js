@@ -239,14 +239,9 @@ const routes = [
 
   {
     path: '/notifications',
-    name: 'NotificationsRedirect',
-    meta: { requiresAuth: true },
-    redirect: () => {
-      const user = getCurrentUser()
-      if (user?.role === 'ADMIN') return '/admin/notifications'
-      if (user?.role === 'FACULTY') return '/faculty/notifications'
-      return '/student/notifications'
-    }
+    name: 'Notifications',
+    component: () => import('@/views/Notifications.vue'),
+    meta: { requiresAuth: true }
   },
 
   {
@@ -261,22 +256,23 @@ const router = createRouter({
 });
 
 
-router.beforeEach((to, from, next) => {
+router.beforeEach((to) => {
   if (!to.meta.requiresAuth) {
-    return next();
+    return true;
   }
 
   if (!isLoggedIn()) {
-    return next('/login');
+    return '/login';
   }
 
   const user = getCurrentUser();
 
   if (to.meta.role && user?.role !== to.meta.role) {
-    return next('/');
+    const rolePrefix = user?.role === 'ADMIN' ? '/admin' : (user?.role === 'FACULTY' ? '/faculty' : '/student');
+    return rolePrefix;
   }
 
-  next();
+  return true;
 });
 
 export default router;

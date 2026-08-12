@@ -12,7 +12,7 @@ from flask import Blueprint, jsonify, g # type: ignore
 from app.models import db, User
 from app.models.club import Club, ClubFaculty, ClubOrganizer, ClubMembership
 
-from app.utils.auth_jwt import jwt_required, roles_required
+from app.utils.auth_jwt import jwt_required, roles_required, check_legacy_user_action
 from werkzeug.exceptions import NotFound
 
 
@@ -26,6 +26,8 @@ student_bp = Blueprint(
 @jwt_required
 @roles_required("STUDENT")
 def get_my_clubs():
+    if g.current_user and (g.current_user.account_status == "LEGACY" or getattr(g.current_user, 'is_legacy', False)):
+        return jsonify([]), 200
 
     memberships = ClubMembership.query.filter_by(
         user_id=g.current_user.id,
@@ -98,6 +100,10 @@ def get_club(club_id):
 def join_club(club_id):
     current_user = g.current_user
 
+    legacy_err = check_legacy_user_action(current_user)
+    if legacy_err:
+        return legacy_err
+
     # Check if club exists
     club = Club.query.get(club_id)
     if not club:
@@ -154,6 +160,10 @@ def join_club(club_id):
 @roles_required("STUDENT")
 def leave_club(club_id):
     current_user = g.current_user
+
+    legacy_err = check_legacy_user_action(current_user)
+    if legacy_err:
+        return legacy_err
 
     # Check if club exists
     club = Club.query.get(club_id)
@@ -229,6 +239,10 @@ from app.models.club import ClubOrganizer
 @roles_required("STUDENT")
 def update_my_club_details(club_id):
     current_user = g.current_user
+
+    legacy_err = check_legacy_user_action(current_user)
+    if legacy_err:
+        return legacy_err
     
     # Verify student is a Club Organizer for this club
     is_org = ClubOrganizer.query.filter_by(club_id=club_id, user_id=current_user.id).first()

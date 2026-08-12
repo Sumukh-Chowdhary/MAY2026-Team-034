@@ -1,13 +1,20 @@
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import StudentLayout from '@/layouts/StudentLayout.vue'
+import { useToast } from '@/composables/useToast'
+import { isLegacyUser, LEGACY_READ_ONLY_MESSAGE } from '@/utils/permissions'
 
 import { getUserAssignments, leaveAssignmentTicket } from '@/api/assignmentTickets'
 import { createRequest } from '@/api/requests'
 import { getClubs } from '@/api/student'
 
 const router = useRouter()
+const { showToast } = useToast()
+
+const userStr = localStorage.getItem('user')
+const currentUser = userStr ? JSON.parse(userStr) : null
+const isLegacy = computed(() => isLegacyUser(currentUser))
 
 function navigateToEventDetails(eventId) {
   router.push(`/student/events/${eventId}`)
@@ -81,6 +88,10 @@ async function handleLeaveStudentRole(ticketId) {
 }
 
 function openApplyModal() {
+  if (isLegacy.value) {
+    showToast('Your student account is now read-only because your student lifecycle is marked Legacy.', 'warning')
+    return
+  }
   applyForm.value = {
     requestType: 'BECOME_ORGANIZER',
     clubId: availableClubs.value.length ? availableClubs.value[0].id : '',

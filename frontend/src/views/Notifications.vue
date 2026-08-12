@@ -38,6 +38,7 @@
           :key="notification.id"
           class="notif-card"
           :class="{'is-unread': !notification.isRead}"
+          @click="handleCardClick(notification)"
         >
           <div class="notif-card-indicator">
             <div class="status-dot"></div>
@@ -50,21 +51,17 @@
             </div>
             
             <p class="notif-card-message">{{ notification.message }}</p>
+
+            <div v-if="notification.context" class="notif-context-line">
+              {{ notification.context }}
+            </div>
             
-            <div class="notif-card-actions">
+            <div v-if="getAction(notification)" class="notif-card-actions">
               <button 
-                v-if="notification.referenceUrl" 
-                @click="goToLink(notification)"
+                @click.stop="onNotificationActionClick(notification)"
                 class="btn-action primary-action"
               >
-                View Details
-              </button>
-              <button 
-                v-if="!notification.isRead" 
-                @click="markAsRead(notification)"
-                class="btn-action secondary-action"
-              >
-                Mark as read
+                {{ getAction(notification).label }}
               </button>
             </div>
           </div>
@@ -80,12 +77,18 @@ import { useRouter } from 'vue-router';
 import { storeToRefs } from 'pinia';
 import { useNotifications } from '@/stores/useNotifications';
 import { getCurrentUser } from '@/services/authService';
+import { handleNotificationDetails, resolveNotificationAction } from '@/utils/notificationNavigation';
+import { useToast } from '@/composables/useToast';
 
 import AdminLayout from '@/layouts/AdminLayout.vue';
 import FacultyLayout from '@/layouts/FacultyLayout.vue';
 import StudentLayout from '@/layouts/StudentLayout.vue';
 
 const user = getCurrentUser();
+
+function getAction(notification) {
+  return resolveNotificationAction(notification, user?.role);
+}
 const layoutComponent = computed(() => {
   if (user?.role === 'ADMIN') return AdminLayout;
   if (user?.role === 'FACULTY') return FacultyLayout;
@@ -93,6 +96,7 @@ const layoutComponent = computed(() => {
 });
 
 const router = useRouter();
+const { showToast } = useToast();
 const notificationStore = useNotifications();
 const { notifications, unreadCount } = storeToRefs(notificationStore);
 const loading = ref(true);
@@ -125,13 +129,17 @@ const markAsRead = async (notification) => {
   }
 };
 
-const goToLink = async (notification) => {
+const handleCardClick = async (notification) => {
   if (!notification.isRead) {
     await markAsRead(notification);
   }
-  if (notification.referenceUrl) {
-    router.push(notification.referenceUrl);
+};
+
+const onNotificationActionClick = async (notification) => {
+  if (!notification.isRead) {
+    await markAsRead(notification);
   }
+  await handleNotificationDetails(notification, router, notificationStore, showToast);
 };
 
 const formatDate = (dateString) => {
@@ -359,7 +367,14 @@ onMounted(() => {
   color: #64748b;
   font-size: 0.95rem;
   line-height: 1.6;
-  margin: 0 0 16px 0;
+  margin: 0 0 8px 0;
+}
+
+.notif-context-line {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #475569;
+  margin-bottom: 14px;
 }
 
 .notif-card-actions {

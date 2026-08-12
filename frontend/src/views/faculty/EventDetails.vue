@@ -4,6 +4,13 @@ import { useRoute } from 'vue-router'
 
 import FacultyLayout from '@/layouts/FacultyLayout.vue'
 import UserProfileModal from '@/components/common/UserProfileModal.vue'
+import EventAttendanceView from '@/components/events/EventAttendanceView.vue'
+import EventAttendanceModal from '@/components/events/EventAttendanceModal.vue'
+import EventRoundsView from '@/components/events/EventRoundsView.vue'
+import ParticipantProgressView from '@/components/events/ParticipantProgressView.vue'
+import EventResultsView from '@/components/events/EventResultsView.vue'
+import RequestVenueModal from '@/components/events/RequestVenueModal.vue'
+import EventVolunteersSection from '@/components/events/EventVolunteersSection.vue'
 import {
   getEvent,
   updateEventStatus,
@@ -14,8 +21,10 @@ import {
   updateVolunteerStatus
 } from '@/api/events'
 import { getVenues } from '@/api/venues'
+import { useToast } from '@/composables/useToast'
 
 const route = useRoute()
+const { showToast } = useToast()
 const activeTab = ref('schedule')
 const event = ref(null)
 const loading = ref(false)
@@ -26,6 +35,8 @@ const scheduleInput = ref({ time: '', activity: '' })
 const announcementInput = ref({ title: '', message: '' })
 
 const showProfileModal = ref(false)
+const showAttendanceModal = ref(false)
+const showVenueRequestModal = ref(false)
 const selectedProfileUserId = ref(null)
 
 function openUserProfile(id) {
@@ -70,18 +81,62 @@ const normalizeEvent = (data) => ({
     : []
 })
 
-onMounted(async () => {
-  loading.value = true
+import { getMySupervisedClubs } from '@/api/faculty'
+import { getCurrentUser } from '@/services/authService'
+
+const isAuthorizedFaculty = ref(false)
+
+async function checkFacultyAuthorization() {
+  const user = getCurrentUser()
+  if (!user || !event.value) return
+
+  if (Number(event.value.createdBy) === Number(user.id)) {
+    isAuthorizedFaculty.value = true
+    return
+  }
+
+  if (!event.value.clubId) {
+    if (Array.isArray(event.value.organizers) && event.value.organizers.some(o => Number(o.userId || o.id) === Number(user.id))) {
+      isAuthorizedFaculty.value = true
+    } else {
+      isAuthorizedFaculty.value = false
+    }
+    return
+  }
+
   try {
-    const [eventData, venueData] = await Promise.all([getEvent(Number(route.params.id)), getVenues()])
-    event.value = normalizeEvent(eventData)
-    statusDraft.value = String(event.value.status || 'SCHEDULED').toUpperCase()
-    venues.value = venueData
+    const supervised = await getMySupervisedClubs()
+    const list = Array.isArray(supervised) ? supervised : (supervised?.clubs || supervised?.data || [])
+    const isCoord = list.some(c => Number(c.id || c.clubId) === Number(event.value.clubId))
+    isAuthorizedFaculty.value = isCoord
+  } catch (e) {
+    isAuthorizedFaculty.value = false
+  }
+}
+
+async function fetchEventDetails() {
+  try {
+    const data = await getEvent(Number(route.params.id))
+    event.value = normalizeEvent(data)
+    statusDraft.value = event.value.status
     if (event.value.venueId) {
       selectedVenueId.value = String(event.value.venueId)
     }
+    await checkFacultyAuthorization()
   } catch (error) {
     console.error('Failed to load event details', error)
+  }
+}
+
+// Aliases for template compatibility
+const loadEventData = fetchEventDetails
+const loadEvent = fetchEventDetails
+
+onMounted(async () => {
+  loading.value = true
+  try {
+    venues.value = await getVenues()
+    await fetchEventDetails()
   } finally {
     loading.value = false
   }
@@ -249,11 +304,49 @@ async function saveVenue() {
 
 const tabs = [
   { key: 'schedule', label: 'Schedule' },
+  { key: 'rounds', label: 'Rounds' },
+  { key: 'progress', label: 'Participant Progress' },
+  { key: 'results', label: 'Results & Podium' },
   { key: 'announcements', label: 'Announcements' },
   { key: 'registrations', label: 'Registrations' },
-  { key: 'attendance', label: 'Entire Attendance Sheet' },
-  { key: 'volunteers', label: 'Event Volunteers (Module 22)' }
+  { key: 'volunteers', label: 'Event Volunteers' }
 ]
+
+const visibleTabs = computed(() => {
+  const isComp = event.value ? (event.value.isCompetition !== false) : true
+  return tabs.filter(t => {
+    if (!isComp && (t.key === 'rounds' || t.key === 'progress' || t.key === 'results')) {
+      return false
+    }
+    if (t.key === 'volunteers') {
+      return isAuthorizedFaculty.value
+    }
+    return true
+  })
+})
+
+const isAttendanceAvailable = computed(() => {
+  if (!event.value) return false
+  const rawDate = event.value.startDate || event.value.start_date
+  if (!rawDate) return true
+  try {
+    const start = new Date(rawDate)
+    start.setHours(0, 0, 0, 0)
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+    return today >= start
+  } catch (e) {
+    return true
+  }
+})
+
+function handleAttendanceClick() {
+  if (!isAttendanceAvailable.value) {
+    showToast(`Attendance will be available when the event begins on ${event.value?.startDate || event.value?.start_date || 'the event date'}.`, 'info')
+    return
+  }
+  showAttendanceModal.value = true
+}
 </script>
 
 <template>
@@ -272,12 +365,15 @@ const tabs = [
 
             <div class="header-actions">
               <span class="status-badge" :class="(event.status || 'scheduled').toLowerCase()">{{ event.status }}</span>
-              <select v-model="statusDraft" class="form-select form-select-sm">
-                <option value="SCHEDULED">Scheduled</option>
-                <option value="LIVE">Live</option>
-                <option value="COMPLETED">Completed</option>
-              </select>
-              <button class="btn btn-sm btn-primary rounded-pill px-3" @click="saveStatus" :disabled="isSaving">Update</button>
+              <button 
+                v-if="isAuthorizedFaculty" 
+                class="btn btn-sm btn-outline-primary rounded-pill px-3 fw-semibold"
+                :class="{ 'opacity-50': !isAttendanceAvailable }"
+                :title="!isAttendanceAvailable ? `Attendance will be available when the event begins on ${event.startDate || event.start_date || ''}` : 'Manage Attendance'"
+                @click="handleAttendanceClick"
+              >
+                <i class="bi bi-calendar-check me-1"></i> Attendance
+              </button>
             </div>
           </div>
 
@@ -292,25 +388,32 @@ const tabs = [
             </div>
           </div>
 
+          <!-- Read-only Venue Display with Request Venue Button -->
+          <div class="info-box mb-3">
+            <div class="d-flex align-items-center justify-content-between">
+              <div>
+                <label>Venue</label>
+                <p class="mb-0 fw-semibold text-dark">{{ event.venueName || event.venue || 'No venue assigned yet' }}</p>
+                <small v-if="event.venueLocation" class="text-muted text-xs d-block">{{ event.venueLocation }}</small>
+              </div>
+              <button 
+                v-if="isAuthorizedFaculty" 
+                class="btn btn-sm btn-outline-primary rounded-3 px-3 text-xs fw-semibold"
+                @click="showVenueRequestModal = true"
+              >
+                <i class="bi bi-geo-alt me-1"></i> {{ event.venueId ? 'Request / Change Venue' : 'Request Venue' }}
+              </button>
+            </div>
+          </div>
+
           <div class="info-box description-box">
             <label>Description</label>
             <p>{{ event.description }}</p>
           </div>
 
-          <div class="toolbar">
-            <div class="venue-box">
-              <label class="form-label text-sm fw-bold">Assign Venue</label>
-              <select v-model="selectedVenueId" class="form-select">
-                <option value="">Choose venue</option>
-                <option v-for="venue in venues" :key="venue.id" :value="venue.id">{{ venue.name }} — {{ venue.location }}</option>
-              </select>
-            </div>
-            <button class="btn btn-outline-primary rounded-pill" @click="saveVenue" :disabled="isSaving">Assign Venue</button>
-          </div>
-
           <!-- Tabs -->
           <div class="detail-tabs">
-            <button v-for="tab in tabs" :key="tab.key" class="tab-option" :class="{ active: activeTab === tab.key }" @click="activeTab = tab.key">
+            <button v-for="tab in visibleTabs" :key="tab.key" class="tab-option" :class="{ active: activeTab === tab.key }" @click="activeTab = tab.key">
               {{ tab.label }}
             </button>
           </div>
@@ -332,6 +435,21 @@ const tabs = [
                 <span class="activity">{{ item.activity }}</span>
               </div>
               <p v-if="event.schedule.length === 0" class="empty-tab">No schedule added yet.</p>
+            </div>
+
+            <!-- Rounds -->
+            <div v-else-if="activeTab === 'rounds'">
+              <EventRoundsView :eventId="event.id" :canManage="isAuthorizedFaculty" />
+            </div>
+
+            <!-- Participant Progress -->
+            <div v-else-if="activeTab === 'progress'">
+              <ParticipantProgressView :eventId="event.id" />
+            </div>
+
+            <!-- Results & Podium -->
+            <div v-else-if="activeTab === 'results'">
+              <EventResultsView :eventId="event.id" :prizes="event.prizes" :canManage="isAuthorizedFaculty" @refresh="fetchEventDetails" />
             </div>
 
             <!-- Announcements -->
@@ -366,131 +484,20 @@ const tabs = [
               <p v-else class="empty-tab">No registrations yet.</p>
             </div>
 
-            <!-- ENTIRE ATTENDANCE SHEET (Sprint 2 Requirement) -->
+            <!-- TAB 4: ATTENDANCE SHEET -->
             <div v-else-if="activeTab === 'attendance'">
-              
-              <!-- Attendance Stats Summary Bar -->
-              <div class="stats-summary-card mb-4 p-3 bg-light rounded-4 border d-flex justify-content-around align-items-center flex-wrap gap-3">
-                <div class="stat-box text-center">
-                  <span class="stat-number text-primary display-6 fw-bold">{{ attendanceStats.total }}</span>
-                  <label class="d-block text-xs text-muted font-semibold uppercase">Total Registered</label>
-                </div>
-                <div class="stat-box text-center">
-                  <span class="stat-number text-success display-6 fw-bold">{{ attendanceStats.present }}</span>
-                  <label class="d-block text-xs text-muted font-semibold uppercase">Present Count</label>
-                </div>
-                <div class="stat-box text-center">
-                  <span class="stat-number text-danger display-6 fw-bold">{{ attendanceStats.absent }}</span>
-                  <label class="d-block text-xs text-muted font-semibold uppercase">Absent Count</label>
-                </div>
-                <div class="stat-box text-center">
-                  <span class="stat-number text-info display-6 fw-bold">{{ attendanceStats.rate }}%</span>
-                  <label class="d-block text-xs text-muted font-semibold uppercase">Attendance Rate</label>
-                </div>
-              </div>
-
-              <!-- Controls Toolbar -->
-              <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
-                <div class="search-box flex-grow-1" style="max-width: 400px;">
-                  <input v-model="attendanceSearch" class="form-control form-control-sm" placeholder="Search by student name or roll number..." />
-                </div>
-
-                <div class="d-flex align-items-center gap-2">
-                  <div class="btn-group btn-group-sm">
-                    <button class="btn btn-outline-secondary btn-xs" :class="{ active: attendanceStatusFilter === 'ALL' }" @click="attendanceStatusFilter = 'ALL'">All</button>
-                    <button class="btn btn-outline-success btn-xs" :class="{ active: attendanceStatusFilter === 'PRESENT' }" @click="attendanceStatusFilter = 'PRESENT'">Present</button>
-                    <button class="btn btn-outline-danger btn-xs" :class="{ active: attendanceStatusFilter === 'ABSENT' }" @click="attendanceStatusFilter = 'ABSENT'">Absent</button>
-                  </div>
-
-                  <div class="btn-group btn-group-sm">
-                    <button class="btn btn-outline-success btn-xs" @click="markAllAttendance('PRESENT')" :disabled="isSaving">Mark All Present</button>
-                    <button class="btn btn-outline-danger btn-xs" @click="markAllAttendance('ABSENT')" :disabled="isSaving">Mark All Absent</button>
-                  </div>
-
-                  <button class="btn btn-sm btn-dark rounded-pill px-3 text-xs fw-semibold" @click="exportAttendanceCSV">
-                    <i class="bi bi-file-earmark-spreadsheet me-1"></i> Export CSV
-                  </button>
-                </div>
-              </div>
-
-              <!-- Full Attendance Table -->
-              <table class="table align-middle" v-if="filteredAttendanceSheet.length">
-                <thead>
-                  <tr>
-                    <th>Student Name</th>
-                    <th>Register Number</th>
-                    <th>Branch</th>
-                    <th>Status</th>
-                    <th>Action Toggle</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr v-for="student in filteredAttendanceSheet" :key="student.userId">
-                    <td class="fw-semibold text-slate-800">{{ student.name }}</td>
-                    <td>{{ student.registerNumber }}</td>
-                    <td>{{ student.branch }}</td>
-                    <td>
-                      <span class="attendance-badge" :class="student.attendanceStatus.toLowerCase()">
-                        {{ student.attendanceStatus }}
-                      </span>
-                    </td>
-                    <td>
-                      <div class="btn-group btn-group-sm">
-                        <button 
-                          class="btn btn-xs" 
-                          :class="student.attendanceStatus === 'PRESENT' ? 'btn-success' : 'btn-outline-success'" 
-                          @click="toggleStudentAttendance(student.userId, 'PRESENT')"
-                        >
-                          Present
-                        </button>
-                        <button 
-                          class="btn btn-xs" 
-                          :class="student.attendanceStatus === 'ABSENT' ? 'btn-danger' : 'btn-outline-danger'" 
-                          @click="toggleStudentAttendance(student.userId, 'ABSENT')"
-                        >
-                          Absent
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
-
-              <p v-else class="empty-tab">No student records match the filter.</p>
+              <EventAttendanceView :eventId="event.id" :canManageSessions="isAuthorizedFaculty" @back="activeTab = 'schedule'" />
             </div>
 
             <!-- Module 22: Event Volunteers -->
             <div v-else-if="activeTab === 'volunteers'">
-              <h6 class="fw-bold text-slate-800 mb-3">Event Volunteers Applications & Assignments</h6>
-              
-              <table class="table align-middle" v-if="event.volunteers && event.volunteers.length">
-                <thead>
-                  <tr>
-                    <th>Volunteer Name</th>
-                    <th>Status</th>
-                    <th>Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr v-for="vol in event.volunteers" :key="vol.id">
-                    <td class="fw-semibold">{{ vol.userName }}</td>
-                    <td>
-                      <span class="badge" :class="vol.status === 'APPROVED' ? 'bg-success' : (vol.status === 'REJECTED' ? 'bg-danger' : 'bg-warning text-dark')">
-                        {{ vol.status }}
-                      </span>
-                    </td>
-                    <td>
-                      <div class="btn-group btn-group-sm" v-if="vol.status !== 'APPROVED'">
-                        <button class="btn btn-sm btn-success" @click="handleVolunteerStatus(vol.id, 'APPROVED')">Approve</button>
-                        <button class="btn btn-sm btn-danger" @click="handleVolunteerStatus(vol.id, 'REJECTED')">Reject</button>
-                      </div>
-                      <span v-else class="text-xs text-muted">Approved Volunteer</span>
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
-
-              <p v-else class="empty-tab">No volunteer applications submitted for this event yet.</p>
+              <EventVolunteersSection 
+                :eventId="event.id" 
+                :event="event" 
+                userRole="FACULTY"
+                :isFacultyCoordinator="isFacultyCoordinator"
+                @refresh="loadEventData" 
+              />
             </div>
 
           </div>
@@ -508,6 +515,22 @@ const tabs = [
         :show="showProfileModal"
         :userId="selectedProfileUserId"
         @close="showProfileModal = false"
+      />
+
+      <EventAttendanceModal 
+        :show="showAttendanceModal"
+        :eventId="event ? event.id : 0"
+        :canManage="isAuthorizedFaculty"
+        @close="showAttendanceModal = false"
+        @saved="fetchEventDetails"
+      />
+
+      <RequestVenueModal
+        v-if="event"
+        :show="showVenueRequestModal"
+        :event="event"
+        @close="showVenueRequestModal = false"
+        @submitted="fetchEventDetails"
       />
     </section>
   </FacultyLayout>

@@ -45,10 +45,22 @@ class ClubMembership(db.Model):
     membership_role = db.Column(db.String(30),nullable=False,default="MEMBER")
     membership_status = db.Column(db.String(20),nullable=False,default="ACTIVE")
     joined_at = db.Column(db.DateTime,default=datetime.utcnow)
+    ended_at = db.Column(db.DateTime,nullable=True)
 
     user = db.relationship("User", back_populates="club_memberships", lazy=True)
 
     __table_args__ = (db.UniqueConstraint("club_id","user_id",name="uq_club_member"),)
+
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "clubId": self.club_id,
+            "userId": self.user_id,
+            "membershipRole": self.membership_role,
+            "membershipStatus": self.membership_status,
+            "joinedAt": self.joined_at.isoformat() if self.joined_at else None,
+            "endedAt": self.ended_at.isoformat() if self.ended_at else None
+        }
 
 class ClubOrganizer(db.Model):
     __tablename__ = "club_organizers"

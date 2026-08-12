@@ -1,193 +1,423 @@
-ADMIN_DATA = {
-    "email": "admin@allclub.com",
-    "password": "admin123",
-    "roll_no": "ADM001",
-    "full_name": "Admin User",
-    "phone_number": "+91 90000 00001",
-    "year_of_study": None,
-    "department": "ADM",
-    "bio": "Platform administrator managing all clubs, events, and users."
-}
+"""
+Comprehensive AllClub Seed Data Definition File
+Contains deterministic seed data for:
+- 9 Departments
+- 2 Admins, 1 Principal, 20 Faculty, 100 Students
+- 20 Clubs
+- 10 Venues
+"""
 
-FACULTY_DATA = [
+import random
+
+random.seed(42)
+
+DEPARTMENTS_DATA = [
+    {"name": "Administration", "code": "ADM"},
+    {"name": "Computer Science & Engineering", "code": "CSE"},
+    {"name": "Electronics & Communication", "code": "ECE"},
+    {"name": "Information Technology", "code": "IT"},
+    {"name": "Mechanical Engineering", "code": "ME"},
+    {"name": "Civil Engineering", "code": "CE"},
+    {"name": "Electrical & Electronics", "code": "EEE"},
+    {"name": "Data Science & AI", "code": "DS"},
+    {"name": "Management Studies", "code": "MBA"}
+]
+
+ADMIN_DATA_LIST = [
     {
-        "email": "principal@allclub.com",
-        "password": "principal123",
-        "employee_id": "PRIN001",
-        "full_name": "Dr. K. S. Murthy (Principal)",
-        "phone_number": "+91 90000 00000",
+        "email": "admin@allclub.com",
+        "password": "admin123",
+        "roll_no": "ADM001",
+        "full_name": "Admin User",
+        "phone_number": "+91 90000 00001",
         "department": "ADM",
-        "designation": "PRINCIPAL",
-        "bio": "Principal of the institution overseeing overall academic and extra-curricular administration."
+        "bio": "Platform administrator managing all campus clubs, events, and approvals."
     },
     {
-        "email": "meena@allclub.com",
-        "password": "faculty123",
-        "employee_id": "FAC001",
-        "full_name": "Dr. Meena Rao",
+        "email": "admin2@allclub.com",
+        "password": "admin123",
+        "roll_no": "ADM002",
+        "full_name": "System Administrator",
         "phone_number": "+91 90000 00002",
-        "department": "CSE",
-        "designation": "Associate Professor",
-        "bio": "Faculty advisor. Passionate about machine learning research."
-    },
-    {
-        "email": "arjun@allclub.com",
-        "password": "faculty123",
-        "employee_id": "FAC002",
-        "full_name": "Dr. Arjun Nair",
-        "phone_number": "+91 90000 00004",
-        "department": "ECE",
-        "designation": "Assistant Professor",
-        "bio": "Faculty advisor for Robotics and Electronics clubs."
-    },
-    {
-        "email": "priya@allclub.com",
-        "password": "faculty123",
-        "employee_id": "FAC003",
-        "full_name": "Dr. Priya Iyer",
-        "phone_number": "+91 90000 00005",
-        "department": "CSE",
-        "designation": "Professor",
-        "bio": "Researcher in Artificial Intelligence and Data Science."
+        "department": "ADM",
+        "bio": "Secondary platform administrator overseeing technical operations and system audit."
     }
 ]
 
-STUDENT_DATA = [
+PRINCIPAL_DATA = {
+    "email": "principal@allclub.com",
+    "password": "principal123",
+    "employee_id": "PRIN001",
+    "full_name": "Dr. K. S. Murthy (Principal)",
+    "phone_number": "+91 90000 00000",
+    "department": "ADM",
+    "designation": "PRINCIPAL",
+    "bio": "Principal of the institution overseeing overall academic, institutional, and extracurricular affairs."
+}
+
+FACULTY_NAMES_AND_DEPTS = [
+    ("Dr. Meena Rao", "CSE", "Associate Professor", "Research in machine learning and distributed systems."),
+    ("Dr. Arjun Nair", "ECE", "Assistant Professor", "Specialist in embedded systems, IoT, and robotics."),
+    ("Dr. Priya Iyer", "CSE", "Professor", "HOD of Computer Science. AI and Data Science researcher."),
+    ("Dr. Rajesh Sharma", "IT", "Associate Professor", "Cloud computing and cybersecurity academic lead."),
+    ("Dr. Sunita Verma", "ME", "Professor", "Fluid dynamics and thermal engineering specialist."),
+    ("Dr. Anil Kulkarni", "CE", "Associate Professor", "Structural engineering and green building consultant."),
+    ("Dr. Kavita Deshmukh", "EEE", "Assistant Professor", "Power systems and renewable energy researcher."),
+    ("Dr. Vikramaditya Sen", "DS", "Professor", "Head of Data Science Initiative. Neural network pioneer."),
+    ("Dr. Ramesh Babu", "MBA", "Associate Professor", "Dean of Management Studies. Startup mentor."),
+    ("Dr. Swati Bhattacharya", "CSE", "Assistant Professor", "Human-computer interaction and web technologies."),
+    ("Dr. Alok Gupta", "ECE", "Professor", "VLSI design and signal processing expert."),
+    ("Dr. Pooja Saxena", "IT", "Assistant Professor", "Software engineering and agile dev practices."),
+    ("Dr. Harish Prasad", "ME", "Associate Professor", "Mechatronics and industrial automation head."),
+    ("Dr. Geeta Krishnan", "CE", "Assistant Professor", "Environmental engineering and waste management."),
+    ("Dr. Anand Joshi", "EEE", "Professor", "Control systems and smart grid technologies."),
+    ("Dr. Deepa Nambiar", "DS", "Associate Professor", "Natural language processing and big data analytics."),
+    ("Dr. Sanjay Roy", "MBA", "Assistant Professor", "Financial markets and corporate finance expert."),
+    ("Dr. Radhika Chawla", "CSE", "Assistant Professor", "Algorithm design and competitive programming lead."),
+    ("Dr. Manoj Pandey", "ME", "Assistant Professor", "CAD/CAM and 3D printing technologies."),
+    ("Dr. Archana Hegde", "IT", "Associate Professor", "Network security and cryptography expert.")
+]
+
+FACULTY_DATA_LIST = [PRINCIPAL_DATA]
+for idx, (fname, dept, desig, fbio) in enumerate(FACULTY_NAMES_AND_DEPTS, start=1):
+    f_email = fname.split()[-1].lower() + "@allclub.com"
+    if idx == 1: f_email = "meena@allclub.com"
+    elif idx == 2: f_email = "arjun@allclub.com"
+    elif idx == 3: f_email = "priya@allclub.com"
+
+    FACULTY_DATA_LIST.append({
+        "email": f_email,
+        "password": "faculty123",
+        "employee_id": f"FAC{idx:03d}",
+        "full_name": fname,
+        "phone_number": f"+91 98765 {idx:05d}",
+        "department": dept,
+        "designation": desig,
+        "bio": fbio
+    })
+
+FIRST_NAMES = [
+    "Rahul", "Ananya", "Vikram", "Sneha", "Karthik", "Meera", "Rohan", "Divya",
+    "Amit", "Pooja", "Siddharth", "Neha", "Aditya", "Kavya", "Suresh", "Ritu",
+    "Varun", "Priya", "Nikhil", "Shreya", "Abhishek", "Tanvi", "Gaurav", "Isha",
+    "Deepak", "Rhea", "Manish", "Aarti", "Tarun", "Krutika", "Akash", "Bhavna",
+    "Karan", "Simran", "Yash", "Pallavi", "Vivek", "Nisha", "Harsh", "Swati",
+    "Sameer", "Preeti", "Sanjay", "Ankita", "Pranav", "Juhi", "Mayank", "Sonam",
+    "Rajesh", "Poonam"
+]
+
+LAST_NAMES = [
+    "Sharma", "Gupta", "Singh", "Nair", "Rao", "Das", "Verma", "Kapoor",
+    "Patel", "Joshi", "Menon", "Reddy", "Bose", "Kulkarni", "Kumar", "Agarwal",
+    "Mishra", "Deshmukh", "Chawla", "Bhattacharya", "Roy", "Hegde", "Pandey", "Saxena",
+    "Prasad", "Krishnan", "Joshi", "Nambiar", "Sen", "Babu"
+]
+
+from app.utils.registration_id import generate_registration_id
+
+DEPTS_LIST = ["CSE", "ECE", "IT", "ME", "CE", "EEE", "DS", "MBA"]
+YEARS_LIST = ["1st Year", "2nd Year", "3rd Year", "4th Year"]
+YEAR_TO_BATCH = {
+    "1st Year": 2026,
+    "2nd Year": 2025,
+    "3rd Year": 2024,
+    "4th Year": 2023
+}
+
+STUDENT_DATA_LIST = [
     {
         "email": "rahul@allclub.com",
         "password": "student123",
-        "roll_no": "STU001",
+        "roll_no": generate_registration_id(2024, "CSE", 1), # Y24CS001
         "full_name": "Rahul Sharma",
         "phone_number": "+91 90000 00003",
         "year_of_study": "3rd Year",
         "department": "CSE",
-        "bio": "Computer science student interested in web development."
+        "bio": "Lead developer and tech enthusiast passionate about web dev and AI."
     },
     {
         "email": "ananya@allclub.com",
         "password": "student123",
-        "roll_no": "STU002",
+        "roll_no": generate_registration_id(2025, "CSE", 2), # Y25CS002
         "full_name": "Ananya Gupta",
         "phone_number": "+91 90000 00006",
         "year_of_study": "2nd Year",
         "department": "CSE",
-        "bio": "Enjoys UI/UX design and student activities."
+        "bio": "UI/UX design enthusiast and student organizer."
     },
     {
         "email": "vikram@allclub.com",
         "password": "student123",
-        "roll_no": "STU003",
+        "roll_no": generate_registration_id(2023, "ECE", 3), # Y23EC003
         "full_name": "Vikram Singh",
         "phone_number": "+91 90000 00007",
         "year_of_study": "4th Year",
         "department": "ECE",
-        "bio": "Electronics enthusiast and robotics hobbyist."
+        "bio": "Electronics enthusiast and robotics lead."
     },
     {
         "email": "sneha@allclub.com",
         "password": "student123",
-        "roll_no": "STU004",
+        "roll_no": generate_registration_id(2026, "CSE", 4), # Y26CS004
         "full_name": "Sneha Nair",
         "phone_number": "+91 90000 00008",
         "year_of_study": "1st Year",
         "department": "CSE",
-        "bio": "Interested in theatre and public speaking."
+        "bio": "Interested in theatre, public speaking, and open-source contribution."
     },
     {
         "email": "karthik@allclub.com",
         "password": "student123",
-        "roll_no": "STU005",
+        "roll_no": generate_registration_id(2024, "ECE", 5), # Y24EC005
         "full_name": "Karthik Rao",
         "phone_number": "+91 90000 00009",
         "year_of_study": "3rd Year",
         "department": "ECE",
-        "bio": "Passionate about embedded systems."
+        "bio": "Passionate about microcontrollers and embedded firmware."
     },
     {
         "email": "meera@allclub.com",
         "password": "student123",
-        "roll_no": "STU006",
+        "roll_no": generate_registration_id(2025, "CSE", 6), # Y25CS006
         "full_name": "Meera Das",
         "phone_number": "+91 90000 00010",
         "year_of_study": "2nd Year",
         "department": "CSE",
-        "bio": "Aspirant software developer."
+        "bio": "Aspiring software engineer and photography hobbyist."
     }
 ]
 
-CLUB_DATA = [
+LEGACY_EXPLICIT_STUDENT_LIST = [
+    {
+        "email": "legacy_rahul@allclub.com",
+        "password": "student123",
+        "roll_no": "Y22CS001",
+        "full_name": "Rahul Verma (Alumni)",
+        "phone_number": "+91 98765 43210",
+        "year_of_study": "Graduated",
+        "department": "CSE",
+        "account_status": "LEGACY",
+        "bio": "Former Lead Developer & AI Club Vice President (Batch 2022-2026). Currently Software Engineer at Google."
+    },
+    {
+        "email": "legacy_ananya@allclub.com",
+        "password": "student123",
+        "roll_no": "Y22EC004",
+        "full_name": "Ananya Sharma (Alumni)",
+        "phone_number": "+91 98765 43211",
+        "year_of_study": "Graduated",
+        "department": "ECE",
+        "account_status": "LEGACY",
+        "bio": "Former Drama Club Organizer & Event Lead (Batch 2022-2026). Currently Hardware Design Engineer at Intel."
+    },
+    {
+        "email": "legacy_vikram@allclub.com",
+        "password": "student123",
+        "roll_no": "Y21ME002",
+        "full_name": "Vikram Patel (Alumni)",
+        "phone_number": "+91 98765 43212",
+        "year_of_study": "Graduated",
+        "department": "ME",
+        "account_status": "LEGACY",
+        "bio": "Former Robotics Club Volunteer & Student Lead (Batch 2021-2025). Currently Systems Engineer at Tesla."
+    }
+]
+
+STUDENT_DATA_LIST.extend(LEGACY_EXPLICIT_STUDENT_LIST)
+
+# Generate remaining 91 students deterministically
+for idx in range(7, 98):
+    fn = FIRST_NAMES[(idx * 3) % len(FIRST_NAMES)]
+    ln = LAST_NAMES[(idx * 7) % len(LAST_NAMES)]
+    full_n = f"{fn} {ln}"
+    s_email = f"student{idx}@allclub.com"
+    dept = DEPTS_LIST[idx % len(DEPTS_LIST)]
+    is_legacy = (85 <= idx <= 97)
+    yr = "Graduated" if is_legacy else YEARS_LIST[idx % len(YEARS_LIST)]
+    batch_yr = 2021 if is_legacy else YEAR_TO_BATCH.get(yr, 2026)
+    status = "LEGACY" if is_legacy else "ACTIVE"
+    
+    STUDENT_DATA_LIST.append({
+        "email": s_email,
+        "password": "student123",
+        "roll_no": generate_registration_id(batch_yr, dept, idx),
+        "full_name": full_n,
+        "phone_number": f"+91 91234 {idx:05d}",
+        "year_of_study": yr,
+        "department": dept,
+        "account_status": status,
+        "bio": f"{'Alumni / Graduated' if is_legacy else yr} {dept} student active in campus events and technical societies."
+    })
+
+CLUB_DATA_LIST = [
     {
         "name": "AI Club",
-        "description": "Learn Artificial Intelligence and Machine Learning together.",
         "category": "Technology",
+        "description": "Fostering research, workshops, and hackathons in Artificial Intelligence, Deep Learning, and Computer Vision.",
         "logo": "psychology",
-        "faculty": "FAC001",
-        "organizer": "STU001",
-    },
-    {
-        "name": "Music Club",
-        "description": "Jam sessions, performances and music workshops.",
-        "category": "Arts",
-        "logo": "music_note",
-        "faculty": "FAC003",
-        "organizer": "STU010"
-    },
-    {
-        "name": "Sports Club",
-        "description": "Football, Cricket, Basketball and many more activities.",
-        "category": "Sports",
-        "logo": "sports_soccer",
-        "faculty": "FAC002",
-        "organizer": "STU009"
-    },
-    {
-        "name": "Drama Club",
-        "description": "Theatre performances, acting practice and stage events.",
-        "category": "Cultural",
-        "logo": "theater_comedy",
-        "faculty": "FAC003",
-        "organizer": "STU014"
-    },
-    {
-        "name": "Photography Club",
-        "description": "Capture moments and learn photography together.",
-        "category": "Creative",
-        "logo": "photo_camera",
-        "faculty": "FAC001",
-        "organizer": "STU006"
-    },
-    {
-        "name": "Science Club",
-        "description": "Science projects, exhibitions and research discussions.",
-        "category": "Academic",
-        "logo": "science",
-        "faculty": "FAC002",
-        "organizer": "STU015"
+        "faculty_emp_id": "FAC001", # Dr. Meena Rao
+        "organizer_roll_no": STUDENT_DATA_LIST[0]["roll_no"] # Rahul Sharma
     },
     {
         "name": "Coding Club",
-        "description": "Fostering programming, algorithmic thinking, and open source development across campus.",
-        "category": "TECHNICAL",
+        "category": "Technical",
+        "description": "Promoting algorithmic thinking, competitive programming, and open-source software development.",
         "logo": "terminal",
-        "faculty": "FAC001",
-        "organizer": "STU001"
+        "faculty_emp_id": "FAC001",
+        "organizer_roll_no": STUDENT_DATA_LIST[0]["roll_no"]
     },
     {
         "name": "Robotics Club",
-        "description": "Building autonomous bots, IoT systems, and competing in national hardware hackathons.",
-        "category": "TECHNICAL",
+        "category": "Technical",
+        "description": "Designing autonomous robots, IoT hardware, and competing in national tech expos.",
         "logo": "smart_toy",
-        "faculty": "FAC001",
-        "organizer": "STU001"
+        "faculty_emp_id": "FAC002", # Dr. Arjun Nair
+        "organizer_roll_no": STUDENT_DATA_LIST[2]["roll_no"] # Vikram Singh
+    },
+    {
+        "name": "Photography Club",
+        "category": "Creative",
+        "description": "Capturing campus life, hosting photo walks, and conducting digital editing masterclasses.",
+        "logo": "photo_camera",
+        "faculty_emp_id": "FAC001",
+        "organizer_roll_no": STUDENT_DATA_LIST[5]["roll_no"] # Meera Das
+    },
+    {
+        "name": "Drama Club",
+        "category": "Cultural",
+        "description": "Theatrical performances, stagecraft, street plays, and monologue competitions.",
+        "logo": "theater_comedy",
+        "faculty_emp_id": "FAC003", # Dr. Priya Iyer
+        "organizer_roll_no": STUDENT_DATA_LIST[3]["roll_no"] # Sneha Nair
+    },
+    {
+        "name": "Music Club",
+        "category": "Arts",
+        "description": "Acoustic jam sessions, classical recitals, and campus band competitions.",
+        "logo": "music_note",
+        "faculty_emp_id": "FAC003",
+        "organizer_roll_no": STUDENT_DATA_LIST[6]["roll_no"]
+    },
+    {
+        "name": "Debate Club",
+        "category": "Academic",
+        "description": "Parliamentary debates, extempore competitions, and Model United Nations (MUN) training.",
+        "logo": "forum",
+        "faculty_emp_id": "FAC004",
+        "organizer_roll_no": STUDENT_DATA_LIST[7]["roll_no"]
+    },
+    {
+        "name": "Literary Club",
+        "category": "Academic",
+        "description": "Creative writing, poetry slams, book discussions, and campus newsletter editorial.",
+        "logo": "menu_book",
+        "faculty_emp_id": "FAC004",
+        "organizer_roll_no": STUDENT_DATA_LIST[8]["roll_no"]
+    },
+    {
+        "name": "Entrepreneurship Club",
+        "category": "Management",
+        "description": "Ideation pitch fests, startup incubation guidance, and business model development.",
+        "logo": "rocket_launch",
+        "faculty_emp_id": "FAC009", # Dr. Ramesh Babu
+        "organizer_roll_no": STUDENT_DATA_LIST[9]["roll_no"]
+    },
+    {
+        "name": "Cyber Security Club",
+        "category": "Technical",
+        "description": "Capture The Flag (CTF) challenges, ethical hacking, and network defense security.",
+        "logo": "shield",
+        "faculty_emp_id": "FAC004",
+        "organizer_roll_no": STUDENT_DATA_LIST[10]["roll_no"]
+    },
+    {
+        "name": "Data Science Club",
+        "category": "Technology",
+        "description": "Data analytics, Kaggle competitions, machine learning models, and visualization dashboards.",
+        "logo": "analytics",
+        "faculty_emp_id": "FAC008", # Dr. Vikramaditya Sen
+        "organizer_roll_no": STUDENT_DATA_LIST[11]["roll_no"]
+    },
+    {
+        "name": "Astronomy Club",
+        "category": "Science",
+        "description": "Night sky observation, telescope workshops, and astrophysics discussions.",
+        "logo": "auto_awesome",
+        "faculty_emp_id": "FAC002",
+        "organizer_roll_no": STUDENT_DATA_LIST[12]["roll_no"]
+    },
+    {
+        "name": "Mechanical Innovation Club",
+        "category": "Technical",
+        "description": "CAD design competitions, 3D printing prototyping, and mechatronic systems.",
+        "logo": "precision_manufacturing",
+        "faculty_emp_id": "FAC005", # Dr. Sunita Verma
+        "organizer_roll_no": STUDENT_DATA_LIST[13]["roll_no"]
+    },
+    {
+        "name": "Eco Club",
+        "category": "Social",
+        "description": "Tree plantation drives, campus sustainability projects, and environmental awareness.",
+        "logo": "eco",
+        "faculty_emp_id": "FAC006", # Dr. Anil Kulkarni
+        "organizer_roll_no": STUDENT_DATA_LIST[14]["roll_no"]
+    },
+    {
+        "name": "Dance Club",
+        "category": "Cultural",
+        "description": "Choreography workshops, inter-college dance face-offs, and showcase galas.",
+        "logo": "directions_run",
+        "faculty_emp_id": "FAC007",
+        "organizer_roll_no": STUDENT_DATA_LIST[15]["roll_no"]
+    },
+    {
+        "name": "Film Club",
+        "category": "Creative",
+        "description": "Short film screenings, video editing masterclasses, and campus cinema festivals.",
+        "logo": "movie",
+        "faculty_emp_id": "FAC010",
+        "organizer_roll_no": STUDENT_DATA_LIST[16]["roll_no"]
+    },
+    {
+        "name": "Finance Club",
+        "category": "Management",
+        "description": "Stock market simulation games, financial literacy sessions, and investment analysis.",
+        "logo": "account_balance",
+        "faculty_emp_id": "FAC017", # Dr. Sanjay Roy
+        "organizer_roll_no": STUDENT_DATA_LIST[17]["roll_no"]
+    },
+    {
+        "name": "Gaming Club",
+        "category": "Entertainment",
+        "description": "LAN gaming tournaments, esports leagues, and game development sprints.",
+        "logo": "sports_esports",
+        "faculty_emp_id": "FAC012",
+        "organizer_roll_no": STUDENT_DATA_LIST[18]["roll_no"]
+    },
+    {
+        "name": "Design Club",
+        "category": "Creative",
+        "description": "UI/UX design sprints, poster artwork design, and digital illustration workshops.",
+        "logo": "palette",
+        "faculty_emp_id": "FAC010",
+        "organizer_roll_no": STUDENT_DATA_LIST[19]["roll_no"]
+    },
+    {
+        "name": "Mathematics Club",
+        "category": "Academic",
+        "description": "Math Olympiad training, logic puzzles, and quantitative problem solving.",
+        "logo": "functions",
+        "faculty_emp_id": "FAC018",
+        "organizer_roll_no": STUDENT_DATA_LIST[20]["roll_no"]
     }
 ]
 
-VENUE_DATA = [
+VENUE_DATA_LIST = [
     {
         "name": "Main Auditorium",
         "location": "Block A, 2nd Floor",
         "type": "Auditorium",
-        "capacity": 250,
+        "capacity": 300,
         "availabilityStatus": "AVAILABLE"
     },
     {
@@ -195,13 +425,13 @@ VENUE_DATA = [
         "location": "Block C, Lab 3",
         "type": "Lab",
         "capacity": 80,
-        "availabilityStatus": "OCCUPIED"
+        "availabilityStatus": "AVAILABLE"
     },
     {
         "name": "Open Air Ground",
         "location": "North Campus",
         "type": "Ground",
-        "capacity": 400,
+        "capacity": 500,
         "availabilityStatus": "AVAILABLE"
     },
     {
@@ -223,570 +453,34 @@ VENUE_DATA = [
         "location": "Admin Block, Floor 3",
         "type": "Conference Room",
         "capacity": 150,
-        "availabilityStatus": "ARCHIVED"
-    }
-]
-
-EVENT_DATA = [
-    {
-        "organizerType": "CLUB",
-        "clubName": "AI Club",
-        "createdByEmail": "meena@allclub.com",
-        "name": "AI Hack Sprint",
-        "description": "A full-day coding sprint focused on AI prototypes and demos.",
-        "status": "LIVE",
-        "startDate": "2026-08-07",
-        "endDate": "2026-08-09",
-        "startTime": "09:00:00",
-        "endTime": "17:00:00",
-        "capacity": 80,
-        "venueName": "Innovation Lab",
-        "schedule": [
-            {"time": "09:00", "activity": "Registration and setup"},
-            {"time": "10:00", "activity": "Opening keynote"},
-            {"time": "13:00", "activity": "Hackathon round 1"}
-        ],
-        "announcements": [
-            {"title": "Bring your laptop", "message": "Please carry your laptop and charger for the sprint."}
-        ],
-        "registrations": ["rahul@allclub.com", "ananya@allclub.com", "aditya@allclub.com"],
-        "attendance": ["rahul@allclub.com", "ananya@allclub.com"],
-        "prizes": [
-            {"title": "Best Innovation", "winnerEmail": "aditya@allclub.com", "description": "Most practical AI prototype"}
-        ],
-        "organizers": ["rahul@allclub.com"],
-        "volunteers": ["sneha@allclub.com", "karthik@allclub.com"]
+        "availabilityStatus": "AVAILABLE"
     },
     {
-        "organizerType": "GENERAL",
-        "clubName": None,
-        "createdByEmail": "meena@allclub.com",
-        "name": "Freshers Campus Orientation 2026",
-        "description": "Welcome ceremony and campus orientation for the incoming batch of 2026.",
-        "status": "SCHEDULED",
-        "startDate": "2026-08-15",
-        "endDate": "2026-08-15",
-        "startTime": "09:30:00",
-        "endTime": "13:00:00",
-        "capacity": 500,
-        "venueName": "Main Auditorium",
-        "schedule": [
-            {"time": "09:30", "activity": "Welcome speech by Principal"},
-            {"time": "11:00", "activity": "Academic orientation and campus tour"}
-        ],
-        "announcements": [
-            {"title": "Welcome Students", "message": "All first-year students must attend in formal attire."}
-        ],
-        "registrations": ["rahul@allclub.com", "ananya@allclub.com"],
-        "attendance": ["rahul@allclub.com"],
-        "prizes": [],
-        "organizers": [],
-        "volunteers": []
+        "name": "Robotics Lab",
+        "location": "Block C, Ground Floor",
+        "type": "Lab",
+        "capacity": 50,
+        "availabilityStatus": "AVAILABLE"
     },
     {
-        "organizerType": "GENERAL",
-        "clubName": None,
-        "createdByEmail": "principal@allclub.com",
-        "name": "15th Annual College Convocation",
-        "description": "Graduation ceremony honoring the graduating class of 2026.",
-        "status": "SCHEDULED",
-        "startDate": "2026-09-10",
-        "endDate": "2026-09-10",
-        "startTime": "10:00:00",
-        "endTime": "16:00:00",
+        "name": "Sports Complex Ground",
+        "location": "South Campus",
+        "type": "Ground",
         "capacity": 800,
-        "venueName": "Main Auditorium",
-        "schedule": [
-            {"time": "10:00", "activity": "Procession and Commencement Speech"},
-            {"time": "12:30", "activity": "Degree Distribution"}
-        ],
-        "announcements": [],
-        "registrations": [],
-        "attendance": [],
-        "prizes": [],
-        "organizers": [],
-        "volunteers": []
+        "availabilityStatus": "AVAILABLE"
     },
     {
-        "organizerType": "GENERAL",
-        "clubName": None,
-        "createdByEmail": "arjun@allclub.com",
-        "name": "Mega Campus Placement Drive 2026",
-        "description": "Annual placement drive connecting top technology firms with graduating students.",
-        "status": "SCHEDULED",
-        "startDate": "2026-09-25",
-        "endDate": "2026-09-27",
-        "startTime": "09:00:00",
-        "endTime": "17:30:00",
-        "capacity": 600,
-        "venueName": "Seminar Hall A",
-        "schedule": [],
-        "announcements": [],
-        "registrations": ["rahul@allclub.com"],
-        "attendance": [],
-        "prizes": [],
-        "organizers": [],
-        "volunteers": []
+        "name": "Computer Center Lab 1",
+        "location": "Block B, Floor 2",
+        "type": "Lab",
+        "capacity": 100,
+        "availabilityStatus": "AVAILABLE"
     },
     {
-        "organizerType": "GENERAL",
-        "clubName": None,
-        "createdByEmail": "priya@allclub.com",
-        "name": "Annual Campus Blood Donation Drive",
-        "description": "College-wide blood donation camp organized in partnership with Red Cross.",
-        "status": "SCHEDULED",
-        "startDate": "2026-08-28",
-        "endDate": "2026-08-28",
-        "startTime": "09:00:00",
-        "endTime": "16:00:00",
-        "capacity": 300,
-        "venueName": "Open Air Ground",
-        "schedule": [],
-        "announcements": [],
-        "registrations": [],
-        "attendance": [],
-        "prizes": [],
-        "organizers": [],
-        "volunteers": []
-    },
-    {
-        "clubName": "Drama Club",
-        "createdByEmail": "priya@allclub.com",
-        "name": "Stagecraft Workshop",
-        "description": "An interactive workshop covering stage direction, acting, and audience engagement.",
-        "status": "SCHEDULED",
-        "startDate": "2026-08-20",
-        "endDate": "2026-08-20",
-        "startTime": "14:00:00",
-        "endTime": "18:00:00",
-        "capacity": 120,
-        "venueName": "Studio Hall",
-        "schedule": [
-            {"time": "14:00", "activity": "Welcome and icebreaker"},
-            {"time": "15:30", "activity": "Scene rehearsal"},
-            {"time": "17:00", "activity": "Feedback session"}
-        ],
-        "announcements": [
-            {"title": "Workshop reminder", "message": "Participants should arrive 15 minutes early."}
-        ],
-        "registrations": ["kavya@allclub.com", "nisha@allclub.com"],
-        "attendance": ["kavya@allclub.com"],
-        "prizes": [],
-        "organizers": ["kavya@allclub.com"],
-        "volunteers": ["neeraj@allclub.com"]
-    },
-    {
-        "clubName": "Sports Club",
-        "createdByEmail": "arjun@allclub.com",
-        "name": "Inter-Club Sports Day",
-        "description": "A fun-filled sports event featuring football, basketball, and relay competitions.",
-        "status": "SCHEDULED",
-        "startDate": "2026-09-05",
-        "endDate": "2026-09-06",
-        "startTime": "08:00:00",
-        "endTime": "18:00:00",
-        "capacity": 400,
-        "venueName": "Open Air Ground",
-        "schedule": [
-            {"time": "08:00", "activity": "Opening ceremony"},
-            {"time": "10:00", "activity": "Football matches"},
-            {"time": "15:00", "activity": "Awards and closing"}
-        ],
-        "announcements": [
-            {"title": "Team registration", "message": "Team captains should confirm their roster by Friday."}
-        ],
-        "registrations": ["aman@allclub.com", "rohan@allclub.com", "vikram@allclub.com"],
-        "attendance": ["aman@allclub.com"],
-        "prizes": [
-            {"title": "Best Team Spirit", "winnerEmail": "rohan@allclub.com", "description": "Recognized for teamwork and sportsmanship"}
-        ],
-        "organizers": ["aman@allclub.com"],
-        "volunteers": ["vikram@allclub.com", "ishita@allclub.com"]
-    },
-    {
-        "clubName": "Robotics Club",
-        "createdByEmail": "arjun@allclub.com",
-        "name": "Robotics Hardware Expo",
-        "description": "Exhibition of autonomous rovers and IoT hardware prototypes.",
-        "status": "SCHEDULED",
-        "startDate": "2026-09-12",
-        "endDate": "2026-09-14",
-        "startTime": "10:00:00",
-        "endTime": "16:00:00",
-        "capacity": 80,
-        "venueName": "Innovation Lab",
-        "schedule": [
-            {"time": "10:00", "activity": "Project Demonstration"},
-            {"time": "14:00", "activity": "Hardware Testing"}
-        ],
-        "announcements": [],
-        "registrations": ["vikram@allclub.com"],
-        "attendance": [],
-        "prizes": [],
-        "organizers": ["vikram@allclub.com"],
-        "volunteers": []
-    },
-    {
-        "clubName": "Photography Club",
-        "createdByEmail": "meena@allclub.com",
-        "name": "Campus Gallery Exhibition",
-        "description": "Exhibition showcasing winning photographs from campus photo walks.",
-        "status": "SCHEDULED",
-        "startDate": "2026-10-02",
-        "endDate": "2026-10-03",
-        "startTime": "11:00:00",
-        "endTime": "17:00:00",
-        "capacity": 120,
-        "venueName": "Studio Hall",
-        "schedule": [],
-        "announcements": [],
-        "registrations": ["meera@allclub.com"],
-        "attendance": [],
-        "prizes": [],
-        "organizers": ["meera@allclub.com"],
-        "volunteers": []
-    },
-    {
-        "clubName": "Coding Club",
-        "createdByEmail": "karthik@allclub.com",
-        "name": "Summer Code Sprint 2026",
-        "description": "Completed algorithm speedrun and competitive programming challenge.",
-        "status": "COMPLETED",
-        "startDate": "2026-07-15",
-        "endDate": "2026-07-16",
-        "startTime": "10:00:00",
-        "endTime": "16:00:00",
-        "capacity": 250,
-        "venueName": "Main Auditorium",
-        "schedule": [
-            {"time": "10:00", "activity": "Contest Kickoff"},
-            {"time": "15:00", "activity": "Leaderboard Freeze"},
-            {"time": "16:00", "activity": "Prize Distribution"}
-        ],
-        "announcements": [
-            {"title": "Sprint Completed", "message": "Thanks to all participants for competing!"}
-        ],
-        "registrations": ["karthik@allclub.com", "rahul@allclub.com"],
-        "attendance": ["karthik@allclub.com", "rahul@allclub.com"],
-        "prizes": [
-            {"title": "1st Place", "winnerEmail": "karthik@allclub.com", "description": "Champion programmer"}
-        ],
-        "organizers": ["karthik@allclub.com"],
-        "volunteers": []
-    }
-]
-
-MEMBERSHIP_SEED_DATA = [
-    {"club_id": 1, "user_id": 6, "membership_role": "PRESIDENT", "membership_status": "ACTIVE"},
-    {"club_id": 1, "user_id": 7, "membership_role": "ORGANIZER", "membership_status": "ACTIVE"},
-    {"club_id": 1, "user_id": 8, "membership_role": "MEMBER", "membership_status": "ACTIVE"},
-    {"club_id": 2, "user_id": 6, "membership_role": "ORGANIZER", "membership_status": "ACTIVE"},
-    {"club_id": 2, "user_id": 9, "membership_role": "MEMBER", "membership_status": "ACTIVE"},
-    {"club_id": 2, "user_id": 10, "membership_role": "MEMBER", "membership_status": "INACTIVE"},
-    {"club_id": 3, "user_id": 9, "membership_role": "PRESIDENT", "membership_status": "ACTIVE"},
-    {"club_id": 3, "user_id": 11, "membership_role": "MEMBER", "membership_status": "ACTIVE"},
-    {"club_id": 3, "user_id": 7, "membership_role": "VOLUNTEER", "membership_status": "ACTIVE"},
-    {"club_id": 4, "user_id": 8, "membership_role": "PRESIDENT", "membership_status": "ACTIVE"},
-    {"club_id": 4, "user_id": 10, "membership_role": "VOLUNTEER", "membership_status": "ACTIVE"},
-    {"club_id": 4, "user_id": 11, "membership_role": "MEMBER", "membership_status": "ACTIVE"}
-]
-
-REQUEST_SEED_DATA = [
-    {
-        "requesterEmail": "rahul@allclub.com",
-        "requestType": "CREATE_EVENT_AS_ORGANIZER",
-        "title": "AI Ethics & Governance Panel",
-        "description": "Panel discussion on responsible AI and policy frameworks in tech.",
-        "referenceType": "CLUB",
-        "referenceName": "AI Club",
-        "priority": "HIGH",
-        "workflowStatus": "APPROVED",
-        "approvals": [
-            {"approverEmail": "meena@allclub.com", "approvalRole": "CLUB_FACULTY", "approvalOrder": 1, "status": "APPROVED", "remarks": "Approved. Important topic."}
-        ]
-    },
-    {
-        "requesterEmail": "ananya@allclub.com",
-        "requestType": "BECOME_ORGANIZER",
-        "title": "Apply for Music Club Event Lead",
-        "description": "Requesting organizer permissions to coordinate weekend jam sessions.",
-        "referenceType": "CLUB",
-        "referenceName": "Music Club",
-        "priority": "MEDIUM",
-        "workflowStatus": "PENDING",
-        "approvals": [
-            {"approverEmail": "priya@allclub.com", "approvalRole": "CLUB_FACULTY", "approvalOrder": 1, "status": "APPROVED", "remarks": "Strong candidate."},
-            {"approverEmail": "admin@allclub.com", "approvalRole": "ADMIN", "approvalOrder": 2, "status": "PENDING", "remarks": None}
-        ]
-    },
-    {
-        "requesterEmail": "vikram@allclub.com",
-        "requestType": "VENUE_REQUEST",
-        "title": "Robotics Arena Ground Reservation",
-        "description": "Requesting Open Air Ground for outdoor drone testing.",
-        "referenceType": "CLUB",
-        "referenceName": "Robotics Club",
-        "priority": "HIGH",
-        "workflowStatus": "CHANGES_REQUESTED",
-        "approvals": [
-            {"approverEmail": "arjun@allclub.com", "approvalRole": "CLUB_FACULTY", "approvalOrder": 1, "status": "CHANGES_REQUESTED", "remarks": "Please select an indoor venue or adjust date due to rain forecast."}
-        ]
-    },
-    {
-        "requesterEmail": "sneha@allclub.com",
-        "requestType": "BECOME_VOLUNTEER",
-        "title": "Volunteer Application for Drama Club",
-        "description": "Application to join as stage management and lighting volunteer.",
-        "referenceType": "CLUB",
-        "referenceName": "Drama Club",
-        "priority": "LOW",
-        "workflowStatus": "APPROVED",
-        "approvals": [
-            {"approverEmail": "priya@allclub.com", "approvalRole": "CLUB_FACULTY", "approvalOrder": 1, "status": "APPROVED", "remarks": "Welcome to the team!"}
-        ]
-    },
-    {
-        "requesterEmail": "arjun@allclub.com",
-        "requestType": "EDIT_CLUB_AS_COORDINATOR",
-        "title": "Sports Club Description and Asset Update",
-        "description": "Update sports club banners, training hours, and equipment details.",
-        "referenceType": "CLUB",
-        "referenceName": "Sports Club",
-        "priority": "MEDIUM",
-        "workflowStatus": "APPROVED",
-        "approvals": [
-            {"approverEmail": "admin@allclub.com", "approvalRole": "ADMIN", "approvalOrder": 1, "status": "APPROVED", "remarks": "Updated successfully."}
-        ]
-    },
-    {
-        "requesterEmail": "karthik@allclub.com",
-        "requestType": "BUDGET_REQUEST",
-        "title": "Hackathon Prize Pool Funding Request",
-        "description": "Requesting $500 sponsorship for national coding challenge prizes.",
-        "referenceType": "CLUB",
-        "referenceName": "Coding Club",
-        "priority": "HIGH",
-        "workflowStatus": "REJECTED",
-        "approvals": [
-            {"approverEmail": "principal@allclub.com", "approvalRole": "PRINCIPAL", "approvalOrder": 1, "status": "REJECTED", "remarks": "Budget request exceeds departmental limit for Q3."}
-        ]
-    },
-    {
-        "requesterEmail": "meena@allclub.com",
-        "requestType": "BECOME_FACULTY_COORDINATOR",
-        "title": "Faculty Coordinator Application for Science Club",
-        "description": "Faculty advisor nomination to lead student research projects.",
-        "referenceType": "CLUB",
-        "referenceName": "Science Club",
-        "priority": "MEDIUM",
-        "workflowStatus": "APPROVED",
-        "approvals": [
-            {"approverEmail": "admin@allclub.com", "approvalRole": "ADMIN", "approvalOrder": 1, "status": "APPROVED", "remarks": "Assigned as coordinator."}
-        ]
-    },
-    {
-        "requesterEmail": "meera@allclub.com",
-        "requestType": "SCHEDULE_REQUEST",
-        "title": "Night Photography Expedition Schedule Approval",
-        "description": "Proposing campus night walk for long-exposure photography tutorial.",
-        "referenceType": "CLUB",
-        "referenceName": "Photography Club",
-        "priority": "MEDIUM",
-        "workflowStatus": "PENDING",
-        "approvals": [
-            {"approverEmail": "meena@allclub.com", "approvalRole": "CLUB_FACULTY", "approvalOrder": 1, "status": "PENDING", "remarks": None}
-        ]
-    }
-]
-
-ACTION_TICKET_SEED_DATA = [
-    {
-        "raisedByEmail": "rahul@allclub.com",
-        "ticketType": "CREATE_CLUB",
-        "title": "Propose CyberSecurity & Ethical Hacking Guild",
-        "description": "Requesting creation of a student guild dedicated to CTFs and security research.",
-        "priority": "HIGH",
-        "approvalStatus": "APPROVED",
-        "assignedToEmail": "admin@allclub.com",
-        "taskStatus": "IN_PROGRESS",
-        "dueDate": "2026-08-25",
-        "completionRemarks": None,
-        "approvals": [
-            {"approverEmail": "meena@allclub.com", "approvalRole": "FACULTY_COORDINATOR", "approvalOrder": 1, "status": "APPROVED", "remarks": "Great initiative."},
-            {"approverEmail": "admin@allclub.com", "approvalRole": "ADMIN", "approvalOrder": 2, "status": "APPROVED", "remarks": "Approved for creation."}
-        ]
-    },
-    {
-        "raisedByEmail": "arjun@allclub.com",
-        "ticketType": "CREATE_EVENT_GENERAL",
-        "title": "Annual Inter-College Tech Fest 2026",
-        "description": "Proposal for institution-wide mega technology symposium.",
-        "priority": "HIGH",
-        "approvalStatus": "APPROVED",
-        "assignedToEmail": "admin@allclub.com",
-        "taskStatus": "OPEN",
-        "dueDate": "2026-09-01",
-        "completionRemarks": None,
-        "approvals": [
-            {"approverEmail": "principal@allclub.com", "approvalRole": "PRINCIPAL", "approvalOrder": 1, "status": "APPROVED", "remarks": "Approved at administrative level."},
-            {"approverEmail": "admin@allclub.com", "approvalRole": "ADMIN", "approvalOrder": 2, "status": "APPROVED", "remarks": "Scheduled."}
-        ]
-    },
-    {
-        "raisedByEmail": "ananya@allclub.com",
-        "ticketType": "CREATE_EVENT_FOR_CLUB",
-        "title": "Acoustic Unplugged Evening",
-        "description": "Inter-department acoustic music performance on student lounge lawn.",
-        "priority": "MEDIUM",
-        "approvalStatus": "PENDING",
-        "assignedToEmail": None,
-        "taskStatus": None,
-        "dueDate": None,
-        "completionRemarks": None,
-        "approvals": [
-            {"approverEmail": "priya@allclub.com", "approvalRole": "CLUB_FACULTY", "approvalOrder": 1, "status": "PENDING", "remarks": None}
-        ]
-    },
-    {
-        "raisedByEmail": "vikram@allclub.com",
-        "ticketType": "EDIT_CLUB_ADMIN",
-        "title": "Update Robotics Club Logo & Equipment Bio",
-        "description": "Action item to update logo icon to smart_toy and list new 3D printers.",
-        "priority": "LOW",
-        "approvalStatus": "APPROVED",
-        "assignedToEmail": "admin@allclub.com",
-        "taskStatus": "COMPLETED",
-        "dueDate": "2026-08-05",
-        "completionRemarks": "Updated club profile details successfully.",
-        "closedAt": "2026-08-05T14:30:00",
-        "approvals": [
-            {"approverEmail": "admin@allclub.com", "approvalRole": "ADMIN", "approvalOrder": 1, "status": "APPROVED", "remarks": "Completed."}
-        ]
-    },
-    {
-        "raisedByEmail": "sneha@allclub.com",
-        "ticketType": "CREATE_CLUB",
-        "title": "Propose Literary & Debate Society",
-        "description": "Establish a formal parliamentary debate and creative writing society.",
-        "priority": "MEDIUM",
-        "approvalStatus": "CHANGES_REQUESTED",
-        "assignedToEmail": None,
-        "taskStatus": None,
-        "dueDate": None,
-        "completionRemarks": None,
-        "approvals": [
-            {"approverEmail": "priya@allclub.com", "approvalRole": "FACULTY_COORDINATOR", "approvalOrder": 1, "status": "CHANGES_REQUESTED", "remarks": "Need detailed faculty endorsement letter and budget outline."}
-        ]
-    },
-    {
-        "raisedByEmail": "priya@allclub.com",
-        "ticketType": "EDIT_EVENT_ADMIN",
-        "title": "Reschedule Stagecraft Workshop Venue",
-        "description": "Re-allocate Stagecraft Workshop from Main Hall to Studio Hall.",
-        "priority": "HIGH",
-        "approvalStatus": "APPROVED",
-        "assignedToEmail": "admin@allclub.com",
-        "taskStatus": "COMPLETED",
-        "dueDate": "2026-08-06",
-        "completionRemarks": "Venue re-allocated to Studio Hall.",
-        "closedAt": "2026-08-06T11:00:00",
-        "approvals": [
-            {"approverEmail": "admin@allclub.com", "approvalRole": "ADMIN", "approvalOrder": 1, "status": "APPROVED", "remarks": "Re-allocated."}
-        ]
-    },
-    {
-        "raisedByEmail": "karthik@allclub.com",
-        "ticketType": "CREATE_EVENT_GENERAL",
-        "title": "Campus Open Source Hack Sprint",
-        "description": "General non-club hackathon open to all engineering departments.",
-        "priority": "MEDIUM",
-        "approvalStatus": "REJECTED",
-        "assignedToEmail": None,
-        "taskStatus": None,
-        "dueDate": None,
-        "completionRemarks": None,
-        "approvals": [
-            {"approverEmail": "admin@allclub.com", "approvalRole": "ADMIN", "approvalOrder": 1, "status": "REJECTED", "remarks": "Conflicts with semester mid-term exam schedule."}
-        ]
-    }
-]
-
-ASSIGNMENT_TICKET_SEED_DATA = [
-    {
-        "holderEmail": "rahul@allclub.com",
-        "assignmentRole": "ORGANIZER",
-        "referenceType": "CLUB",
-        "clubName": "AI Club",
-        "durationType": "INDEFINITE",
-        "startsAt": "2026-01-01T00:00:00",
-        "endsAt": None,
-        "status": "ACTIVE",
-        "grantedByEmail": "admin@allclub.com"
-    },
-    {
-        "holderEmail": "sneha@allclub.com",
-        "assignmentRole": "VOLUNTEER",
-        "referenceType": "CLUB",
-        "clubName": "Drama Club",
-        "durationType": "DATE_RANGE",
-        "startsAt": "2026-08-01T00:00:00",
-        "endsAt": "2026-12-31T23:59:59",
-        "status": "ACTIVE",
-        "grantedByEmail": "priya@allclub.com"
-    },
-    {
-        "holderEmail": "meena@allclub.com",
-        "assignmentRole": "FACULTY_COORDINATOR",
-        "referenceType": "CLUB",
-        "clubName": "Science Club",
-        "durationType": "INDEFINITE",
-        "startsAt": "2026-02-15T00:00:00",
-        "endsAt": None,
-        "status": "ACTIVE",
-        "grantedByEmail": "admin@allclub.com"
-    },
-    {
-        "holderEmail": "ananya@allclub.com",
-        "assignmentRole": "EVENT_ORGANIZER",
-        "referenceType": "EVENT",
-        "eventName": "Stagecraft Workshop",
-        "durationType": "DATE_RANGE",
-        "startsAt": "2026-08-15T00:00:00",
-        "endsAt": "2026-08-25T23:59:59",
-        "status": "ACTIVE",
-        "grantedByEmail": "priya@allclub.com"
-    },
-    {
-        "holderEmail": "vikram@allclub.com",
-        "assignmentRole": "VOLUNTEER",
-        "referenceType": "CLUB",
-        "clubName": "Sports Club",
-        "durationType": "DATE_RANGE",
-        "startsAt": "2026-05-01T00:00:00",
-        "endsAt": "2026-07-01T00:00:00",
-        "status": "EXPIRED",
-        "grantedByEmail": "arjun@allclub.com"
-    },
-    {
-        "holderEmail": "karthik@allclub.com",
-        "assignmentRole": "ORGANIZER",
-        "referenceType": "CLUB",
-        "clubName": "Coding Club",
-        "durationType": "INDEFINITE",
-        "startsAt": "2026-03-01T00:00:00",
-        "endsAt": None,
-        "status": "SUSPENDED",
-        "grantedByEmail": "admin@allclub.com"
-    },
-    {
-        "holderEmail": "meera@allclub.com",
-        "assignmentRole": "VOLUNTEER",
-        "referenceType": "CLUB",
-        "clubName": "Photography Club",
-        "durationType": "DATE_RANGE",
-        "startsAt": "2026-04-01T00:00:00",
-        "endsAt": "2026-06-01T00:00:00",
-        "status": "TERMINATED",
-        "grantedByEmail": "admin@allclub.com"
+        "name": "Open Air Theatre",
+        "location": "Central Campus",
+        "type": "Auditorium",
+        "capacity": 350,
+        "availabilityStatus": "AVAILABLE"
     }
 ]

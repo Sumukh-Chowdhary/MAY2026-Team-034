@@ -4,11 +4,14 @@ import StudentLayout from '@/layouts/StudentLayout.vue'
 import GlassRequestDetailsModal from '@/components/common/GlassRequestDetailsModal.vue'
 import NewTicketModal from '@/components/student/NewTicketModal.vue'
 import PermissionTokensCard from '@/components/student/PermissionTokensCard.vue'
+import { useToast } from '@/composables/useToast'
+import { isLegacyUser, LEGACY_READ_ONLY_MESSAGE } from '@/utils/permissions'
 
 import { getStudentRequestsDashboard } from '@/api/requests'
 import { useRealtimeTickets } from '@/composables/useRealtimeTickets'
 import { getRequestPreview } from '@/utils/requestFormatter'
 
+const { showToast } = useToast()
 const search = ref('')
 const filter = ref('open') // 'open' | 'closed' | 'all'
 
@@ -20,12 +23,15 @@ const selectedTicket = ref(null)
 const showTicketModal = ref(false)
 const showNewTicketModal = ref(false)
 const currentUserId = ref(null)
+const currentUser = ref(null)
+const isLegacy = computed(() => isLegacyUser(currentUser.value))
 
 onMounted(async () => {
   try {
     const userStr = localStorage.getItem('user')
     if (userStr) {
       const user = JSON.parse(userStr)
+      currentUser.value = user
       currentUserId.value = user.id
     }
   } catch (e) {
@@ -33,6 +39,14 @@ onMounted(async () => {
   }
   await fetchStudentData(false)
 })
+
+function handleRaiseRequestClick() {
+  if (isLegacy.value) {
+    showToast(LEGACY_READ_ONLY_MESSAGE, 'warning')
+    return
+  }
+  showNewTicketModal.value = true
+}
 
 async function fetchStudentData(isSilent = false) {
   if (!isSilent && isInitialLoad.value) {
@@ -98,8 +112,8 @@ function badgeClass(status) {
           <p class="text-secondary mb-0">Track all submitted requests, action tickets, and live active permission tokens.</p>
         </div>
 
-        <button class="btn btn-warning fw-semibold px-4 rounded-pill shadow-sm" @click="showNewTicketModal = true">
-          <i class="bi bi-plus-lg me-1"></i> Raise Request / Ticket
+        <button class="btn btn-warning fw-semibold px-4 rounded-pill shadow-sm" :disabled="isLegacy" @click="handleRaiseRequestClick">
+          <i class="bi bi-plus-lg me-1"></i> {{ isLegacy ? 'Read-Only Mode' : 'Raise Request / Ticket' }}
         </button>
       </div>
 
