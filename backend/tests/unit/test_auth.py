@@ -46,7 +46,7 @@ def test_login_by_roll_no(client):
     response = client.post(
         "/api/auth/login",
         json={
-            "username": "STU001",
+            "username": "Y24CS001",
             "password": "student123"
         }
     )
@@ -178,7 +178,7 @@ def test_register_duplicate_roll_no(client):
             "email": "anotherrahul@example.com",
             "password": "securepassword",
             "role": "STUDENT",
-            "registerNumber": "STU001"
+            "registerNumber": "Y24CS001"
         }
     )
     assert response.status_code == 400

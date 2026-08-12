@@ -75,11 +75,13 @@ const isOpen = ref(false);
 const dropdownRef = ref(null);
 
 const notificationsPath = computed(() => {
-  const role = authStore.user?.role
-  if (role === 'ADMIN') return '/admin/requests'
-  if (role === 'FACULTY') return '/faculty/requests'
-  return '/student/requests'
+  const role = authStore.user?.role || 'STUDENT';
+  if (role === 'ADMIN') return '/admin/notifications';
+  if (role === 'FACULTY') return '/faculty/notifications';
+  return '/student/notifications';
 })
+
+import { handleNotificationDetails, resolveNotificationAction } from '@/utils/notificationNavigation';
 
 const toggleDropdown = () => {
   isOpen.value = !isOpen.value;
@@ -96,12 +98,15 @@ const markAllAsRead = async () => {
 };
 
 const handleNotificationClick = async (notification) => {
-  if (!notification.isRead) {
-    await notificationStore.markAsRead(notification.id);
-  }
   isOpen.value = false;
-  if (notification.referenceUrl) {
-    router.push(notification.referenceUrl);
+  const role = authStore.user?.role || 'STUDENT';
+  const action = resolveNotificationAction(notification, role);
+  if (action) {
+    await handleNotificationDetails(notification, router, notificationStore);
+  } else {
+    if (!notification.isRead) {
+      await notificationStore.markAsRead(notification.id);
+    }
   }
 };
 

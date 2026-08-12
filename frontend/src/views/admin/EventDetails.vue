@@ -3,6 +3,23 @@ import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 
 import AdminLayout from '@/layouts/AdminLayout.vue'
+import UserProfileModal from '@/components/common/UserProfileModal.vue'
+import EventAttendanceView from '@/components/events/EventAttendanceView.vue'
+import EventAttendanceModal from '@/components/events/EventAttendanceModal.vue'
+import EventRoundsView from '@/components/events/EventRoundsView.vue'
+import ParticipantProgressView from '@/components/events/ParticipantProgressView.vue'
+import EventResultsView from '@/components/events/EventResultsView.vue'
+import RequestVenueModal from '@/components/events/RequestVenueModal.vue'
+
+const showProfileModal = ref(false)
+const selectedProfileUserId = ref(null)
+const showVenueRequestModal = ref(false)
+
+function openUserProfile(id) {
+  if (!id) return
+  selectedProfileUserId.value = id
+  showProfileModal.value = true
+}
 import {
   getEvent,
   updateEvent,
@@ -13,10 +30,13 @@ import {
   assignVenue
 } from '@/api/events'
 import { getEventStatus } from '@/utils/eventUtils'
+import { useToast } from '@/composables/useToast'
 
 const route = useRoute()
 const router = useRouter()
+const { showToast } = useToast()
 const activeTab = ref('schedule')
+const showAttendanceModal = ref(false)
 const event = ref(null)
 const loading = ref(false)
 
@@ -57,7 +77,7 @@ async function toggleCloseEvent() {
   }
 }
 
-onMounted(async () => {
+async function fetchEventDetails() {
   try {
     loading.value = true
     const data = await getEvent(Number(route.params.id))
@@ -70,14 +90,55 @@ onMounted(async () => {
   } finally {
     loading.value = false
   }
-})
+}
+
+// Alias for template compatibility
+const loadEvent = fetchEventDetails
+const loadEventData = fetchEventDetails
+
+onMounted(fetchEventDetails)
 
 const tabs = [
   { key: 'schedule', label: 'Schedule' },
+  { key: 'rounds', label: 'Rounds' },
+  { key: 'progress', label: 'Participant Progress' },
+  { key: 'results', label: 'Results & Podium' },
   { key: 'announcements', label: 'Announcements' },
-  { key: 'registrations', label: 'Registrations' },
-  { key: 'attendance', label: 'Attendance' }
+  { key: 'registrations', label: 'Registrations' }
 ]
+
+const visibleTabs = computed(() => {
+  const isComp = event.value ? (event.value.isCompetition !== false) : true
+  return tabs.filter(t => {
+    if (!isComp && (t.key === 'rounds' || t.key === 'progress' || t.key === 'results')) {
+      return false
+    }
+    return true
+  })
+})
+
+const isAttendanceAvailable = computed(() => {
+  if (!event.value) return false
+  const rawDate = event.value.startDate || event.value.start_date
+  if (!rawDate) return true
+  try {
+    const start = new Date(rawDate)
+    start.setHours(0, 0, 0, 0)
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+    return today >= start
+  } catch (e) {
+    return true
+  }
+})
+
+function handleAttendanceClick() {
+  if (!isAttendanceAvailable.value) {
+    showToast(`Attendance will be available when the event begins on ${event.value?.startDate || event.value?.start_date || 'the event date'}.`, 'info')
+    return
+  }
+  showAttendanceModal.value = true
+}
 
 // Modal & Form States for Event Details page
 const showAddScheduleModal = ref(false)
@@ -239,6 +300,15 @@ async function postAttendance() {
             </div>
 
             <div class="d-flex align-items-center gap-2">
+              <button 
+                class="btn btn-outline-primary btn-sm rounded-pill px-3 fw-semibold" 
+                :class="{ 'opacity-50': !isAttendanceAvailable }"
+                :title="!isAttendanceAvailable ? `Attendance will be available when the event begins on ${event.startDate || event.start_date || ''}` : 'Manage Attendance'"
+                @click="handleAttendanceClick"
+              >
+                <i class="bi bi-calendar-check me-1"></i> Attendance
+              </button>
+
               <button
                 class="btn btn-warning btn-sm"
                 @click="
@@ -273,6 +343,23 @@ async function postAttendance() {
             </div>
           </div>
 
+          <!-- Read-only Venue Display with Request Venue Button -->
+          <div class="info-box mb-3">
+            <div class="d-flex align-items-center justify-content-between">
+              <div>
+                <label>Venue</label>
+                <p class="mb-0 fw-semibold text-dark">{{ event.venueName || event.venue || 'No venue assigned yet' }}</p>
+                <small v-if="event.venueLocation" class="text-muted text-xs d-block">{{ event.venueLocation }}</small>
+              </div>
+              <button 
+                class="btn btn-sm btn-outline-primary rounded-3 px-3 text-xs fw-semibold"
+                @click="showVenueRequestModal = true"
+              >
+                <i class="bi bi-geo-alt me-1"></i> {{ event.venueId ? 'Request / Change Venue' : 'Request Venue' }}
+              </button>
+            </div>
+          </div>
+
           <div class="info-box description-box">
             <label>Description</label>
             <p>{{ event.description }}</p>
@@ -281,7 +368,7 @@ async function postAttendance() {
           <!-- Navigation Tabs -->
           <div class="detail-tabs">
             <button
-              v-for="tab in tabs"
+              v-for="tab in visibleTabs"
               :key="tab.key"
               class="tab-option"
               :class="{ active: activeTab === tab.key }"
@@ -311,6 +398,21 @@ async function postAttendance() {
                   <span class="activity">{{ item.activity }}</span>
                 </div>
               </div>
+            </div>
+
+            <!-- 1B. Rounds Tab -->
+            <div v-else-if="activeTab === 'rounds'">
+              <EventRoundsView :eventId="event.id" :canManage="true" />
+            </div>
+
+            <!-- 1C. Participant Progress Tab -->
+            <div v-else-if="activeTab === 'progress'">
+              <ParticipantProgressView :eventId="event.id" />
+            </div>
+
+            <!-- 1D. Results Tab -->
+            <div v-else-if="activeTab === 'results'">
+              <EventResultsView :eventId="event.id" :prizes="event.prizes" :canManage="true" @refresh="fetchEventDetails" />
             </div>
 
             <!-- 2. Announcements Tab -->
@@ -368,45 +470,7 @@ async function postAttendance() {
 
             <!-- 4. Attendance Tab -->
             <div v-else-if="activeTab === 'attendance'">
-              <div class="d-flex justify-content-between align-items-center mb-3">
-                <h5 class="fw-bold m-0 text-dark">Participant Attendance</h5>
-                <button class="btn btn-sm btn-primary" @click="postAttendance" v-if="event.attendance && event.attendance.length">
-                  Save Attendance
-                </button>
-              </div>
-
-              <table class="table align-middle" v-if="event.attendance && event.attendance.length">
-                <thead>
-                  <tr>
-                    <th>User ID</th>
-                    <th>Name</th>
-                    <th>Register Number</th>
-                    <th>Status</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr v-for="(student, index) in event.attendance" :key="index">
-                    <td>{{ student.userId }}</td>
-                    <td class="fw-semibold">
-                      {{ student.userName || student.name }}
-                    </td>
-
-                    <td>
-                      {{ student.registerNumber || '-' }}
-                    </td>
-                    <td>
-                      <select
-                        class="form-select form-select-sm"
-                        v-model="student.status"
-                      >
-                        <option value="Present">Present</option>
-                        <option value="Absent">Absent</option>
-                      </select>
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
-              <div v-else class="empty-tab">Attendance has not been recorded yet.</div>
+              <EventAttendanceView :eventId="event.id" :canManageSessions="true" @back="activeTab = 'schedule'" />
             </div>
           </div>
         </div>
@@ -542,6 +606,28 @@ async function postAttendance() {
           </div>
         </div>
       </div>
+
+      <UserProfileModal 
+        :show="showProfileModal"
+        :userId="selectedProfileUserId"
+        @close="showProfileModal = false"
+      />
+
+      <EventAttendanceModal 
+        :show="showAttendanceModal"
+        :eventId="event ? event.id : 0"
+        :canManage="true"
+        @close="showAttendanceModal = false"
+        @saved="fetchEventDetails"
+      />
+
+      <RequestVenueModal
+        v-if="event"
+        :show="showVenueRequestModal"
+        :event="event"
+        @close="showVenueRequestModal = false"
+        @submitted="fetchEventDetails"
+      />
     </section>
   </AdminLayout>
 </template>

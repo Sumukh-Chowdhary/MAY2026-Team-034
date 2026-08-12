@@ -114,6 +114,40 @@ def roles_required(*roles):
         return decorated
     return decorator
 
+
+LEGACY_READ_ONLY_MSG = "Your student account is now read-only because your student lifecycle is marked Legacy."
+
+
+def check_legacy_user_action(user):
+    """
+    Centralized backend permission checker for student operational actions.
+    If user is LEGACY, returns 403 response with standard message.
+    Otherwise returns None.
+    """
+    if getattr(user, 'account_status', None) == 'LEGACY' or getattr(user, 'is_legacy', False):
+        return jsonify({
+            'error': LEGACY_READ_ONLY_MSG,
+            'message': LEGACY_READ_ONLY_MSG,
+            'isLegacy': True
+        }), 403
+    return None
+
+
+def active_student_required(f):
+    """
+    Decorator enforcing that the current user is not a LEGACY student.
+    Must be placed AFTER @jwt_required.
+    """
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        user = getattr(g, 'current_user', None)
+        legacy_err = check_legacy_user_action(user)
+        if legacy_err:
+            return legacy_err
+        return f(*args, **kwargs)
+    return decorated
+
+
 def faculty_club_access_required(func):
     @wraps(func)
     def wrapper(*args, **kwargs):

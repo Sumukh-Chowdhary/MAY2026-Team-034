@@ -25,14 +25,14 @@ export const events = [
       { title: 'Bring Your Own Camera', message: 'DSLR or smartphone both work fine for this session.', date: '19 Jul 2026' }
     ],
     registrations: [
-      { name: 'Rahul Sharma', registerNumber: 'CB.SC.U4CSE22001', branch: 'CSE' },
-      { name: 'Ananya Iyer', registerNumber: 'CB.SC.U4CSE22015', branch: 'CSE' },
-      { name: 'Karthik Raj', registerNumber: 'CB.SC.U4ECE22007', branch: 'ECE' }
+      { name: 'Rahul Sharma', registerNumber: 'Y24CS001', branch: 'CSE' },
+      { name: 'Ananya Iyer', registerNumber: 'Y25CS002', branch: 'CSE' },
+      { name: 'Karthik Raj', registerNumber: 'Y25EC003', branch: 'ECE' }
     ],
     attendance: [
-      { name: 'Rahul Sharma', registerNumber: 'CB.SC.U4CSE22001', status: 'Present' },
-      { name: 'Ananya Iyer', registerNumber: 'CB.SC.U4CSE22015', status: 'Present' },
-      { name: 'Karthik Raj', registerNumber: 'CB.SC.U4ECE22007', status: 'Absent' }
+      { name: 'Rahul Sharma', registerNumber: 'Y24CS001', status: 'Present' },
+      { name: 'Ananya Iyer', registerNumber: 'Y25CS002', status: 'Present' },
+      { name: 'Karthik Raj', registerNumber: 'Y25EC003', status: 'Absent' }
     ]
   },
   {
@@ -54,8 +54,8 @@ export const events = [
       { title: 'Seat Limit Reached', message: 'Registrations are now closed for this seminar.', date: '20 Jul 2026' }
     ],
     registrations: [
-      { name: 'Priya Nair', registerNumber: 'CB.SC.U4CSE22002', branch: 'CSE' },
-      { name: 'Mohammed Aslam', registerNumber: 'CB.SC.U4CSE22030', branch: 'CSE' }
+      { name: 'Priya Nair', registerNumber: 'Y25CS002', branch: 'CSE' },
+      { name: 'Mohammed Aslam', registerNumber: 'Y25CS006', branch: 'CSE' }
     ],
     attendance: []
   },
@@ -79,12 +79,12 @@ export const events = [
       { title: 'Thank You!', message: 'Thanks to everyone who performed and attended. Photos coming soon.', date: '19 Jul 2026' }
     ],
     registrations: [
-      { name: 'Priya Nair', registerNumber: 'CB.SC.U4CSE22002', branch: 'CSE' },
-      { name: 'Sara Thomas', registerNumber: 'CB.SC.U4EEE22011', branch: 'EEE' }
+      { name: 'Priya Nair', registerNumber: 'Y25CS002', branch: 'CSE' },
+      { name: 'Sara Thomas', registerNumber: 'Y24EE007', branch: 'EEE' }
     ],
     attendance: [
-      { name: 'Priya Nair', registerNumber: 'CB.SC.U4CSE22002', status: 'Present' },
-      { name: 'Sara Thomas', registerNumber: 'CB.SC.U4EEE22011', status: 'Present' }
+      { name: 'Priya Nair', registerNumber: 'Y25CS002', status: 'Present' },
+      { name: 'Sara Thomas', registerNumber: 'Y24EE007', status: 'Present' }
     ]
   },
   {
@@ -105,8 +105,8 @@ export const events = [
       { title: 'Registration Open', message: 'Auditions start this Friday in Auditorium Hall A.', date: '21 Jul 2026' }
     ],
     registrations: [
-      { name: 'Rahul Sharma', registerNumber: 'CB.SC.U4CSE22001', branch: 'CSE' },
-      { name: 'Siddharth V', registerNumber: 'CB.SC.U4ME22033', branch: 'ME' }
+      { name: 'Rahul Sharma', registerNumber: 'Y24CS001', branch: 'CSE' },
+      { name: 'Siddharth V', registerNumber: 'Y24ME008', branch: 'ME' }
     ],
     attendance: []
   },
@@ -146,12 +146,12 @@ export const events = [
       { title: 'Pre-requisites Released', message: 'Please install Python 3.10 and PyTorch before attending.', date: '20 Jul 2026' }
     ],
     registrations: [
-      { name: 'Kavya Singh', registerNumber: 'CB.SC.U4CSE21012', branch: 'CSE' },
-      { name: 'Rohan Verma', registerNumber: 'CB.SC.U4ECE21045', branch: 'ECE' }
+      { name: 'Kavya Singh', registerNumber: 'Y23CS009', branch: 'CSE' },
+      { name: 'Rohan Verma', registerNumber: 'Y23EC010', branch: 'ECE' }
     ],
     attendance: [
-      { name: 'Kavya Singh', registerNumber: 'CB.SC.U4CSE21012', status: 'Present' },
-      { name: 'Rohan Verma', registerNumber: 'CB.SC.U4ECE21045', status: 'Present' }
+      { name: 'Kavya Singh', registerNumber: 'Y23CS009', status: 'Present' },
+      { name: 'Rohan Verma', registerNumber: 'Y23EC010', status: 'Present' }
     ]
   },
   {
@@ -192,12 +192,12 @@ export const events = [
       { title: 'Bring Extra SD Cards', message: 'Charge your camera batteries and format SD cards in advance.', date: '21 Jul 2026' }
     ],
     registrations: [
-      { name: 'Varun K', registerNumber: 'CB.SC.U4ME22011', branch: 'ME' },
-      { name: 'Divya P', registerNumber: 'CB.SC.U4CE22077', branch: 'CIVIL' }
+      { name: 'Varun K', registerNumber: 'Y25ME011', branch: 'ME' },
+      { name: 'Divya P', registerNumber: 'Y25CE012', branch: 'CIVIL' }
     ],
     attendance: [
-      { name: 'Varun K', registerNumber: 'CB.SC.U4ME22011', status: 'Present' },
-      { name: 'Divya P', registerNumber: 'CB.SC.U4CE22077', status: 'Present' }
+      { name: 'Varun K', registerNumber: 'Y25ME011', status: 'Present' },
+      { name: 'Divya P', registerNumber: 'Y25CE012', status: 'Present' }
     ]
   },
   {

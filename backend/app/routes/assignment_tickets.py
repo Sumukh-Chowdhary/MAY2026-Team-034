@@ -134,13 +134,41 @@ def get_user_assignments(target_user_id):
     # Run expiry checks on active ones
     for t in active_tickets:
         t.check_expiry()
+
+    from app.models.events import EventVolunteer
+    vols = EventVolunteer.query.filter_by(user_id=target_user_id).all()
+    vol_active = []
+    vol_history = []
+    for v in vols:
+        v_item = {
+            'id': f"vol_{v.id}",
+            'holderId': v.user_id,
+            'assignmentRole': f"Volunteer — {v.position_name}",
+            'role': f"Volunteer — {v.position_name}",
+            'referenceType': 'EVENT',
+            'referenceId': v.event_id,
+            'referenceName': v.event.event_name if v.event else 'Event',
+            'clubName': v.event.club.club_name if (v.event and v.event.club) else 'Campus Club',
+            'status': v.computed_status,
+            'startsAt': v.start_date.isoformat() if v.start_date else None,
+            'endsAt': v.end_date.isoformat() if v.end_date else None,
+            'createdAt': v.requested_at.isoformat() if v.requested_at else None
+        }
+        if v.computed_status in ['APPROVED', 'ACTIVE']:
+            vol_active.append(v_item)
+        else:
+            vol_history.append(v_item)
+
     db.session.commit()
+
+    combined_active = [t.to_dict() for t in active_tickets if t.status == AssignmentStatus.ACTIVE] + vol_active
+    combined_history = [t.to_dict() for t in history_tickets] + [t.to_dict() for t in active_tickets if t.status != AssignmentStatus.ACTIVE] + vol_history
 
     return jsonify({
         "success": True, 
         "data": {
-            "active": [t.to_dict() for t in active_tickets if t.status == AssignmentStatus.ACTIVE],
-            "history": [t.to_dict() for t in history_tickets] + [t.to_dict() for t in active_tickets if t.status != AssignmentStatus.ACTIVE]
+            "active": combined_active,
+            "history": combined_history
         }
     }), 200
 

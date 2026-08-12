@@ -179,7 +179,7 @@ def test_get_club_member(client, faculty_headers):
     member = response.get_json()
 
     assert member["id"] == RAHUL_USER_ID
-    assert member["rollNumber"] == "STU001"
+    assert member["rollNumber"] == "Y24CS001"
     assert member["name"] == "Rahul Sharma"
     assert member["email"] == "rahul@allclub.com"
     assert member["phoneNumber"] == "+91 90000 00003"

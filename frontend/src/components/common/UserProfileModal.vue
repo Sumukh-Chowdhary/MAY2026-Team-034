@@ -1,6 +1,7 @@
 <script setup>
-import { ref, watch } from 'vue'
+import { ref, computed, watch } from 'vue'
 import { getUser } from '@/api/users'
+import { getCurrentUser } from '@/services/authService'
 import UserAvatar from '@/components/profile/UserAvatar.vue'
 
 const props = defineProps({
@@ -18,20 +19,42 @@ const emit = defineEmits(['close'])
 
 const userData = ref(null)
 const loading = ref(false)
+const errorMsg = ref('')
+
+const loggedInUser = computed(() => getCurrentUser() || {})
+const viewerRole = computed(() => (loggedInUser.value?.role || 'STUDENT').toUpperCase())
+
+const isSelf = computed(() => {
+  if (!props.userId || !loggedInUser.value?.id) return false
+  return String(props.userId) === String(loggedInUser.value.id)
+})
+
+const canSeePhone = computed(() => {
+  if (isSelf.value) return true
+  if (viewerRole.value === 'ADMIN' || viewerRole.value === 'FACULTY') return true
+  return false
+})
 
 watch([() => props.show, () => props.userId], async ([newShow, newId]) => {
   if (newShow && newId) {
     loading.value = true
+    errorMsg.value = ''
     userData.value = null
     try {
       const u = await getUser(newId)
       userData.value = u
     } catch (err) {
       console.error('Failed to load profile in UserProfileModal', err)
+      errorMsg.value = 'User profile information unavailable.'
     } finally {
       loading.value = false
     }
   }
+})
+
+const targetRole = computed(() => {
+  if (!userData.value) return 'MEMBER'
+  return (userData.value.role || 'MEMBER').toUpperCase()
 })
 
 function roleBadgeClass(role, designation) {
@@ -40,6 +63,56 @@ function roleBadgeClass(role, designation) {
   if (role === 'FACULTY') return 'bg-primary text-white'
   return 'bg-info text-dark'
 }
+
+// Compute safe, role-appropriate, non-sensitive profile fields
+const profileFields = computed(() => {
+  if (!userData.value) return []
+  const u = userData.value
+  const role = targetRole.value
+  const fields = []
+
+  // 1. Register / ID / Employee Number (if present)
+  const regNo = u.registerNumber || u.rollNo || u.employeeId
+  if (regNo) {
+    const label = role === 'FACULTY' ? 'Employee ID' : 'Register / ID No.'
+    fields.push({ label, value: regNo })
+  }
+
+  // 2. Department (if present)
+  if (u.department) {
+    fields.push({ label: 'Department', value: u.department })
+  }
+
+  // 3. Year of Study (ONLY for Student role!)
+  if (role === 'STUDENT' && (u.yearOfStudy || u.year)) {
+    fields.push({ label: 'Year of Study', value: u.yearOfStudy || u.year })
+  }
+
+  // 4. Designation (ONLY for Faculty role!)
+  if (role === 'FACULTY' && u.designation) {
+    fields.push({ label: 'Designation', value: u.designation })
+  }
+
+  // 5. Phone Number (ONLY if viewer is authorized and phone is returned!)
+  const phoneVal = u.phone || u.phoneNumber
+  if (canSeePhone.value && phoneVal) {
+    fields.push({ label: 'Phone', value: phoneVal })
+  }
+
+  // 6. Email (Always included)
+  if (u.email) {
+    fields.push({ label: 'Email', value: u.email })
+  }
+
+  // 7. Account Status
+  fields.push({ 
+    label: 'Account Status', 
+    value: u.status || u.accountStatus || 'ACTIVE',
+    isBadge: true 
+  })
+
+  return fields
+})
 </script>
 
 <template>
@@ -53,67 +126,59 @@ function roleBadgeClass(role, designation) {
             <i class="bi bi-person-badge-fill me-2 text-primary"></i>
             User Profile Details
           </h5>
-          <button class="btn-close-glass" @click="$emit('close')"><i class="bi bi-x-lg"></i></button>
+          <button class="btn-close-glass" @click="$emit('close')" aria-label="Close">
+            <i class="bi bi-x-lg"></i>
+          </button>
         </div>
 
         <!-- Body -->
         <div class="modal-body-glass">
+          <!-- Loading State -->
           <div v-if="loading" class="text-center py-4">
             <div class="spinner-border text-primary" role="status"></div>
             <p class="text-muted mt-2 text-sm">Loading user profile...</p>
           </div>
 
+          <!-- Error State -->
+          <div v-else-if="errorMsg" class="text-center py-4 text-muted">
+            <i class="bi bi-exclamation-circle fs-2 d-block mb-2 text-warning"></i>
+            <p class="mb-0">{{ errorMsg }}</p>
+          </div>
+
+          <!-- Profile Details -->
           <div v-else-if="userData" class="profile-content">
             
             <!-- User Avatar & Core Banner -->
             <div class="avatar-banner d-flex align-items-center gap-3 p-3 bg-light rounded-3 mb-3">
               <UserAvatar size="card" :user="userData" />
               <div>
-                <h5 class="fw-bold text-dark mb-1">{{ userData.fullName || userData.name }}</h5>
-                <span class="badge" :class="roleBadgeClass(userData.role, userData.designation)">
-                  {{ userData.designation || userData.role }}
+                <h5 class="fw-bold text-dark mb-1">{{ userData.fullName || userData.name || 'User' }}</h5>
+                <span class="badge" :class="roleBadgeClass(targetRole, userData.designation)">
+                  {{ userData.designation || targetRole }}
                 </span>
                 <small class="text-muted d-block mt-1">{{ userData.email }}</small>
               </div>
             </div>
 
-            <!-- Profile Details Grid -->
+            <!-- Profile Details Grid (Dynamic & Self-Reflowing) -->
             <div class="row g-3 text-sm">
-              <div class="col-6">
-                <span class="text-muted d-block text-xs uppercase fw-bold">Register / ID No.</span>
-                <strong class="text-dark">{{ userData.registerNumber || userData.rollNo || userData.employeeId || 'N/A' }}</strong>
-              </div>
-
-              <div class="col-6">
-                <span class="text-muted d-block text-xs uppercase fw-bold">Department</span>
-                <strong class="text-dark">{{ userData.department || 'N/A' }}</strong>
-              </div>
-
-              <div class="col-6" v-if="userData.year || userData.yearOfStudy">
-                <span class="text-muted d-block text-xs uppercase fw-bold">Year of Study</span>
-                <strong class="text-dark">{{ userData.year || userData.yearOfStudy }}</strong>
-              </div>
-
-              <div class="col-6" v-if="userData.designation">
-                <span class="text-muted d-block text-xs uppercase fw-bold">Designation</span>
-                <strong class="text-dark">{{ userData.designation }}</strong>
-              </div>
-
-              <div class="col-6">
-                <span class="text-muted d-block text-xs uppercase fw-bold">Phone</span>
-                <strong class="text-dark">{{ userData.phone || 'N/A' }}</strong>
-              </div>
-
-              <div class="col-6">
-                <span class="text-muted d-block text-xs uppercase fw-bold">Account Status</span>
-                <span class="badge" :class="userData.status === 'ACTIVE' ? 'bg-success' : 'bg-secondary'">
-                  {{ userData.status || 'ACTIVE' }}
+              <div 
+                v-for="field in profileFields" 
+                :key="field.label" 
+                class="col-6"
+              >
+                <span class="text-muted d-block text-xs uppercase fw-bold mb-1">{{ field.label }}</span>
+                
+                <span v-if="field.isBadge" class="badge" :class="field.value === 'ACTIVE' ? 'bg-success' : 'bg-secondary'">
+                  {{ field.value }}
                 </span>
+                <strong v-else class="text-dark d-block text-truncate">{{ field.value }}</strong>
               </div>
 
+              <!-- Bio Box (Full-width if present) -->
               <div class="col-12" v-if="userData.bio">
                 <span class="text-muted d-block text-xs uppercase fw-bold mb-1">Bio / Notes</span>
-                <p class="bio-box text-secondary bg-white p-2 border rounded-2 mb-0">{{ userData.bio }}</p>
+                <p class="bio-box text-secondary bg-white p-2.5 border rounded-2 mb-0">{{ userData.bio }}</p>
               </div>
             </div>
 
@@ -184,19 +249,6 @@ function roleBadgeClass(role, designation) {
   padding: 1.25rem;
   max-height: 70vh;
   overflow-y: auto;
-}
-
-.user-avatar-lg {
-  width: 48px;
-  height: 48px;
-  border-radius: 50%;
-  background: linear-gradient(135deg, #2563eb, #1d4ed8);
-  color: white;
-  font-weight: 700;
-  font-size: 1.25rem;
-  display: flex;
-  align-items: center;
-  justify-content: center;
 }
 
 .bio-box {

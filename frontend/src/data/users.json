@@ -47,7 +47,7 @@
   {
     "id": 4,
     "name": "Rahul Sharma",
-    "registerNumber": "CB.SC.U4CSE22001",
+    "registerNumber": "Y24CS001",
     "email": "rahul@allclub.com",
     "phone": "+91 90000 00004",
     "role": "STUDENT",
@@ -62,7 +62,7 @@
   {
     "id": 5,
     "name": "Priya Nair",
-    "registerNumber": "CB.SC.U4CSE22002",
+    "registerNumber": "Y25CS002",
     "email": "priya@allclub.com",
     "phone": "+91 90000 00005",
     "role": "STUDENT",
@@ -77,7 +77,7 @@
   {
     "id": 6,
     "name": "Arjun Menon",
-    "registerNumber": "CB.SC.U4ECE23001",
+    "registerNumber": "Y25EC003",
     "email": "arjun@allclub.com",
     "phone": "+91 90000 00006",
     "role": "STUDENT",
@@ -92,7 +92,7 @@
   {
     "id": 7,
     "name": "Kavitha Suresh",
-    "registerNumber": "CB.SC.U4MBA23002",
+    "registerNumber": "Y25BS004",
     "email": "kavitha@allclub.com",
     "phone": "+91 90000 00007",
     "role": "STUDENT",
@@ -107,7 +107,7 @@
   {
     "id": 8,
     "name": "Siddharth Pillai",
-    "registerNumber": "CB.SC.U4CSE24001",
+    "registerNumber": "Y26CS005",
     "email": "sid@allclub.com",
     "phone": "+91 90000 00008",
     "role": "STUDENT",

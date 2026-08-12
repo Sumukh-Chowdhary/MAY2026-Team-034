@@ -68,6 +68,18 @@
               </div>
             </div>
 
+            <div v-if="parsedVenuePayload" class="col-12">
+              <label class="form-label text-primary font-bold">Requested Venue Information</label>
+              <div class="p-3 bg-light border border-primary-subtle rounded-3">
+                <div class="row g-2 text-xs">
+                  <div class="col-md-6"><strong>Venue:</strong> {{ parsedVenuePayload.venueName }}</div>
+                  <div class="col-md-6"><strong>Requested Date:</strong> {{ parsedVenuePayload.date }}</div>
+                  <div class="col-md-6"><strong>Time Slot:</strong> {{ parsedVenuePayload.startTime }} - {{ parsedVenuePayload.endTime }}</div>
+                  <div v-if="parsedVenuePayload.reason" class="col-12 mt-1"><strong>Reason / Notes:</strong> {{ parsedVenuePayload.reason }}</div>
+                </div>
+              </div>
+            </div>
+
             <div class="col-12">
               <label class="form-label">
                 Description
@@ -157,12 +169,12 @@
 </template>
 
 <script setup>
-import { ref } from "vue"
+import { ref, computed } from "vue"
 
 import StatusBadge from "./StatusBadge.vue"
 import ApprovalTimeline from "./ApprovalTimeline.vue"
 
-defineProps({
+const props = defineProps({
   show: Boolean,
   request: Object,
   approvals: {
@@ -183,6 +195,19 @@ const emit = defineEmits([
 ])
 
 const remarks = ref("")
+
+const parsedVenuePayload = computed(() => {
+  if (!props.request || (props.request.request_type !== 'VENUE_REQUEST' && props.request.requestType !== 'VENUE_REQUEST')) return null
+  try {
+    const desc = props.request.description || ''
+    if (desc.startsWith('{')) {
+      return JSON.parse(desc)
+    }
+  } catch (e) {
+    return null
+  }
+  return null
+})
 
 const format = value => {
   if (!value) return "-"

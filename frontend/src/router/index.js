@@ -99,6 +99,18 @@ const routes = [
     component: () => import('@/views/admin/Profile.vue'),
     meta: { requiresAuth: true, role: 'ADMIN' }
   },
+  {
+    path: '/admin/profile/:id',
+    name: 'AdminUserProfileView',
+    component: () => import('@/views/PublicUserProfile.vue'),
+    meta: { requiresAuth: true, role: 'ADMIN' }
+  },
+  {
+    path: '/admin/notifications',
+    name: 'AdminNotifications',
+    component: () => import('@/views/Notifications.vue'),
+    meta: { requiresAuth: true, role: 'ADMIN' }
+  },
 
   // --- Faculty Routes ---
   {
@@ -147,6 +159,18 @@ const routes = [
     path: '/faculty/profile',
     name: 'FacultyProfile',
     component: () => import('@/views/faculty/Profile.vue'),
+    meta: { requiresAuth: true, role: 'FACULTY' }
+  },
+  {
+    path: '/faculty/profile/:id',
+    name: 'FacultyUserProfileView',
+    component: () => import('@/views/PublicUserProfile.vue'),
+    meta: { requiresAuth: true, role: 'FACULTY' }
+  },
+  {
+    path: '/faculty/notifications',
+    name: 'FacultyNotifications',
+    component: () => import('@/views/Notifications.vue'),
     meta: { requiresAuth: true, role: 'FACULTY' }
   },
 
@@ -200,6 +224,32 @@ const routes = [
     component: () => import('@/views/student/Profile.vue'),
     meta: { requiresAuth: true, role: 'STUDENT' }
   },
+  {
+    path: '/student/profile/:id',
+    name: 'StudentUserProfileView',
+    component: () => import('@/views/PublicUserProfile.vue'),
+    meta: { requiresAuth: true, role: 'STUDENT' }
+  },
+  {
+    path: '/student/notifications',
+    name: 'StudentNotifications',
+    component: () => import('@/views/Notifications.vue'),
+    meta: { requiresAuth: true, role: 'STUDENT' }
+  },
+
+  {
+    path: '/profile/:id',
+    name: 'SharedUserProfileView',
+    component: () => import('@/views/PublicUserProfile.vue'),
+    meta: { requiresAuth: true }
+  },
+
+  {
+    path: '/notifications',
+    name: 'Notifications',
+    component: () => import('@/views/Notifications.vue'),
+    meta: { requiresAuth: true }
+  },
 
   {
     path: '/:pathMatch(.*)*',
@@ -213,22 +263,23 @@ const router = createRouter({
 });
 
 
-router.beforeEach((to, from, next) => {
+router.beforeEach((to) => {
   if (!to.meta.requiresAuth) {
-    return next();
+    return true;
   }
 
   if (!isLoggedIn()) {
-    return next('/login');
+    return '/login';
   }
 
   const user = getCurrentUser();
 
   if (to.meta.role && user?.role !== to.meta.role) {
-    return next('/');
+    const rolePrefix = user?.role === 'ADMIN' ? '/admin' : (user?.role === 'FACULTY' ? '/faculty' : '/student');
+    return rolePrefix;
   }
 
-  next();
+  return true;
 });
 
 export default router;

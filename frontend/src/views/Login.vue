@@ -50,18 +50,19 @@ async function handleLogin() {
           <h2 class="text-center fw-bold mb-4">Login to AllClub</h2>
           
           <div class="mb-3">
-            <label class="form-label">Register Number / Email</label>
+            <label class="form-label fw-semibold">Registration ID / Faculty ID</label>
             <input 
               v-model="username" 
               type="text" 
               class="form-control" 
-              placeholder="Enter register number or email"
+              placeholder="e.g. Y26CS001, Y24CS001, FAC001"
               @keyup.enter="handleLogin"
             />
+            <div class="form-text text-muted">Students: enter your Registration ID (e.g. Y26CS001). Email login is disabled for students.</div>
           </div>
 
           <div class="mb-4">
-            <label class="form-label">Password</label>
+            <label class="form-label fw-semibold">Password</label>
             <input 
               v-model="password" 
               type="password" 

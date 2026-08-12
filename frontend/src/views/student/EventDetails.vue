@@ -1,8 +1,26 @@
 <script setup>
 import { ref, computed, onMounted, onUnmounted } from 'vue'
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 
 import StudentLayout from '@/layouts/StudentLayout.vue'
+import UserProfileModal from '@/components/common/UserProfileModal.vue'
+import EventAttendanceView from '@/components/events/EventAttendanceView.vue'
+import EventAttendanceModal from '@/components/events/EventAttendanceModal.vue'
+import EventRoundsView from '@/components/events/EventRoundsView.vue'
+import ParticipantProgressView from '@/components/events/ParticipantProgressView.vue'
+import EventResultsView from '@/components/events/EventResultsView.vue'
+import RequestVenueModal from '@/components/events/RequestVenueModal.vue'
+import EventVolunteersSection from '@/components/events/EventVolunteersSection.vue'
+
+const showProfileModal = ref(false)
+const selectedProfileUserId = ref(null)
+const showVenueRequestModal = ref(false)
+
+function openUserProfile(id) {
+  if (!id) return
+  selectedProfileUserId.value = id
+  showProfileModal.value = true
+}
 import {
   getEvent,
   registerForEvent,
@@ -13,12 +31,14 @@ import {
   manageEventPrizes,
   manageEventVolunteers
 } from '@/api/events'
+import { createRequest } from '@/api/requests'
 import { getUserAssignments } from '@/api/assignmentTickets'
 import { getCurrentUser } from '@/services/authService'
 import { useToast } from '@/composables/useToast'
 import { eventSocketService } from '@/services/eventService'
 
 const route = useRoute()
+const router = useRouter()
 const { showToast } = useToast()
 
 const activeTab = ref('schedule')
@@ -31,6 +51,7 @@ const currentUserId = ref(null)
 
 // Ticket modal state
 const showTicketModal = ref(false)
+const showAttendanceModal = ref(false)
 const ticketTargetRole = ref('ORGANIZER') // 'ORGANIZER' | 'COORDINATOR'
 const ticketTitle = ref('')
 const ticketDescription = ref('')
@@ -84,6 +105,10 @@ const normalizeEvent = (data) => ({
     : []
 })
 
+import { getMyClubs } from '@/api/clubs'
+
+const myClubs = ref([])
+
 const myVolunteerRecord = computed(() => {
   if (!event.value || !event.value.volunteers || !currentUserId.value) return null
   return event.value.volunteers.find(v => Number(v.userId) === Number(currentUserId.value))
@@ -91,6 +116,20 @@ const myVolunteerRecord = computed(() => {
 
 const isApprovedVolunteer = computed(() => {
   return myVolunteerRecord.value && myVolunteerRecord.value.status === 'APPROVED'
+})
+
+const isClubMember = computed(() => {
+  if (!event.value || !event.value.clubId) return false
+  return myClubs.value.some(c => Number(c.id || c.clubId) === Number(event.value.clubId))
+})
+
+const canApplyVolunteer = computed(() => {
+  if (!event.value || !event.value.clubId) return false
+  if (!isClubMember.value) return false
+  if (event.value.status === 'COMPLETED') return false
+  if (isOrganizer.value) return false
+  if (myVolunteerRecord.value) return false
+  return true
 })
 
 const canManage = computed(() => {
@@ -136,6 +175,12 @@ async function loadEventData() {
     const user = getCurrentUser()
     if (user) {
       currentUserId.value = user.id
+    }
+
+    try {
+      myClubs.value = await getMyClubs()
+    } catch (e) {
+      myClubs.value = []
     }
 
     const data = await getEvent(Number(route.params.id))
@@ -219,20 +264,40 @@ async function handleRegister() {
 }
 
 async function applyVolunteer() {
-  if (isApplyingVolunteer.value || myVolunteerRecord.value) return
+  if (isApplyingVolunteer.value || myVolunteerRecord.value) {
+    if (myVolunteerRecord.value?.status === 'PENDING') {
+      showToast('You already have a pending volunteer application for this event.', 'warning')
+    }
+    return
+  }
   isApplyingVolunteer.value = true
   volunteerFeedback.value = ''
   try {
-    await manageEventVolunteers(event.value.id, { userId: currentUserId.value })
-    volunteerFeedback.value = 'Application submitted! Awaiting approval from organizer/faculty.'
+    const payload = {
+      title: `Apply as Volunteer - ${event.value.name}`,
+      description: `Volunteer application for event ${event.value.name} under club ${event.value.club || 'Club'}.`,
+      requestType: 'BECOME_VOLUNTEER',
+      priority: 'MEDIUM',
+      referenceType: 'EVENT',
+      referenceId: event.value.id,
+      referenceName: event.value.name
+    }
+    await createRequest(payload)
+    volunteerFeedback.value = 'Volunteer application submitted! Awaiting faculty/admin approval.'
+    showToast('Volunteer application submitted!', 'success')
     event.value.volunteers.push({
       userId: currentUserId.value,
       status: 'PENDING'
     })
-    showToast('Volunteer application submitted!', 'success')
   } catch (err) {
-    volunteerFeedback.value = 'Failed to submit volunteer application.'
-    showToast('Application failed', 'error')
+    const errorMsg = err.response?.data?.error || err.message || 'Failed to submit volunteer application.'
+    if (errorMsg.toLowerCase().includes('already pending') || err.response?.status === 409) {
+      showToast('You already have a pending volunteer application for this event.', 'warning')
+      volunteerFeedback.value = 'You already have a pending volunteer application for this event.'
+    } else {
+      showToast(errorMsg, 'error')
+      volunteerFeedback.value = errorMsg
+    }
   } finally {
     isApplyingVolunteer.value = false
   }
@@ -258,8 +323,9 @@ async function submitTicketToTarget() {
       ticketFeedback.value = ''
     }, 1200)
   } catch (err) {
-    ticketFeedback.value = 'Failed to raise ticket.'
-    showToast('Failed to raise ticket', 'error')
+    const msg = err.response?.data?.error || 'Failed to raise ticket.'
+    ticketFeedback.value = msg
+    showToast(msg, 'error')
   } finally {
     isSubmittingTicket.value = false
   }
@@ -318,11 +384,46 @@ async function handleAddPrize() {
 
 const tabs = [
   { key: 'schedule', label: 'Schedule' },
+  { key: 'rounds', label: 'Rounds' },
+  { key: 'progress', label: 'Participant Progress' },
+  { key: 'results', label: 'Results & Podium' },
   { key: 'announcements', label: 'Announcements' },
   { key: 'registrations', label: 'Registrations' },
-  { key: 'attendance', label: 'Attendance' },
-  { key: 'prizes', label: 'Prizes & Winners' }
+  { key: 'volunteers', label: 'Event Volunteers' }
 ]
+
+const visibleTabs = computed(() => {
+  const isComp = event.value ? (event.value.isCompetition !== false) : true
+  return tabs.filter(tab => {
+    if (!isComp && (tab.key === 'rounds' || tab.key === 'progress' || tab.key === 'results')) {
+      return false
+    }
+    return true
+  })
+})
+
+const isAttendanceAvailable = computed(() => {
+  if (!event.value) return false
+  const rawDate = event.value.startDate || event.value.start_date
+  if (!rawDate) return true
+  try {
+    const start = new Date(rawDate)
+    start.setHours(0, 0, 0, 0)
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+    return today >= start
+  } catch (e) {
+    return true
+  }
+})
+
+function handleAttendanceClick() {
+  if (!isAttendanceAvailable.value) {
+    showToast(`Attendance will be available when the event begins on ${event.value?.startDate || event.value?.start_date || 'the event date'}.`, 'info')
+    return
+  }
+  showAttendanceModal.value = true
+}
 </script>
 
 <template>
@@ -366,7 +467,17 @@ const tabs = [
               </button>
 
               <button 
-                v-if="!myVolunteerRecord && event.status !== 'COMPLETED' && !isOrganizer" 
+                v-if="canManage" 
+                class="btn btn-sm btn-outline-primary rounded-pill px-3 fw-semibold"
+                :class="{ 'opacity-50': !isAttendanceAvailable }"
+                :title="!isAttendanceAvailable ? `Attendance will be available when the event begins on ${event.startDate || event.start_date || ''}` : 'Manage Attendance'"
+                @click="handleAttendanceClick"
+              >
+                <i class="bi bi-calendar-check me-1"></i> Attendance
+              </button>
+
+              <button 
+                v-if="canApplyVolunteer" 
                 class="btn btn-warning rounded-pill px-3 fw-semibold text-xs"
                 :disabled="isApplyingVolunteer"
                 @click="applyVolunteer"
@@ -380,7 +491,12 @@ const tabs = [
             </div>
           </div>
 
-          <div v-if="volunteerFeedback" class="alert alert-info py-2 text-xs mb-3">{{ volunteerFeedback }}</div>
+          <div v-if="volunteerFeedback" class="alert alert-info py-2 text-xs mb-3 d-flex justify-content-between align-items-center">
+            <span>{{ volunteerFeedback }}</span>
+            <button class="btn btn-sm btn-link text-primary p-0 ms-2 text-decoration-none fw-bold" @click="router.push('/student/requests')">
+              View Requests <i class="bi bi-arrow-right"></i>
+            </button>
+          </div>
 
           <div class="info-grid">
             <div class="info-box">
@@ -393,13 +509,31 @@ const tabs = [
             </div>
           </div>
 
+          <!-- Read-only Venue Display with Request Venue Button for Organizers -->
+          <div class="info-box mb-3">
+            <div class="d-flex align-items-center justify-content-between">
+              <div>
+                <label>Venue</label>
+                <p class="mb-0 fw-semibold text-dark">{{ event.venueName || event.venue || 'No venue assigned yet' }}</p>
+                <small v-if="event.venueLocation" class="text-muted text-xs d-block">{{ event.venueLocation }}</small>
+              </div>
+              <button 
+                v-if="isOrganizer" 
+                class="btn btn-sm btn-outline-primary rounded-3 px-3 text-xs fw-semibold"
+                @click="showVenueRequestModal = true"
+              >
+                <i class="bi bi-geo-alt me-1"></i> {{ event.venueId ? 'Request / Change Venue' : 'Request Venue' }}
+              </button>
+            </div>
+          </div>
+
           <div class="info-box description-box">
             <label>Description</label>
             <p>{{ event.description }}</p>
           </div>
 
           <div class="detail-tabs">
-            <button v-for="tab in tabs" :key="tab.key" class="tab-option" :class="{ active: activeTab === tab.key }" @click="activeTab = tab.key">
+            <button v-for="tab in visibleTabs" :key="tab.key" class="tab-option" :class="{ active: activeTab === tab.key }" @click="activeTab = tab.key">
               {{ tab.label }}
             </button>
           </div>
@@ -422,6 +556,21 @@ const tabs = [
                 <span class="activity">{{ item.activity }}</span>
               </div>
               <p v-if="event.schedule.length === 0" class="empty-tab">No schedule added yet.</p>
+            </div>
+
+            <!-- TAB 1B: ROUNDS -->
+            <div v-else-if="activeTab === 'rounds'">
+              <EventRoundsView :eventId="event.id" :canManage="canManage" />
+            </div>
+
+            <!-- TAB 1C: PARTICIPANT PROGRESS -->
+            <div v-else-if="activeTab === 'progress'">
+              <ParticipantProgressView :eventId="event.id" />
+            </div>
+
+            <!-- TAB 1D: RESULTS & PODIUM -->
+            <div v-else-if="activeTab === 'results'">
+              <EventResultsView :eventId="event.id" :prizes="event.prizes" :canManage="canManage" @refresh="loadEventData" />
             </div>
 
             <!-- TAB 2: ANNOUNCEMENTS -->
@@ -466,36 +615,6 @@ const tabs = [
               <p v-else class="empty-tab">No registrations yet.</p>
             </div>
 
-            <!-- TAB 4: ATTENDANCE -->
-            <div v-else-if="activeTab === 'attendance'">
-              <table class="table" v-if="event.registrations.length">
-                <thead>
-                  <tr>
-                    <th>Name</th>
-                    <th>Register Number</th>
-                    <th>Attendance Status</th>
-                    <th v-if="canManage" class="text-end">Mark Attendance</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr v-for="(student, index) in event.registrations" :key="index">
-                    <td>{{ student.name }}</td>
-                    <td>{{ student.registerNumber }}</td>
-                    <td>
-                      <span class="attendance-badge" :class="event.attendance.some(a => (a.userId === student.userId || a.name === student.name) && String(a.status).toUpperCase() === 'PRESENT') ? 'present' : 'absent'">
-                        {{ event.attendance.some(a => (a.userId === student.userId || a.name === student.name) && String(a.status).toUpperCase() === 'PRESENT') ? 'PRESENT' : 'ABSENT / NOT MARKED' }}
-                      </span>
-                    </td>
-                    <td v-if="canManage" class="text-end">
-                      <button class="btn-mark present-btn" @click="handleUpdateAttendance(student.userId, 'PRESENT')">Present</button>
-                      <button class="btn-mark absent-btn" @click="handleUpdateAttendance(student.userId, 'ABSENT')">Absent</button>
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
-              <p v-else class="empty-tab">No registered participants to mark attendance.</p>
-            </div>
-
             <!-- TAB 5: PRIZES & WINNERS -->
             <div v-else-if="activeTab === 'prizes'">
               <div v-if="canManage" class="organizer-form-box">
@@ -517,6 +636,17 @@ const tabs = [
                 </div>
               </div>
               <p v-if="event.prizes.length === 0" class="empty-tab">No prizes or winners announced yet.</p>
+            </div>
+
+            <!-- TAB 6: VOLUNTEERS -->
+            <div v-else-if="activeTab === 'volunteers'" class="py-2">
+              <EventVolunteersSection 
+                :eventId="event.id" 
+                :event="event" 
+                userRole="STUDENT"
+                :isClubMember="isClubMember"
+                @refresh="loadEventData" 
+              />
             </div>
 
           </div>
@@ -579,7 +709,12 @@ const tabs = [
               <textarea v-model="ticketDescription" class="form-control custom-input" rows="3" placeholder="Explain your request or issue in detail..."></textarea>
             </div>
 
-            <div v-if="ticketFeedback" class="alert alert-info text-xs py-2">{{ ticketFeedback }}</div>
+            <div v-if="ticketFeedback" class="alert alert-info text-xs py-2 d-flex justify-content-between align-items-center">
+              <span>{{ ticketFeedback }}</span>
+              <button class="btn btn-sm btn-link text-primary p-0 ms-2 text-decoration-none fw-bold" @click="showTicketModal = false; router.push('/student/requests')">
+                View Requests <i class="bi bi-arrow-right"></i>
+              </button>
+            </div>
           </div>
 
           <div class="modal-footer-custom">
@@ -591,6 +726,28 @@ const tabs = [
         </div>
       </div>
     </Teleport>
+
+    <UserProfileModal 
+      :show="showProfileModal"
+      :userId="selectedProfileUserId"
+      @close="showProfileModal = false"
+    />
+
+    <EventAttendanceModal 
+      :show="showAttendanceModal"
+      :eventId="event ? event.id : 0"
+      :canManage="canManage"
+      @close="showAttendanceModal = false"
+      @saved="loadEventData"
+    />
+
+    <RequestVenueModal
+      v-if="event"
+      :show="showVenueRequestModal"
+      :event="event"
+      @close="showVenueRequestModal = false"
+      @submitted="loadEventData"
+    />
 
   </StudentLayout>
 </template>

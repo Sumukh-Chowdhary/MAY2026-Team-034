@@ -17,22 +17,36 @@ VALID_CLUB_CATEGORIES = {
 }
 
 def serialize_club(club: Club):
+    # Calculate live current active members (User.account_status == 'ACTIVE' and membership_status == 'ACTIVE')
+    active_mems = [
+        m for m in club.memberships 
+        if m.membership_status == 'ACTIVE' and m.user and m.user.account_status == 'ACTIVE'
+    ]
+    legacy_mems = [
+        m for m in club.memberships 
+        if (m.user and m.user.account_status == 'LEGACY') or m.membership_status in ['LEGACY', 'GRADUATED']
+    ]
+
+    active_count = len(active_mems)
+    legacy_count = len(legacy_mems)
+
     organizers = [
         {
             "id": organizer.user.id,
             "name": (
                 organizer.user.student_profile.full_name
-                if organizer.user.student_profile
-                else organizer.user.faculty_profile.full_name
+                if organizer.user and organizer.user.student_profile
+                else (organizer.user.faculty_profile.full_name if organizer.user and organizer.user.faculty_profile else 'Organizer')
             ),
         }
         for organizer in club.organizers
+        if organizer.user and organizer.user.account_status == 'ACTIVE'
     ]
 
     faculty = [
         {
             "id": advisor.faculty.id,
-            "name": advisor.faculty.faculty_profile.full_name,
+            "name": advisor.faculty.faculty_profile.full_name if (advisor.faculty and hasattr(advisor.faculty, 'faculty_profile') and advisor.faculty.faculty_profile) else 'Faculty Advisor',
         }
         for advisor in club.faculty_coordinators
     ]
@@ -44,11 +58,12 @@ def serialize_club(club: Club):
         "category": club.club_category,
         "logo": club.club_logo,
         "status": club.club_status,
-        "totalMembers": club.total_members,
-        "activeMembers": club.active_members,
+        "totalMembers": active_count,
+        "activeMembers": active_count,
+        "legacyMembers": legacy_count,
         "organizers": organizers,
         "faculty": faculty,
-        "createdAt": club.created_at.isoformat(),
+        "createdAt": club.created_at.isoformat() if club.created_at else None,
     }
 
 def serialize_faculty(member):
@@ -64,34 +79,66 @@ def serialize_faculty(member):
     }
 
 def serialize_member(membership):
+    student = membership.user.student_profile if (membership.user and membership.user.student_profile) else None
+    user_status = membership.user.account_status if membership.user else 'ACTIVE'
+    is_legacy = (user_status == 'LEGACY')
+    reg_id = (student.registration_id or student.roll_no) if student else None
+
     return {
         "id": membership.user.id,
-        "name": membership.user.student_profile.full_name,
+        "userId": membership.user.id,
+        "name": student.full_name if student else membership.user.email.split('@')[0],
         "email": membership.user.email,
+        "rollNumber": reg_id,
+        "registerNumber": reg_id,
+        "registrationId": reg_id,
+        "department": (student.department.name if (student and student.department) else None),
+        "branchCode": getattr(student, 'branch_code', None) if student else None,
+        "batchYear": getattr(student, 'batch_year', None) if student else None,
+        "graduationYear": getattr(student, 'graduation_year', None) if student else None,
         "membershipRole": membership.membership_role,
         "membershipStatus": membership.membership_status,
-        "joinedAt": membership.joined_at.isoformat(),
+        "userStatus": user_status,
+        "isLegacy": is_legacy,
+        "avatarStyle": getattr(student, 'avatar_style', 'adventurer') if student else 'adventurer',
+        "avatarSeed": getattr(student, 'avatar_seed', None) if student else membership.user.email,
+        "joinedAt": membership.joined_at.isoformat() if membership.joined_at else None,
+        "leftAt": membership.left_at.isoformat() if (hasattr(membership, 'left_at') and membership.left_at) else None
     }
 
 def serialize_member_profile(membership):
-    student = membership.user.student_profile
+    student = membership.user.student_profile if (membership.user and membership.user.student_profile) else None
+    user_status = membership.user.account_status if membership.user else 'ACTIVE'
+    is_legacy = (user_status == 'LEGACY')
+    reg_id = (student.registration_id or student.roll_no) if student else None
 
     return {
         "id": membership.user.id,
-        "rollNumber": student.roll_no,
-        "name": student.full_name,
+        "userId": membership.user.id,
+        "rollNumber": reg_id,
+        "registerNumber": reg_id,
+        "registrationId": reg_id,
+        "name": student.full_name if student else membership.user.email,
         "email": membership.user.email,
-        "phoneNumber": student.phone_number,
-        "yearOfStudy": student.year_of_study,
+        "phoneNumber": student.phone_number if student else None,
+        "yearOfStudy": student.year_of_study if student else None,
         "department": (
             student.department.name
-            if student.department
+            if (student and student.department)
             else None
         ),
-        "bio": student.bio,
+        "branchCode": getattr(student, 'branch_code', None) if student else None,
+        "batchYear": getattr(student, 'batch_year', None) if student else None,
+        "graduationYear": getattr(student, 'graduation_year', None) if student else None,
+        "bio": student.bio if student else None,
         "membershipRole": membership.membership_role,
         "membershipStatus": membership.membership_status,
-        "joinedAt": membership.joined_at.isoformat(),
+        "userStatus": user_status,
+        "isLegacy": is_legacy,
+        "avatarStyle": getattr(student, 'avatar_style', 'adventurer') if student else 'adventurer',
+        "avatarSeed": getattr(student, 'avatar_seed', None) if student else membership.user.email,
+        "joinedAt": membership.joined_at.isoformat() if membership.joined_at else None,
+        "leftAt": membership.left_at.isoformat() if (hasattr(membership, 'left_at') and membership.left_at) else None
     }
 
 def serialize_event(event):
@@ -224,6 +271,10 @@ def create_club(name, category, description, logo, faculty_ids):
 
     db.session.commit()
 
+    from app.services.notification_service import NotificationService
+    for fid in faculty_ids:
+        NotificationService.notify_club_created(fid, club.club_name, club.id)
+
     return serialize_club(club)
 
 def update_club(club_id, name, category, description, logo, faculty_ids):
@@ -305,7 +356,7 @@ def archive_club(club_id):
 
     return serialize_club(club)
 
-def get_club_members(club_id, include_inactive=False):
+def get_club_members(club_id, include_inactive=True):
     club = Club.query.get_or_404(club_id, description="Club not found")
 
     query = ClubMembership.query.filter_by(club_id=club.id)

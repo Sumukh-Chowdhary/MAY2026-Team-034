@@ -5,9 +5,13 @@ from app.utils.auth_jwt import jwt_required, roles_required
 users_bp = Blueprint('users', __name__, url_prefix='/api/users')
 
 @users_bp.route('', methods=['GET'])
+@jwt_required
 def get_users():
     role_name = request.args.get('role')
     search_q = request.args.get('search')
+
+    current_user = g.current_user
+    viewer_role = current_user.role.name if (current_user and current_user.role) else 'STUDENT'
 
     query = User.query
 
@@ -17,7 +21,14 @@ def get_users():
             query = query.filter(User.role_id == role.id)
 
     users = query.all()
-    results = [u.to_dict() for u in users]
+    results = []
+    for u in users:
+        u_dict = u.to_dict()
+        is_self = (current_user and current_user.id == u.id)
+        if viewer_role == 'STUDENT' and not is_self:
+            u_dict['phone'] = None
+            u_dict['phoneNumber'] = None
+        results.append(u_dict)
 
     if search_q:
         q = search_q.lower()
@@ -34,9 +45,20 @@ def get_users():
 
 
 @users_bp.route('/<int:user_id>', methods=['GET'])
+@jwt_required
 def get_user(user_id):
     user = User.query.get_or_404(user_id)
-    return jsonify(user.to_dict()), 200
+
+    current_user = g.current_user
+    viewer_role = current_user.role.name if (current_user and current_user.role) else 'STUDENT'
+    is_self = (current_user and current_user.id == user.id)
+
+    data = user.to_dict()
+    if viewer_role == 'STUDENT' and not is_self:
+        data['phone'] = None
+        data['phoneNumber'] = None
+
+    return jsonify(data), 200
 
 
 @users_bp.route('/<int:user_id>', methods=['PUT'])
@@ -77,6 +99,13 @@ def update_user(user_id):
     new_status = data.get('accountStatus') or data.get('status')
     if new_status and is_admin:
         user.account_status = new_status
+        if new_status == 'LEGACY':
+            for membership in user.club_memberships:
+                if not membership.ended_at:
+                    membership.ended_at = datetime.utcnow()
+        elif new_status == 'ACTIVE':
+            for membership in user.club_memberships:
+                membership.ended_at = None
 
     db.session.commit()
     return jsonify(user.to_dict()), 200

@@ -9,33 +9,39 @@ auth_bp = Blueprint('auth', __name__, url_prefix='/api/auth')
 @auth_bp.route('/login', methods=['POST'])
 def login():
     data = request.get_json() or {}
-    username = data.get('username') or data.get('email')
+    username = str(data.get('username') or data.get('registerNumber') or data.get('email') or '').strip()
     password = data.get('password')
 
     if not username or not password:
         return jsonify(
-            {'error': 'Email/Register Number and Password are required'}
+            {'error': 'Registration ID/Email and Password are required'}
         ), 400
 
-    # Search user by email first, or by Student roll_no / Faculty employee_id
-    user = User.query.filter_by(email=username).first()
+    # If an email is provided, check if it belongs to a student
+    user = None
+    if '@' in username:
+        user = User.query.filter_by(email=username).first()
+        if user and user.role and user.role.name == 'STUDENT':
+            return jsonify({'error': 'Students must log in using their Registration ID (e.g. Y26CS001). Email login is disabled for students.'}), 400
+    
     if not user:
-        student_prof = StudentProfile.query.filter_by(roll_no=username).first()
+        student_prof = StudentProfile.query.filter(
+            (StudentProfile.roll_no == username) | 
+            (StudentProfile.registration_id == username)
+        ).first()
         if student_prof:
             user = student_prof.user
         else:
-            faculty_prof = FacultyProfile.query.filter_by(
-                employee_id=username
-            ).first()
+            faculty_prof = FacultyProfile.query.filter_by(employee_id=username).first()
             if faculty_prof:
                 user = faculty_prof.user
 
     if not user or not user.check_password(password):
         return jsonify(
-            {'error': 'Invalid email/register number or password'}
+            {'error': 'Invalid Registration ID/Email or password'}
         ), 401
 
-    if user.account_status != 'ACTIVE':
+    if user.account_status == 'INACTIVE':
         return jsonify(
             {'error': 'Your account has been deactivated. Please contact admin.'}
         ), 403
@@ -108,14 +114,32 @@ def register():
             department_id=dept_id
         )
         db.session.add(prof)
-    else:  # STUDENT
-        roll_no = register_number or f"STU{user.id:04d}"
+        from app.utils.registration_id import generate_registration_id, get_branch_code, parse_registration_id
+
+        dept_code = department.code if department else 'CS'
+        batch_yr = 2026
+        if register_number and str(register_number).strip() and not str(register_number).startswith('STU'):
+            roll_no = str(register_number).strip().upper()
+        else:
+            roll_no = generate_registration_id(batch_yr, dept_code, user.id)
+
         if StudentProfile.query.filter_by(roll_no=roll_no).first():
             db.session.rollback()
             return jsonify({'error': 'Register/Roll number already exists'}), 400
+
+        parsed = parse_registration_id(roll_no)
+        b_yr = (int(parsed["batchYear"]) + 2000) if parsed else batch_yr
+        br_code = parsed["branchCode"] if parsed else get_branch_code(dept_code)
+        r_num = int(parsed["rollNumber"]) if parsed else user.id
+
         prof = StudentProfile(
             user_id=user.id,
             roll_no=roll_no,
+            registration_id=roll_no,
+            batch_year=b_yr,
+            branch_code=br_code,
+            roll_number=r_num,
+            graduation_year=b_yr + 4,
             full_name=full_name,
             phone_number=phone_number,
             year_of_study=year_of_study,

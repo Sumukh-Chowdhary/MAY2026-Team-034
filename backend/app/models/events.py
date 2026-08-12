@@ -47,6 +47,7 @@ class Event(db.Model):
     start_time = db.Column(db.Time, nullable=True)
     end_time = db.Column(db.Time, nullable=True)
     capacity = db.Column(db.Integer, nullable=False, default=0)
+    event_format = db.Column(db.String(20), nullable=False, default='COMPETITION')
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
@@ -128,6 +129,8 @@ class Event(db.Model):
             'startTime': self.start_time.strftime('%H:%M') if self.start_time else None,
             'endTime': self.end_time.strftime('%H:%M') if self.end_time else None,
             'capacity': self.capacity,
+            'eventFormat': (self.event_format or 'COMPETITION').upper(),
+            'isCompetition': (self.event_format or 'COMPETITION').upper() == 'COMPETITION' or len(self.sessions) > 1 or len(self.prizes) > 0,
             'createdAt': self.created_at.isoformat() if self.created_at else None,
             'updatedAt': self.updated_at.isoformat() if self.updated_at else None,
             'schedule': [item.to_dict() for item in self.schedules],
@@ -161,13 +164,23 @@ class EventAnnouncement(db.Model):
     event_id = db.Column(db.Integer, db.ForeignKey('events.id'), nullable=False)
     title = db.Column(db.String(120), nullable=False)
     message = db.Column(db.Text, nullable=False)
+    created_by_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
+    created_by = db.relationship('User', foreign_keys=[created_by_id], lazy=True)
+
     def to_dict(self):
+        cb_sp = getattr(self.created_by, 'student_profile', None) if self.created_by else None
+        cb_fp = getattr(self.created_by, 'faculty_profile', None) if self.created_by else None
+        cb_name = cb_sp.full_name if cb_sp else (cb_fp.full_name if cb_fp else getattr(self.created_by, 'username', 'Organizer'))
+
         return {
             'id': self.id,
+            'eventId': self.event_id,
             'title': self.title,
             'message': self.message,
+            'createdById': self.created_by_id,
+            'createdByName': cb_name,
             'date': self.created_at.strftime('%Y-%m-%d') if self.created_at else None,
             'createdAt': self.created_at.isoformat() if self.created_at else None,
         }
@@ -186,40 +199,172 @@ class EventRegistration(db.Model):
     user = db.relationship('User', lazy=True)
 
     def to_dict(self):
+        sp = self.user.student_profile if (self.user and hasattr(self.user, 'student_profile')) else None
+        fp = self.user.faculty_profile if (self.user and hasattr(self.user, 'faculty_profile')) else None
+        u_name = sp.full_name if sp else (fp.full_name if fp else (self.user.email if self.user else None))
+        reg_id = (sp.registration_id or sp.roll_no) if sp else (fp.employee_id if fp else None)
+        u_status = self.user.account_status if self.user else 'ACTIVE'
+
         return {
             'id': self.id,
             'eventId': self.event_id,
             'userId': self.user_id,
-            'userName': self.user.student_profile.full_name if self.user and self.user.student_profile else (
-                self.user.faculty_profile.full_name if self.user and self.user.faculty_profile else None
-            ),
+            'userName': u_name,
+            'registerNumber': reg_id,
+            'rollNumber': reg_id,
+            'userStatus': u_status,
+            'isLegacy': (u_status == 'LEGACY'),
             'status': self.registration_status,
             'registeredAt': self.registered_at.isoformat() if self.registered_at else None,
         }
 
 
-class EventAttendance(db.Model):
-    __tablename__ = 'event_attendance'
-    __table_args__ = (db.UniqueConstraint('event_id', 'user_id', name='uq_event_attendance'),)
+class EventSession(db.Model):
+    __tablename__ = 'event_sessions'
 
     id = db.Column(db.Integer, primary_key=True)
     event_id = db.Column(db.Integer, db.ForeignKey('events.id'), nullable=False)
-    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
-    attendance_status = db.Column(db.String(20), nullable=False, default='PRESENT')
-    marked_at = db.Column(db.DateTime, default=datetime.utcnow)
+    name = db.Column(db.String(100), nullable=False)
+    round_number = db.Column(db.Integer, nullable=False, default=1)
+    status = db.Column(db.String(20), nullable=False, default='UPCOMING')
+    session_date = db.Column(db.Date, nullable=True)
+    start_time = db.Column(db.String(30), nullable=True)
+    end_time = db.Column(db.String(30), nullable=True)
+    description = db.Column(db.Text, nullable=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
-    user = db.relationship('User', lazy=True)
+    event = db.relationship('Event', backref=db.backref('sessions', lazy=True, cascade='all, delete-orphan'))
 
     def to_dict(self):
+        records = EventAttendance.query.filter_by(session_id=self.id).all()
+        present_count = sum(1 for r in records if (r.attendance_status or '').upper() == 'PRESENT')
+        absent_count = sum(1 for r in records if (r.attendance_status or '').upper() == 'ABSENT')
+        total_count = len(records)
+        shortlisted_count = ParticipantRoundStatus.query.filter_by(session_id=self.id, status='SHORTLISTED').count()
+        eliminated_count = ParticipantRoundStatus.query.filter_by(session_id=self.id, status='ELIMINATED').count()
+
+        # Parse linked round context stored in description as prefix
+        linked_round_id = None
+        linked_round_name = None
+        clean_description = self.description or ''
+        if clean_description.startswith('__linked_round__:'):
+            try:
+                meta_part, _, user_desc = clean_description.partition('|')
+                _, _, rest = meta_part.partition(':')
+                rid_str, _, rname = rest.partition(':')
+                linked_round_id = int(rid_str)
+                linked_round_name = rname
+                clean_description = user_desc.strip()
+            except Exception:
+                pass
+
         return {
             'id': self.id,
             'eventId': self.event_id,
+            'name': self.name,
+            'roundNumber': self.round_number,
+            'status': (self.status or 'UPCOMING').upper(),
+            'sessionDate': self.session_date.isoformat() if self.session_date else None,
+            'startTime': self.start_time,
+            'endTime': self.end_time,
+            'description': clean_description,
+            'linkedRoundId': linked_round_id,
+            'linkedRoundName': linked_round_name,
+            'presentCount': present_count,
+            'absentCount': absent_count,
+            'totalCount': total_count,
+            'shortlistedCount': shortlisted_count,
+            'eliminatedCount': eliminated_count,
+            'createdAt': self.created_at.isoformat() if self.created_at else None,
+        }
+
+
+
+class ParticipantRoundStatus(db.Model):
+    __tablename__ = 'participant_round_statuses'
+
+    id = db.Column(db.Integer, primary_key=True)
+    event_id = db.Column(db.Integer, db.ForeignKey('events.id'), nullable=False)
+    session_id = db.Column(db.Integer, db.ForeignKey('event_sessions.id'), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    status = db.Column(db.String(30), nullable=False, default='REGISTERED')
+    reason = db.Column(db.Text, nullable=True)
+    updated_by_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    session = db.relationship('EventSession', backref=db.backref('round_statuses', lazy=True, cascade='all, delete-orphan'))
+    user = db.relationship('User', foreign_keys=[user_id], lazy=True)
+    updated_by = db.relationship('User', foreign_keys=[updated_by_id], lazy=True)
+
+    def to_dict(self):
+        sp = getattr(self.user, 'student_profile', None)
+        fp = getattr(self.user, 'faculty_profile', None)
+        u_name = sp.full_name if sp else (fp.full_name if fp else getattr(self.user, 'username', 'User'))
+        reg_num = sp.roll_no if sp else (fp.employee_id if fp else 'N/A')
+        ub_sp = getattr(self.updated_by, 'student_profile', None)
+        ub_fp = getattr(self.updated_by, 'faculty_profile', None)
+        ub_name = ub_sp.full_name if ub_sp else (ub_fp.full_name if ub_fp else getattr(self.updated_by, 'username', None))
+
+        return {
+            'id': self.id,
+            'eventId': self.event_id,
+            'sessionId': self.session_id,
+            'roundName': self.session.name if self.session else None,
+            'roundNumber': self.session.round_number if self.session else None,
             'userId': self.user_id,
-            'userName': self.user.student_profile.full_name if self.user and self.user.student_profile else (
-                self.user.faculty_profile.full_name if self.user and self.user.faculty_profile else None
-            ),
-            'status': self.attendance_status.title(),
+            'userName': u_name,
+            'userEmail': self.user.email if self.user else None,
+            'registerNumber': reg_num,
+            'status': self.status,
+            'reason': self.reason,
+            'updatedById': self.updated_by_id,
+            'updatedByName': ub_name,
+            'updatedAt': self.updated_at.isoformat() if self.updated_at else None
+        }
+
+
+class EventAttendance(db.Model):
+    __tablename__ = 'event_attendance'
+
+    id = db.Column(db.Integer, primary_key=True)
+    event_id = db.Column(db.Integer, db.ForeignKey('events.id'), nullable=False)
+    session_id = db.Column(db.Integer, db.ForeignKey('event_sessions.id'), nullable=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    attendance_status = db.Column(db.String(20), nullable=False, default='PRESENT')
+    marked_by_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)
+    marked_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    user = db.relationship('User', foreign_keys=[user_id], lazy=True)
+    marked_by = db.relationship('User', foreign_keys=[marked_by_id], lazy=True)
+    session = db.relationship('EventSession', backref=db.backref('attendance_records', lazy=True, cascade='all, delete-orphan'))
+
+    def to_dict(self):
+        student_prof = self.user.student_profile if (self.user and hasattr(self.user, 'student_profile')) else None
+        faculty_prof = self.user.faculty_profile if (self.user and hasattr(self.user, 'faculty_profile')) else None
+        
+        marked_by_name = None
+        if self.marked_by:
+            mb_sp = getattr(self.marked_by, 'student_profile', None)
+            mb_fp = getattr(self.marked_by, 'faculty_profile', None)
+            marked_by_name = mb_sp.full_name if mb_sp else (mb_fp.full_name if mb_fp else getattr(self.marked_by, 'username', 'User'))
+
+        user_name = student_prof.full_name if student_prof else (faculty_prof.full_name if faculty_prof else getattr(self.user, 'username', 'Participant'))
+
+        return {
+            'id': self.id,
+            'eventId': self.event_id,
+            'sessionId': self.session_id,
+            'userId': self.user_id,
+            'userName': user_name,
+            'userEmail': self.user.email if self.user else None,
+            'registerNumber': student_prof.roll_no if student_prof else (faculty_prof.employee_id if faculty_prof else 'N/A'),
+            'branch': (student_prof.department.name if (student_prof and student_prof.department) else getattr(student_prof, 'branch', 'N/A')) if student_prof else 'N/A',
+            'status': (self.attendance_status or 'PRESENT').upper(),
+            'markedById': self.marked_by_id,
+            'markedByName': marked_by_name,
             'markedAt': self.marked_at.isoformat() if self.marked_at else None,
+            'updatedAt': self.updated_at.isoformat() if self.updated_at else None,
         }
 
 
@@ -255,40 +400,121 @@ class EventOrganizer(db.Model):
     user = db.relationship('User', lazy=True)
 
     def to_dict(self):
+        sp = self.user.student_profile if (self.user and hasattr(self.user, 'student_profile')) else None
+        fp = self.user.faculty_profile if (self.user and hasattr(self.user, 'faculty_profile')) else None
+        u_name = sp.full_name if sp else (fp.full_name if fp else (self.user.email if self.user else None))
+        reg_id = (sp.registration_id or sp.roll_no) if sp else (fp.employee_id if fp else None)
+        u_status = self.user.account_status if self.user else 'ACTIVE'
+
         return {
             'id': self.id,
             'eventId': self.event_id,
             'userId': self.user_id,
-            'userName': self.user.student_profile.full_name if self.user and self.user.student_profile else (
-                self.user.faculty_profile.full_name if self.user and self.user.faculty_profile else None
-            ),
+            'userName': u_name,
+            'registerNumber': reg_id,
+            'rollNumber': reg_id,
+            'userStatus': u_status,
+            'isLegacy': (u_status == 'LEGACY'),
             'role': self.organizer_role,
             'assignedAt': self.assigned_at.isoformat() if self.assigned_at else None,
         }
 
 
+class EventVolunteerPosition(db.Model):
+    __tablename__ = 'event_volunteer_positions'
+
+    id = db.Column(db.Integer, primary_key=True)
+    event_id = db.Column(db.Integer, db.ForeignKey('events.id'), nullable=False)
+    position_name = db.Column(db.String(100), nullable=False)
+    max_capacity = db.Column(db.Integer, nullable=False, default=3)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    event = db.relationship('Event', backref=db.backref('volunteer_positions', lazy=True, cascade='all, delete-orphan'))
+
+    __table_args__ = (db.UniqueConstraint('event_id', 'position_name', name='uq_event_pos_name'),)
+
+    def to_dict(self):
+        vols = EventVolunteer.query.filter_by(
+            event_id=self.event_id,
+            position_name=self.position_name
+        ).all()
+        active_vols = [v for v in vols if v.computed_status in ['APPROVED', 'ACTIVE']]
+        filled_count = len(active_vols)
+        is_full = filled_count >= self.max_capacity
+
+        return {
+            'id': self.id,
+            'eventId': self.event_id,
+            'positionName': self.position_name,
+            'name': self.position_name,
+            'maxCapacity': self.max_capacity,
+            'capacity': self.max_capacity,
+            'filledCount': filled_count,
+            'isFull': is_full,
+            'status': 'FULL' if is_full else 'AVAILABLE'
+        }
+
+
 class EventVolunteer(db.Model):
     __tablename__ = 'event_volunteers'
-    __table_args__ = (db.UniqueConstraint('event_id', 'user_id', name='uq_event_volunteer'),)
+    __table_args__ = (db.UniqueConstraint('event_id', 'user_id', 'position_name', name='uq_event_volunteer_user_pos'),)
 
     id = db.Column(db.Integer, primary_key=True)
     event_id = db.Column(db.Integer, db.ForeignKey('events.id'), nullable=False)
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    request_id = db.Column(db.Integer, db.ForeignKey('requests.id'), nullable=True)
+    position_name = db.Column(db.String(100), nullable=False, default='General Volunteer')
     volunteer_status = db.Column(db.String(30), nullable=False, default='PENDING')
+    start_date = db.Column(db.DateTime, nullable=True)
+    end_date = db.Column(db.DateTime, nullable=True)
     requested_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
     user = db.relationship('User', lazy=True)
+    request_ticket = db.relationship('Request', lazy=True, foreign_keys=[request_id])
+
+    @property
+    def computed_status(self):
+        status_upper = (self.volunteer_status or 'PENDING').upper()
+        if status_upper in ['APPROVED', 'ACTIVE']:
+            if self.end_date:
+                now = datetime.utcnow()
+                if now > self.end_date:
+                    return 'EXPIRED'
+            return 'ACTIVE'
+        return status_upper
+
+    def check_expiry(self):
+        if self.volunteer_status in ['APPROVED', 'ACTIVE'] and self.end_date:
+            if datetime.utcnow() > self.end_date:
+                self.volunteer_status = 'EXPIRED'
+                db.session.commit()
 
     def to_dict(self):
+        sp = self.user.student_profile if (self.user and hasattr(self.user, 'student_profile')) else None
+        fp = self.user.faculty_profile if (self.user and hasattr(self.user, 'faculty_profile')) else None
+        u_name = sp.full_name if sp else (fp.full_name if fp else (self.user.email if self.user else None))
+        reg_id = (sp.registration_id or sp.roll_no) if sp else (fp.employee_id if fp else None)
+        u_status = self.user.account_status if self.user else 'ACTIVE'
+        c_name = self.event.club.club_name if (self.event and self.event.club) else 'Campus Club'
+
         return {
             'id': self.id,
             'eventId': self.event_id,
+            'eventName': self.event.event_name if self.event else None,
+            'clubName': c_name,
             'userId': self.user_id,
-            'userName': self.user.student_profile.full_name if self.user and self.user.student_profile else (
-                self.user.faculty_profile.full_name if self.user and self.user.faculty_profile else None
-            ),
-            'status': self.volunteer_status,
+            'userName': u_name,
+            'registerNumber': reg_id,
+            'rollNumber': reg_id,
+            'userStatus': u_status,
+            'isLegacy': (u_status == 'LEGACY'),
+            'positionName': self.position_name,
+            'position': self.position_name,
+            'requestId': self.request_id,
+            'status': self.computed_status,
+            'startDate': self.start_date.isoformat() if self.start_date else None,
+            'endDate': self.end_date.isoformat() if self.end_date else None,
             'requestedAt': self.requested_at.isoformat() if self.requested_at else None,
             'updatedAt': self.updated_at.isoformat() if self.updated_at else None,
         }

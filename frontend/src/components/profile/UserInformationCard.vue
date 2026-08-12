@@ -51,7 +51,7 @@ const emit = defineEmits(['save', 'update:user'])
       </div>
 
       <!-- Phone -->
-      <div>
+      <div v-if="user.phone || isEditing">
         <label class="form-label text-xs fw-bold text-uppercase text-muted">Phone Number</label>
         <input 
           type="text" 

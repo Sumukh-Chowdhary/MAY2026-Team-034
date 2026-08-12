@@ -38,6 +38,7 @@
           :key="notification.id"
           class="notif-card"
           :class="{'is-unread': !notification.isRead}"
+          @click="handleCardClick(notification)"
         >
           <div class="notif-card-indicator">
             <div class="status-dot"></div>
@@ -50,21 +51,17 @@
             </div>
             
             <p class="notif-card-message">{{ notification.message }}</p>
+
+            <div v-if="notification.context" class="notif-context-line">
+              {{ notification.context }}
+            </div>
             
-            <div class="notif-card-actions">
+            <div v-if="getAction(notification)" class="notif-card-actions">
               <button 
-                v-if="notification.referenceUrl" 
-                @click="goToLink(notification)"
+                @click.stop="onNotificationActionClick(notification)"
                 class="btn-action primary-action"
               >
-                View Details
-              </button>
-              <button 
-                v-if="!notification.isRead" 
-                @click="markAsRead(notification)"
-                class="btn-action secondary-action"
-              >
-                Mark as read
+                {{ getAction(notification).label }}
               </button>
             </div>
           </div>
@@ -77,14 +74,21 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
-import notificationService from '../services/notification.service';
+import { storeToRefs } from 'pinia';
+import { useNotifications } from '@/stores/useNotifications';
 import { getCurrentUser } from '@/services/authService';
+import { handleNotificationDetails, resolveNotificationAction } from '@/utils/notificationNavigation';
+import { useToast } from '@/composables/useToast';
 
 import AdminLayout from '@/layouts/AdminLayout.vue';
 import FacultyLayout from '@/layouts/FacultyLayout.vue';
 import StudentLayout from '@/layouts/StudentLayout.vue';
 
 const user = getCurrentUser();
+
+function getAction(notification) {
+  return resolveNotificationAction(notification, user?.role);
+}
 const layoutComponent = computed(() => {
   if (user?.role === 'ADMIN') return AdminLayout;
   if (user?.role === 'FACULTY') return FacultyLayout;
@@ -92,18 +96,15 @@ const layoutComponent = computed(() => {
 });
 
 const router = useRouter();
-const notifications = ref([]);
+const { showToast } = useToast();
+const notificationStore = useNotifications();
+const { notifications, unreadCount } = storeToRefs(notificationStore);
 const loading = ref(true);
-
-const unreadCount = computed(() => notifications.value.filter(n => !n.isRead).length);
 
 const fetchNotifications = async () => {
   loading.value = true;
   try {
-    const res = await notificationService.getNotifications();
-    if (res.success) {
-      notifications.value = res.data;
-    }
+    await notificationStore.fetchInitial();
   } catch (error) {
     console.error("Failed to fetch notifications:", error);
   } finally {
@@ -113,10 +114,7 @@ const fetchNotifications = async () => {
 
 const markAllAsRead = async () => {
   try {
-    const res = await notificationService.markAllAsRead();
-    if (res.success) {
-      notifications.value.forEach(n => n.isRead = true);
-    }
+    await notificationStore.markAllAsRead();
   } catch (error) {
     console.error("Failed to mark all as read:", error);
   }
@@ -125,20 +123,23 @@ const markAllAsRead = async () => {
 const markAsRead = async (notification) => {
   if (notification.isRead) return;
   try {
-    const res = await notificationService.markAsRead(notification.id);
-    if (res.success) {
-      notification.isRead = true;
-    }
+    await notificationStore.markAsRead(notification.id);
   } catch (error) {
     console.error("Failed to mark as read:", error);
   }
 };
 
-const goToLink = async (notification) => {
+const handleCardClick = async (notification) => {
   if (!notification.isRead) {
     await markAsRead(notification);
   }
-  router.push(notification.referenceUrl);
+};
+
+const onNotificationActionClick = async (notification) => {
+  if (!notification.isRead) {
+    await markAsRead(notification);
+  }
+  await handleNotificationDetails(notification, router, notificationStore, showToast);
 };
 
 const formatDate = (dateString) => {
@@ -366,7 +367,14 @@ onMounted(() => {
   color: #64748b;
   font-size: 0.95rem;
   line-height: 1.6;
-  margin: 0 0 16px 0;
+  margin: 0 0 8px 0;
+}
+
+.notif-context-line {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #475569;
+  margin-bottom: 14px;
 }
 
 .notif-card-actions {

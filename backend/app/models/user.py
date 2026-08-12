@@ -85,6 +85,22 @@ class User(db.Model):
                 if hasattr(profile, attr):
                     data[key] = getattr(profile, attr)
 
+            if hasattr(profile, 'roll_no'):
+                reg_id = getattr(profile, 'registration_id', None) or profile.roll_no
+                data['registerNumber'] = reg_id
+                data['rollNo'] = reg_id
+                data['registrationId'] = reg_id
+                data['batchYear'] = getattr(profile, 'batch_year', None)
+                data['branchCode'] = getattr(profile, 'branch_code', None)
+                data['rollNumber'] = getattr(profile, 'roll_number', None)
+                data['graduationYear'] = getattr(profile, 'graduation_year', None)
+            elif hasattr(profile, 'employee_id'):
+                data['registerNumber'] = profile.employee_id
+                data['employeeId'] = profile.employee_id
+
+            if profile.department:
+                data['department'] = profile.department.name
+
             data['avatarStyle'] = getattr(profile, 'avatar_style', None) or 'adventurer'
             data['avatarSeed'] = getattr(profile, 'avatar_seed', None) or data['fullName']
 
@@ -93,15 +109,37 @@ class User(db.Model):
         if 'avatarSeed' not in data or not data['avatarSeed']:
             data['avatarSeed'] = data.get('fullName') or data.get('name') or data.get('email', 'User')
 
+        data['isLegacy'] = (self.account_status == 'LEGACY')
         data['clubs'] = [membership.club.club_name for membership in self.club_memberships if membership.club]
         return data
+
+    @property
+    def is_legacy(self):
+        return self.account_status == 'LEGACY'
+
+    def check_and_update_lifecycle(self):
+        """Auto-update student lifecycle status to LEGACY if graduation_year <= current year."""
+        if self.role and self.role.name == 'STUDENT' and self.student_profile:
+            current_year = datetime.utcnow().year
+            grad_year = self.student_profile.graduation_year
+            if grad_year and grad_year <= current_year and self.account_status == 'ACTIVE':
+                self.account_status = 'LEGACY'
+                for membership in self.club_memberships:
+                    if not membership.ended_at:
+                        membership.ended_at = datetime.utcnow()
+                db.session.commit()
 
 class StudentProfile(db.Model):
     __tablename__ = 'student_profiles'
 
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'), unique=True, nullable=False)
-    roll_no = db.Column(db.String(50), unique=True, nullable=False)
+    roll_no = db.Column(db.String(50), unique=True, nullable=False) # Stores formatted Registration ID (e.g. Y26CS001)
+    registration_id = db.Column(db.String(50), unique=True, nullable=True)
+    batch_year = db.Column(db.Integer, nullable=True)
+    branch_code = db.Column(db.String(10), nullable=True)
+    roll_number = db.Column(db.Integer, nullable=True)
+    graduation_year = db.Column(db.Integer, nullable=True)
     full_name = db.Column(db.String(100), nullable=False)
     phone_number = db.Column(db.String(30), nullable=True)
     year_of_study = db.Column(db.String(20), nullable=True)
@@ -116,17 +154,26 @@ class StudentProfile(db.Model):
         user_role = (
             self.user.role.name if (self.user and self.user.role) else 'STUDENT'
         )
+        user_status = self.user.account_status if self.user else 'ACTIVE'
+        reg_id = self.registration_id or self.roll_no
         return {
             'id': self.id,
             'userId': self.user_id,
-            'rollNo': self.roll_no,
-            'registerNumber': self.roll_no,
+            'rollNo': reg_id,
+            'registerNumber': reg_id,
+            'registrationId': reg_id,
+            'batchYear': self.batch_year,
+            'branchCode': self.branch_code,
+            'rollNumber': self.roll_number,
+            'graduationYear': self.graduation_year,
             'fullName': self.full_name,
             'phone': self.phone_number,
             'yearOfStudy': self.year_of_study,
             'departmentId': self.department_id,
             'department': self.department.name if self.department else None,
             'role': user_role,
+            'status': user_status,
+            'isLegacy': (user_status == 'LEGACY'),
             'avatarStyle': self.avatar_style or 'adventurer',
             'avatarSeed': self.avatar_seed or self.full_name
         }

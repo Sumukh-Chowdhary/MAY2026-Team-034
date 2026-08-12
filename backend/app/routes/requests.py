@@ -22,7 +22,7 @@ from app.models.tickets import (
     resolve_club_faculty
 )
 from app.models.club import Club, ClubOrganizer, ClubFaculty
-from app.utils.auth_jwt import jwt_required
+from app.utils.auth_jwt import jwt_required, check_legacy_user_action
 from app.services.notification_service import NotificationService
 
 requests_bp = Blueprint("requests", __name__, url_prefix="/api/requests")
@@ -103,17 +103,22 @@ def get_approvers_for_request(req):
         ]
         
     if req.request_type == RequestType.VENUE_REQUEST:
-        return [
-            (resolve_club_faculty(req.reference_id), "CLUB_FACULTY"),
-            (resolve_sports_faculty(), "SPORTS_FACULTY"),
-            (resolve_security_officer(), "SECURITY"),
-            (resolve_admin(), "ADMIN")
-        ]
+        return [(resolve_admin(), "ADMIN")]
 
     if req.request_type in {RequestType.BECOME_ORGANIZER, RequestType.BECOME_VOLUNTEER, RequestType.EDIT_CLUB_AS_COORDINATOR, RequestType.CREATE_EVENT_AS_ORGANIZER, RequestType.EDIT_EVENT_AS_ORGANIZER}:
-        club_faculty = resolve_club_faculty(req.reference_id) if req.reference_id else None
+        club_id = req.reference_id
+        if req.reference_type == "EVENT" and req.reference_id:
+            from app.models.events import Event
+            evt = Event.query.get(req.reference_id)
+            if evt and evt.club_id:
+                club_id = evt.club_id
+            elif evt and evt.created_by:
+                creator = User.query.get(evt.created_by)
+                if creator and creator.id != req.requester_id:
+                    return [(creator, "EVENT_ORGANIZER")]
+
+        club_faculty = resolve_club_faculty(club_id) if club_id else None
         if club_faculty:
-            # If club faculty is the requester, escalate to Principal -> Admin
             fac_id = getattr(club_faculty, 'id', None)
             if fac_id and fac_id == req.requester_id:
                 return [(resolve_principal(), "PRINCIPAL"), (resolve_admin(), "ADMIN")]
@@ -125,11 +130,36 @@ def get_approvers_for_request(req):
 def get_user_role(user):
     return user.role.name.upper()
 
-def validate_request_permission(user, request_type, reference_id=None):
+def validate_request_permission(user, request_type, reference_id=None, reference_type=None):
     role = get_user_role(user)
 
     if request_type in {RequestType.BECOME_ORGANIZER, RequestType.BECOME_VOLUNTEER}:
-        return role == "STUDENT"
+        if role != "STUDENT":
+            return False
+
+        # Club Membership Verification (Requirement 1 & 3):
+        # Student MUST be an active member of the target Club
+        club_id = None
+        if reference_type == "EVENT" and reference_id:
+            from app.models.events import Event
+            evt = Event.query.get(reference_id)
+            if evt and evt.club_id:
+                club_id = evt.club_id
+        elif reference_type == "CLUB" and reference_id:
+            club_id = reference_id
+        elif reference_id:
+            club_id = reference_id
+
+        if club_id:
+            from app.models.club import ClubMembership
+            mem = ClubMembership.query.filter_by(
+                club_id=club_id,
+                user_id=user.id,
+                membership_status='ACTIVE'
+            ).first()
+            if not mem:
+                return False
+        return True
 
     if request_type == RequestType.BECOME_FACULTY_COORDINATOR:
         return role == "FACULTY"
@@ -137,9 +167,29 @@ def validate_request_permission(user, request_type, reference_id=None):
     if request_type == RequestType.EDIT_CLUB_AS_COORDINATOR:
         return ClubFaculty.query.filter_by(faculty_id=user.id, club_id=reference_id, faculty_role="FACULTY_COORDINATOR").first() is not None
 
-    if request_type in {RequestType.CREATE_EVENT_AS_ORGANIZER, RequestType.EDIT_EVENT_AS_ORGANIZER, RequestType.VENUE_REQUEST, RequestType.BUDGET_REQUEST, RequestType.SCHEDULE_REQUEST}:
+    if request_type == RequestType.VENUE_REQUEST:
+        if role == "ADMIN":
+            return True
+        if reference_type == "EVENT" and reference_id:
+            from app.models.events import Event
+            from app.routes.events import _can_manage_event
+            evt = Event.query.get(reference_id)
+            if evt:
+                return _can_manage_event(evt, user)
+        if reference_type == "CLUB" and reference_id:
+            return ClubFaculty.query.filter_by(faculty_id=user.id, club_id=reference_id).first() is not None or ClubOrganizer.query.filter_by(user_id=user.id, club_id=reference_id).first() is not None
+        return False
+
+    if request_type in {RequestType.CREATE_EVENT_AS_ORGANIZER, RequestType.EDIT_EVENT_AS_ORGANIZER, RequestType.BUDGET_REQUEST, RequestType.SCHEDULE_REQUEST}:
         if role == "FACULTY":
             return ClubFaculty.query.filter_by(faculty_id=user.id, club_id=reference_id).first() is not None
+        
+        # Student organizer check: Must be an active member or organizer of the club
+        if role == "STUDENT" and reference_id:
+            from app.models.club import ClubMembership
+            mem = ClubMembership.query.filter_by(club_id=reference_id, user_id=user.id, membership_status='ACTIVE').first()
+            if not mem:
+                return False
         return ClubOrganizer.query.filter_by(user_id=user.id, club_id=reference_id).first() is not None or ClubFaculty.query.filter_by(faculty_id=user.id, club_id=reference_id).first() is not None
 
     return False
@@ -148,6 +198,10 @@ def validate_request_permission(user, request_type, reference_id=None):
 @jwt_required
 def create_request():
     user = g.current_user
+    legacy_err = check_legacy_user_action(user)
+    if legacy_err:
+        return legacy_err
+
     data = request.get_json() or {}
 
     title = (data.get("title") or "").strip()
@@ -158,15 +212,14 @@ def create_request():
     reference_id = data.get("referenceId")
     reference_name = data.get("referenceName")
 
-    # ... (Validation checks remain exactly the same as your code) ...
     if not title: return jsonify({"success": False, "error": "Title is required."}), 400
     if len(title) > 150: return jsonify({"success": False, "error": "Title cannot exceed 150 characters."}), 400
     if request_type not in VALID_REQUEST_TYPES: return jsonify({"success": False, "error": "Invalid request type."}), 400
     if priority not in VALID_PRIORITIES: return jsonify({"success": False, "error": "Invalid priority."}), 400
     if reference_type not in {None, "CLUB", "EVENT"}: return jsonify({"success": False, "error": "Invalid reference type."}), 400
 
-    if not validate_request_permission(user, request_type, reference_id):
-        return jsonify({"success": False, "error": "You are not authorized to raise this request."}), 403
+    if not validate_request_permission(user, request_type, reference_id, reference_type):
+        return jsonify({"success": False, "error": "You are not authorized to raise this request. Club membership required."}), 403
 
     if reference_type == "CLUB":
         club = Club.query.get(reference_id)
@@ -362,9 +415,12 @@ def approve_request(request_id):
                         if not fac:
                             db.session.add(ClubFaculty(club_id=req.reference_id, faculty_id=req.requester_id, faculty_role="FACULTY_COORDINATOR"))
                     elif role_str == "VOLUNTEER":
-                        mem = ClubMembership.query.filter_by(club_id=req.reference_id, user_id=req.requester_id).first()
-                        if not mem:
-                            db.session.add(ClubMembership(club_id=req.reference_id, user_id=req.requester_id, membership_role="VOLUNTEER", membership_status="ACTIVE"))
+                        from app.models.events import EventVolunteer
+                        vol = EventVolunteer.query.filter_by(request_id=req.id).first()
+                        if not vol and req.reference_type == "EVENT":
+                            vol = EventVolunteer.query.filter_by(event_id=req.reference_id, user_id=req.requester_id).first()
+                        if vol:
+                            vol.volunteer_status = "ACTIVE"
 
             elif req.request_type == RequestType.CREATE_EVENT_AS_ORGANIZER:
                 import json
@@ -396,6 +452,51 @@ def approve_request(request_id):
                         db.session.add(event)
                 except Exception as err:
                     print("Error creating event upon request approval:", err)
+
+            elif req.request_type == RequestType.VENUE_REQUEST:
+                import json
+                from app.models.events import Event, Venue
+                from app.routes.events import _parse_date, _parse_time
+                try:
+                    payload = json.loads(req.description) if req.description and req.description.startswith('{') else {}
+                    target_event_id = req.reference_id if req.reference_type == 'EVENT' else payload.get('eventId')
+                    target_venue_id = payload.get('venueId')
+
+                    if target_event_id and target_venue_id:
+                        evt = Event.query.get(target_event_id)
+                        target_v = Venue.query.get(target_venue_id)
+
+                        if evt and target_v:
+                            req_date = _parse_date(payload.get('date')) or evt.start_date
+                            req_start = _parse_time(payload.get('startTime')) or evt.start_time
+                            req_end = _parse_time(payload.get('endTime')) or evt.end_time
+
+                            overlap_q = Event.query.filter(
+                                Event.id != evt.id,
+                                Event.venue_id == target_v.id,
+                                Event.start_date <= (evt.end_date or req_date),
+                                Event.end_date >= req_date
+                            )
+                            if req_start and req_end:
+                                overlap_q = overlap_q.filter(
+                                    Event.start_time < req_end,
+                                    Event.end_time > req_start
+                                )
+                            conflict = overlap_q.first()
+
+                            if conflict:
+                                db.session.rollback()
+                                return jsonify({
+                                    "success": False,
+                                    "error": f"Venue is no longer available for this time slot (Conflicting Event: '{conflict.event_name}')."
+                                }), 400
+
+                            evt.venue_id = target_v.id
+                            evt.reservation_status = "RESERVED"
+                            if req_start: evt.start_time = req_start
+                            if req_end: evt.end_time = req_end
+                except Exception as err:
+                    print("Error assigning venue on request approval:", err)
 
         db.session.commit()
         

@@ -2,6 +2,18 @@
 import { ref, computed, onMounted } from 'vue'
 import { getUsers } from '@/api/users'
 import UserAvatar from '@/components/profile/UserAvatar.vue'
+import UserProfileModal from '@/components/common/UserProfileModal.vue'
+
+const showProfileModal = ref(false)
+const selectedProfileUserId = ref(null)
+
+function openProfile(item) {
+  const targetId = item.id || item.approverId || item.userId
+  if (targetId) {
+    selectedProfileUserId.value = targetId
+    showProfileModal.value = true
+  }
+}
 
 const props = defineProps({
   modelValue: {
@@ -140,11 +152,11 @@ function moveDown(index) {
           :key="item.approverId || index"
           class="chain-item-row shadow-sm"
         >
-          <div class="d-flex align-items-center gap-2">
+          <div class="d-flex align-items-center gap-2" @click="openProfile(item)" style="cursor: pointer;">
             <span class="step-num">Step {{ index + 1 }}</span>
             <UserAvatar size="list" :user="item" />
             <div>
-              <strong class="user-name-text">{{ item.name || 'User #' + item.approverId }}</strong>
+              <strong class="user-name-text text-primary-hover">{{ item.name || 'User #' + item.approverId }}</strong>
               <span class="badge ms-2" :class="item.role === 'PRINCIPAL' ? 'role-badge-principal' : 'role-badge-default'">
                 {{ item.role }}
               </span>
@@ -229,6 +241,11 @@ function moveDown(index) {
       </div>
     </div>
 
+    <UserProfileModal 
+      :show="showProfileModal"
+      :userId="selectedProfileUserId"
+      @close="showProfileModal = false"
+    />
   </div>
 </template>
 

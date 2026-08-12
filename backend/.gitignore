@@ -1,5 +1,12 @@
 .env
 backend/
+__pycache__/
+*.py[cod]
+
+backend/instance/app.db
+backend/instance/
+.env
+backend/
 venv/
 __pycache__/
 *.py[cod]
@@ -8,4 +15,4 @@ __pycache__/
 *.db
 *.sqlite
 *.sqlite3
-instance/
+instance/
