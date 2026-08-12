@@ -5,3 +5,14 @@ __pycache__/
 
 backend/instance/app.db
 backend/instance/
+.env
+backend/
+venv/
+__pycache__/
+*.py[cod]
+
+# SQLite database files
+*.db
+*.sqlite
+*.sqlite3
+instance/

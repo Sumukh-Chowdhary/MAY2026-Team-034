@@ -174,6 +174,13 @@ const routes = [
     meta: { requiresAuth: true, role: 'FACULTY' }
   },
 
+  {
+    path: '/faculty/profile',
+    name: 'FacultyProfile',
+    component: () => import('@/views/faculty/Profile.vue'),
+    meta: { requiresAuth: true, role: 'FACULTY' }
+  },
+
   // --- Student Routes ---
   {
     path: '/student',

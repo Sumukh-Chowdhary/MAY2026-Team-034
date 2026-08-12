@@ -7,7 +7,7 @@ from app.services.club_service import (
     get_club_members as get_club_members_service,
 )
 from app.services.club_service import get_all_clubs, get_club_by_id as get_club_by_id_service
-from flask import Blueprint, jsonify, g # type: ignore
+from flask import Blueprint, jsonify, g, request # type: ignore
 
 from app.models import db, User
 from app.models.club import Club, ClubFaculty, ClubOrganizer, ClubMembership
