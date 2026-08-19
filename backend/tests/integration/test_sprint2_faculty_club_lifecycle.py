@@ -24,7 +24,7 @@ def test_faculty_club_lifecycle_supervise_to_stepdown(
 ):
     AI_CLUB = 1
 
-    # ── Step 1: Faculty views supervised clubs ────────────────────────────────
+    # ── Step 1: Faculty views supervised clubs
     my_clubs_resp = client.get('/api/faculty/my-clubs', headers=faculty_headers)
     assert my_clubs_resp.status_code == 200
     my_clubs = my_clubs_resp.get_json()
@@ -32,7 +32,8 @@ def test_faculty_club_lifecycle_supervise_to_stepdown(
     assert len(my_clubs) > 0
 
     ai_club_entry = next((c for c in my_clubs if c['id'] == AI_CLUB), None)
-    assert ai_club_entry is not None, "AI Club should be in faculty's supervised clubs"
+    assert ai_club_entry is not None, """AI Club should be in
+     faculty's supervised clubs"""
     assert ai_club_entry['clubName'] == 'AI Club'
     assert ai_club_entry['status'] == 'ACTIVE'
     initial_member_count = ai_club_entry['memberCount']
