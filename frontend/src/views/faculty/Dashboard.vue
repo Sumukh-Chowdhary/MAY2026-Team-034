@@ -111,6 +111,14 @@ function navigateToRoles() {
 function navigateToRequests() {
   router.push('/faculty/requests')
 }
+
+function navigateToClub(clubId) {
+  if (clubId) {
+    router.push(`/faculty/clubs/${clubId}`)
+  } else {
+    router.push('/faculty/clubs')
+  }
+}
 </script>
 
 <template>
@@ -124,9 +132,28 @@ function navigateToRequests() {
         </div>
         <div class="dashboard-actions">
           <button class="request-btn" @click="openEditProfile">
-            <i class="bi bi-person-gear me-1"></i> View / Edit Profile
+            <i class="bi bi-person-gear me-1"></i> View Profile
           </button>
         </div>
+      </div>
+
+      <!-- Quick Nav Shortcuts -->
+      <div class="quick-nav-bar d-flex align-items-center gap-2 mb-4 overflow-x-auto pb-1">
+        <button class="quick-chip active" @click="router.push('/faculty')">
+          <i class="bi bi-speedometer2 me-1"></i> Overview
+        </button>
+        <button class="quick-chip" @click="router.push('/faculty/clubs')">
+          <i class="bi bi-collection-fill me-1 text-primary"></i> Supervised Clubs
+        </button>
+        <button class="quick-chip" @click="router.push('/faculty/roles')">
+          <i class="bi bi-shield-check me-1 text-warning"></i> Role Details
+        </button>
+        <button class="quick-chip" @click="router.push('/faculty/events')">
+          <i class="bi bi-calendar-event-fill me-1 text-success"></i> Events
+        </button>
+        <button class="quick-chip" @click="router.push('/faculty/requests')">
+          <i class="bi bi-inbox-fill me-1 text-info"></i> Approvals & Requests
+        </button>
       </div>
 
       <!-- Stat Cards -->
@@ -175,7 +202,14 @@ function navigateToRequests() {
                       <span class="material-symbols-rounded">groups</span>
                     </div>
                     <div>
-                      <h5 class="club-title">{{ club.clubName }}</h5>
+                      <h5 
+                        class="club-title cursor-pointer text-primary-hover" 
+                        @click="navigateToClub(club.id)"
+                        :title="`Open ${club.clubName} page`"
+                      >
+                        {{ club.clubName }}
+                        <i class="bi bi-box-arrow-up-right text-xs ms-1"></i>
+                      </h5>
                       <div class="badges-row">
                         <span class="role-badge">
                           <span class="material-symbols-rounded icon-xs">workspace_premium</span>
@@ -230,7 +264,7 @@ function navigateToRequests() {
 
                 <!-- Card Action Footer -->
                 <div class="card-footer-action">
-                  <button class="btn-manage-club" @click="navigateToRoles">
+                  <button class="btn-manage-club" @click="navigateToClub(club.id)">
                     Manage Club
                     <span class="material-symbols-rounded icon-sm">arrow_forward</span>
                   </button>
@@ -277,7 +311,13 @@ function navigateToRequests() {
                 </div>
 
                 <div class="general-card-body">
-                  <h5 class="general-event-title">{{ event.name }}</h5>
+                  <h5 
+                    class="general-event-title cursor-pointer text-primary-hover" 
+                    @click="router.push(`/faculty/events/${event.id}`)"
+                    :title="`Open ${event.name} details`"
+                  >
+                    {{ event.name }}
+                  </h5>
                   <p class="general-event-desc">{{ event.description || 'Institutional college event.' }}</p>
 
                   <div class="general-meta-list">
@@ -307,9 +347,12 @@ function navigateToRequests() {
         <!-- Upcoming Events Card -->
         <div class="col-12 col-lg-6">
           <div class="dashboard-card">
-            <div class="card-header">
-              <h5>Upcoming Events</h5>
-              <p>Upcoming events from your clubs.</p>
+            <div class="card-header d-flex justify-content-between align-items-center">
+              <div>
+                <h5>Upcoming Events</h5>
+                <p>Upcoming events from your clubs.</p>
+              </div>
+              <RouterLink to="/faculty/events" class="btn btn-sm btn-link text-decoration-none fw-semibold text-primary">See All →</RouterLink>
             </div>
 
             <div class="card-content">
@@ -320,11 +363,13 @@ function navigateToRequests() {
               <div
                 v-for="event in upcomingEvents"
                 :key="event.id"
-                class="event-item"
+                class="event-item cursor-pointer"
+                @click="router.push(`/faculty/events/${event.id}`)"
+                :title="`Open ${event.name || event.title} details`"
               >
                 <div>
-                  <h6>{{ event.name || event.title }}</h6>
-                  <span>{{ event.clubName || 'Campus Event' }}</span>
+                  <h6 class="mb-1 text-primary-hover">{{ event.name || event.title }}</h6>
+                  <span class="text-secondary text-xs">{{ event.clubName || 'Campus Event' }}</span>
                 </div>
 
                 <div class="event-date">
@@ -887,5 +932,37 @@ function navigateToRequests() {
   max-width: 520px;
   padding: 24px;
   box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
+}
+
+.quick-chip {
+  padding: 6px 14px;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 999px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: #475569;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.quick-chip:hover,
+.quick-chip.active {
+  background: #eff6ff;
+  border-color: #bfdbfe;
+  color: #2563eb;
+}
+
+.cursor-pointer {
+  cursor: pointer;
+}
+
+.text-primary-hover {
+  transition: color 0.2s ease;
+}
+
+.text-primary-hover:hover {
+  color: #2563eb !important;
 }
 </style>
