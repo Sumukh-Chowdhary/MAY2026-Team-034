@@ -9,6 +9,8 @@ from app.models.events import (
 )
 from app.models.user import User
 from app.extensions import socketio
+from app.utils.cache import get_cached, set_cached, delete_cached
+from app.models import club
 
 def _parse_date(value):
     if not value:
@@ -32,25 +34,54 @@ def _parse_time(value):
 class EventService:
     @staticmethod
     def get_events(search_q=None, club_id=None, status=None):
+
+        # Cache only the completely unfiltered list.
+        if search_q is None and club_id is None and status is None:
+            cache_key = "events:all"
+
+            cached = get_cached(cache_key)
+
+            if cached is not None:
+                print("Redis cache HIT:", cache_key)
+                return cached
+
+            print("Redis cache MISS:", cache_key)
+
         query = Event.query
+
         if club_id:
             query = query.filter(Event.club_id == club_id)
+
         if status:
-            query = query.filter(Event.event_status == status.upper())
+            query = query.filter(
+                Event.event_status == status.upper()
+            )
 
         if search_q:
             q = f"%{search_q.strip().lower()}%"
-            query = query.join(Club, Event.club_id == Club.id).outerjoin(Venue, Event.venue_id == Venue.id).filter(
-                db.or_(
-                    db.func.lower(Event.event_name).like(q),
-                    db.func.lower(Event.event_description).like(q),
-                    db.func.lower(Club.club_name).like(q),
-                    db.func.lower(Venue.venue_name).like(q),
+
+            query = (
+                query
+                .join(club, Event.club_id == club.id)
+                .outerjoin(Venue, Event.venue_id == Venue.id)
+                .filter(
+                    db.or_(
+                        db.func.lower(Event.event_name).like(q),
+                        db.func.lower(Event.event_description).like(q),
+                        db.func.lower(club.club_name).like(q),
+                        db.func.lower(Venue.venue_name).like(q),
+                    )
                 )
             )
 
         events = query.order_by(Event.start_date.asc()).all()
-        return [event.to_dict() for event in events]
+
+        result = [event.to_dict() for event in events]
+
+        if search_q is None and club_id is None and status is None:
+            set_cached(cache_key, result)
+
+        return result
 
     @staticmethod
     def get_my_events(user_id, scope='registered'):
@@ -127,6 +158,8 @@ class EventService:
         db.session.add(event)
         db.session.commit()
 
+        delete_cached("events:all")
+
         socketio.emit('event_created', event.to_dict(), room='events_room')
         return event.to_dict()
 
@@ -162,6 +195,9 @@ class EventService:
             event.capacity = data.get('capacity')
 
         db.session.commit()
+
+        delete_cached("events:all")
+
         dict_data = event.to_dict()
         socketio.emit('event_updated', dict_data, room=f'event_{event.id}')
         socketio.emit('event_updated', dict_data, room='events_room')
@@ -172,6 +208,9 @@ class EventService:
         event = Event.query.get_or_404(event_id)
         event.event_status = status.upper()
         db.session.commit()
+
+        delete_cached("events:all")
+
         dict_data = event.to_dict()
         socketio.emit('event_updated', dict_data, room=f'event_{event.id}')
         socketio.emit('event_updated', dict_data, room='events_room')
@@ -185,6 +224,9 @@ class EventService:
             raise ValueError('Venue not found.')
         event.venue_id = venue.id
         db.session.commit()
+
+        delete_cached("events:all")
+        
         dict_data = event.to_dict()
         socketio.emit('event_updated', dict_data, room=f'event_{event.id}')
         socketio.emit('event_updated', dict_data, room='events_room')

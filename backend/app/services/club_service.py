@@ -4,6 +4,7 @@ from app.models.user import FacultyProfile, StudentProfile, Department
 from app.models.events import Event, EventRegistration, EventAttendance
 from sqlalchemy import case
 from flask import g
+from app.utils.cache import delete_cached, get_cached, set_cached
 from collections import defaultdict
 
 VALID_CLUB_CATEGORIES = {
@@ -174,6 +175,15 @@ def serialize_event(event):
     }
 
 def get_all_clubs():
+    cache_key = "clubs:all"
+
+    cached = get_cached(cache_key)
+
+    if cached is not None:
+        print("Redis cache HIT:", cache_key)
+        return cached
+
+    print("Redis cache MISS:", cache_key)
 
     query = Club.query
 
@@ -184,10 +194,14 @@ def get_all_clubs():
         ),
         Club.club_name.asc()
     )
-        
+
     clubs = query.all()
 
-    return [serialize_club(club) for club in clubs]
+    result = [serialize_club(club) for club in clubs]
+
+    set_cached(cache_key, result)
+
+    return result
 
 def get_club_by_id(club_id):
     club = Club.query.get_or_404(club_id)
@@ -201,6 +215,8 @@ def update_club_status(club_id, status):
 
     club.club_status = status
     db.session.commit()
+
+    delete_cached("clubs:all")
 
     return serialize_club(club)
 
@@ -272,6 +288,8 @@ def create_club(name, category, description, logo, faculty_ids):
 
     db.session.commit()
 
+    delete_cached("clubs:all")
+
     from app.services.notification_service import NotificationService
     for fid in faculty_ids:
         NotificationService.notify_club_created(fid, club.club_name, club.id)
@@ -342,6 +360,9 @@ def update_club(club_id, name, category, description, logo, faculty_ids):
 
     db.session.commit()
 
+    delete_cached("clubs:all")
+    delete_cached("events:all")
+
     return serialize_club(club)
 
 def archive_club(club_id):
@@ -354,6 +375,8 @@ def archive_club(club_id):
     club.club_status = "INACTIVE"
 
     db.session.commit()
+
+    delete_cached("clubs:all")
 
     return serialize_club(club)
 
