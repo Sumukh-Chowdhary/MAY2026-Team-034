@@ -11,7 +11,7 @@ import {
   Legend
 } from 'chart.js'
 
-import { clubMembership } from '@/data/analytics.js'
+import { clubMembership as defaultClubMembership } from '@/data/analytics.js'
 
 ChartJS.register(
   CategoryScale,
@@ -22,17 +22,28 @@ ChartJS.register(
   Legend
 )
 
-const chartData = computed(() => ({
-  labels: clubMembership.labels,
-  datasets: [
-    {
-      label: 'Members',
-      data: clubMembership.data,
-      backgroundColor: '#2563EB',
-      borderRadius: 8
-    }
-  ]
-}))
+const props = defineProps({
+  membership: {
+    type: Object,
+    default: () => defaultClubMembership
+  }
+})
+
+const chartData = computed(() => {
+  const mem = props.membership || defaultClubMembership
+  return {
+    labels: mem.labels || [],
+    datasets: [
+      {
+        label: 'Members',
+        data: mem.data || [],
+        backgroundColor: '#2563EB',
+        borderRadius: 8,
+        barThickness: 32
+      }
+    ]
+  }
+})
 
 const chartOptions = {
   responsive: true,

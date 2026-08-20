@@ -13,7 +13,7 @@ import {
   Filler
 } from 'chart.js'
 
-import { platformActivity } from '@/data/analytics.js'
+import { platformActivity as defaultPlatformActivity } from '@/data/analytics.js'
 
 ChartJS.register(
   CategoryScale,
@@ -26,21 +26,32 @@ ChartJS.register(
   Filler
 )
 
-const chartData = computed(() => ({
-  labels: platformActivity.labels,
-  datasets: [
-    {
-      label: 'Activity',
-      data: platformActivity.data,
-      borderColor: '#2563EB',
-      backgroundColor: 'rgba(37, 99, 235, 0.1)',
-      fill: true,
-      tension: 0.4,
-      pointRadius: 4,
-      pointHoverRadius: 6
-    }
-  ]
-}))
+const props = defineProps({
+  activity: {
+    type: Object,
+    default: () => defaultPlatformActivity
+  }
+})
+
+const chartData = computed(() => {
+  const act = props.activity || defaultPlatformActivity
+  return {
+    labels: act.labels || [],
+    datasets: [
+      {
+        label: 'Registrations & Participations',
+        data: act.data || [],
+        borderColor: '#2563EB',
+        backgroundColor: 'rgba(37, 99, 235, 0.12)',
+        fill: true,
+        tension: 0.4,
+        pointRadius: 4,
+        pointBackgroundColor: '#2563EB',
+        pointHoverRadius: 6
+      }
+    ]
+  }
+})
 
 const chartOptions = {
   responsive: true,
@@ -75,9 +86,12 @@ const chartOptions = {
 
 <template>
   <div class="analytics-card">
-    <div class="card-header">
-      <h4>Platform Activity</h4>
-      <p>Monthly activity trend across the platform</p>
+    <div class="card-header d-flex justify-content-between align-items-center">
+      <div>
+        <h4>Platform Engagement Trend</h4>
+        <p>Monthly event registrations and active platform participation</p>
+      </div>
+      <span class="badge bg-primary-subtle text-primary border px-3 py-1 fw-semibold">2026 Academic Year</span>
     </div>
 
     <div class="chart-container">

@@ -35,6 +35,9 @@ const emit = defineEmits(['save', 'update:user'])
       <span class="badge bg-light text-muted border text-xs" v-if="!isEditing">
         Read-Only Mode
       </span>
+      <span class="badge bg-primary-subtle text-primary border text-xs" v-else>
+        Editing Mode
+      </span>
     </div>
 
     <form @submit.prevent="emit('save')" class="d-flex flex-column gap-3">
@@ -50,6 +53,20 @@ const emit = defineEmits(['save', 'update:user'])
         />
       </div>
 
+      <!-- Registration No / Employee ID -->
+      <div v-if="user.registerNumber || user.rollNo || user.employeeId">
+        <label class="form-label text-xs fw-bold text-uppercase text-muted d-flex align-items-center gap-1">
+          {{ user.role === 'FACULTY' ? 'Employee ID' : 'Registration Number' }}
+          <span class="material-symbols-rounded fs-6 text-muted" title="Institutional ID">lock</span>
+        </label>
+        <input 
+          type="text" 
+          class="form-control rounded-3 bg-light text-secondary" 
+          :value="user.registerNumber || user.rollNo || user.employeeId" 
+          disabled 
+        />
+      </div>
+
       <!-- Phone -->
       <div v-if="user.phone || isEditing">
         <label class="form-label text-xs fw-bold text-uppercase text-muted">Phone Number</label>
@@ -59,6 +76,40 @@ const emit = defineEmits(['save', 'update:user'])
           v-model="user.phone" 
           :disabled="!isEditing"
           placeholder="+91 XXXXX XXXXX" 
+        />
+      </div>
+
+      <!-- Year of Study (Students) -->
+      <div v-if="user.role === 'STUDENT' || user.year">
+        <label class="form-label text-xs fw-bold text-uppercase text-muted">Year of Study</label>
+        <select 
+          v-if="isEditing" 
+          class="form-select rounded-3" 
+          v-model="user.year"
+        >
+          <option value="1st Year">1st Year</option>
+          <option value="2nd Year">2nd Year</option>
+          <option value="3rd Year">3rd Year</option>
+          <option value="4th Year">4th Year</option>
+        </select>
+        <input 
+          v-else 
+          type="text" 
+          class="form-control rounded-3" 
+          :value="user.year || '—'" 
+          disabled 
+        />
+      </div>
+
+      <!-- Designation (Faculty) -->
+      <div v-if="user.role === 'FACULTY' || user.designation">
+        <label class="form-label text-xs fw-bold text-uppercase text-muted">Designation</label>
+        <input 
+          type="text" 
+          class="form-control rounded-3" 
+          v-model="user.designation" 
+          :disabled="!isEditing"
+          placeholder="e.g. Associate Professor" 
         />
       </div>
 
