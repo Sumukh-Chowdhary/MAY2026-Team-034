@@ -1,8 +1,15 @@
 from flask_socketio import SocketIO
+import redis
+from config import Config
 
 socketio = SocketIO(
     cors_allowed_origins="*",
     async_mode="threading",
     logger=True,
     engineio_logger=True
+)
+
+redis_client = redis.Redis.from_url(
+    Config.REDIS_URL,
+    decode_responses=True
 )
