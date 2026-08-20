@@ -56,6 +56,11 @@ export const getMyClubs = async () => {
   return response.data
 }
 
+export const getClubAnalytics = async (clubId) => {
+  const response = await api.get(`/student/clubs/${clubId}/analytics`)
+  return response.data
+}
+
 export const joinClub = async (clubId) => {
   const response = await api.post(`/student/clubs/${clubId}/join`)
   return response.data
