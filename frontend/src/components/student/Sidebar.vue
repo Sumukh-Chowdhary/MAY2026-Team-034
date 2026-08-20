@@ -3,12 +3,14 @@ import { ref, computed, watch, onMounted, onBeforeUnmount } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { Modal } from 'bootstrap'
 import { getCurrentUser } from '@/services/authService'
+import { getMyClubs } from '@/api/clubs'
 import UserAvatar from '@/components/profile/UserAvatar.vue'
 
 const router = useRouter()
 const route = useRoute()
 const collapsed = ref(false)
 const showProfileMenu = ref(false)
+const isOrganizer = ref(false)
 const emit = defineEmits(['toggle'])
 
 const user = computed(() => getCurrentUser() || {})
@@ -62,9 +64,21 @@ watch(() => route.path, () => {
   showProfileMenu.value = false
 })
 
+async function checkOrganizerStatus() {
+  try {
+    const myClubs = await getMyClubs()
+    isOrganizer.value = (myClubs || []).some(club =>
+      (club.organizers || []).some(org => org.id === user.value?.id)
+    )
+  } catch (e) {
+    isOrganizer.value = false
+  }
+}
+
 onMounted(() => {
   document.addEventListener('click', handleOutsideClick)
   document.addEventListener('keydown', handleKeydown)
+  checkOrganizerStatus()
 })
 
 onBeforeUnmount(() => {
@@ -118,6 +132,14 @@ onBeforeUnmount(() => {
                         to="/student/events">
                         <i class="bi bi-calendar-event-fill"></i>
                         <span v-if="!collapsed">Events</span>
+                    </RouterLink>
+                </li>
+                <li v-if="isOrganizer">
+                    <RouterLink
+                        class="nav-item"
+                        to="/student/analytics">
+                        <i class="bi bi-bar-chart-line-fill"></i>
+                        <span v-if="!collapsed">Analytics</span>
                     </RouterLink>
                 </li>
                 <li>

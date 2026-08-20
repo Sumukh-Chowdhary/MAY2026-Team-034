@@ -5,6 +5,7 @@ from app.services.club_service import (
     get_club_by_id as get_club_by_id_service,
     get_club_events as get_club_events_service,
     get_club_members as get_club_members_service,
+    get_club_analytics as get_club_analytics_service,
 )
 from app.services.club_service import get_all_clubs, get_club_by_id as get_club_by_id_service
 from flask import Blueprint, jsonify, g, request # type: ignore
@@ -259,3 +260,21 @@ def update_my_club_details(club_id):
 
     db.session.commit()
     return jsonify(club.to_dict()), 200
+
+
+@student_bp.get("/clubs/<int:club_id>/analytics")
+@jwt_required
+@roles_required("STUDENT")
+def get_club_analytics(club_id):
+    current_user = g.current_user
+
+    # Only organizers of this specific club may view its analytics
+    is_org = ClubOrganizer.query.filter_by(club_id=club_id, user_id=current_user.id).first()
+    if not is_org:
+        return jsonify({"error": "You do not have permission to view this club's analytics."}), 403
+
+    try:
+        data = get_club_analytics_service(club_id)
+        return jsonify(data), 200
+    except NotFound as e:
+        return jsonify({"error": e.description}), 404
