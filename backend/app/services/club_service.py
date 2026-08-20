@@ -1,9 +1,10 @@
 from app.models import Club, db
-from app.models.club import ClubFaculty, ClubMembership
-from app.models.user import FacultyProfile
-from app.models.events import Event
+from app.models.club import ClubFaculty, ClubMembership, ClubOrganizer
+from app.models.user import FacultyProfile, StudentProfile, Department
+from app.models.events import Event, EventRegistration, EventAttendance
 from sqlalchemy import case
 from flask import g
+from collections import defaultdict
 
 VALID_CLUB_CATEGORIES = {
     "Technology",
@@ -438,4 +439,128 @@ def verify_faculty_access(club_id, faculty_id):
         )
 
     return assignment
+
+
+def get_club_analytics(club_id):
+    """
+    Builds a real, DB-backed analytics snapshot for a single club:
+    membership growth/composition and event performance.
+    Scoped to one club only — used by the organizer-facing analytics page.
+    """
+    club = Club.query.get_or_404(club_id, description="Club not found")
+
+    memberships = ClubMembership.query.filter_by(club_id=club_id).all()
+    active_memberships = [m for m in memberships if m.membership_status == "ACTIVE"]
+    inactive_memberships = [m for m in memberships if m.membership_status != "ACTIVE"]
+
+    # --- Membership growth over time (cumulative, by month joined) ---
+    joins_by_month = defaultdict(int)
+    for m in memberships:
+        if m.joined_at:
+            key = m.joined_at.strftime("%Y-%m")
+            joins_by_month[key] += 1
+
+    sorted_months = sorted(joins_by_month.keys())
+    running_total = 0
+    membership_growth = []
+    for month in sorted_months:
+        running_total += joins_by_month[month]
+        membership_growth.append({"month": month, "totalMembers": running_total})
+
+    # --- Role distribution (membership_role + organizer overlay) ---
+    role_counts = defaultdict(int)
+    for m in active_memberships:
+        role_counts[m.membership_role or "MEMBER"] += 1
+    organizer_count = ClubOrganizer.query.filter_by(club_id=club_id).count()
+    role_distribution = [{"role": role, "count": count} for role, count in role_counts.items()]
+
+    # --- Department & year-of-study breakdown (active student members only) ---
+    dept_counts = defaultdict(int)
+    year_counts = defaultdict(int)
+    for m in active_memberships:
+        profile = m.user.student_profile if (m.user and m.user.student_profile) else None
+        if not profile:
+            continue
+        dept_name = profile.department.name if profile.department else "Unspecified"
+        dept_counts[dept_name] += 1
+        year_counts[profile.year_of_study or "Unspecified"] += 1
+
+    department_breakdown = [{"department": k, "count": v} for k, v in dept_counts.items()]
+    year_breakdown = [{"year": k, "count": v} for k, v in year_counts.items()]
+
+    # --- Event performance ---
+    events = Event.query.filter_by(club_id=club_id).order_by(Event.start_date.asc()).all()
+
+    per_event = []
+    total_registrations = 0
+    total_present = 0
+    total_attendance_marked = 0
+    registrations_by_month = defaultdict(int)
+
+    for event in events:
+        registrations = EventRegistration.query.filter(
+            EventRegistration.event_id == event.id,
+            EventRegistration.registration_status != "CANCELLED"
+        ).all()
+        attendance_records = EventAttendance.query.filter_by(event_id=event.id).all()
+        present_count = sum(1 for a in attendance_records if (a.attendance_status or "").upper() == "PRESENT")
+
+        reg_count = len(registrations)
+        att_count = len(attendance_records)
+        attendance_rate = round((present_count / reg_count) * 100, 1) if reg_count else 0
+
+        per_event.append({
+            "eventId": event.id,
+            "name": event.event_name,
+            "date": event.start_date.isoformat() if event.start_date else None,
+            "status": event.event_status,
+            "registrations": reg_count,
+            "attendanceMarked": att_count,
+            "present": present_count,
+            "attendanceRate": attendance_rate,
+        })
+
+        total_registrations += reg_count
+        total_present += present_count
+        total_attendance_marked += att_count
+
+        for r in registrations:
+            if r.registered_at:
+                registrations_by_month[r.registered_at.strftime("%Y-%m")] += 1
+
+    registration_trend = [
+        {"month": month, "registrations": count}
+        for month, count in sorted(registrations_by_month.items())
+    ]
+
+    avg_attendance_rate = (
+        round((total_present / total_registrations) * 100, 1)
+        if total_registrations else 0
+    )
+
+    upcoming = sum(1 for e in events if e.event_status in ("SCHEDULED", "UPCOMING"))
+    completed = sum(1 for e in events if e.event_status in ("COMPLETED", "ENDED"))
+
+    return {
+        "club": {"id": club.id, "name": club.club_name},
+        "membership": {
+            "totalMembers": len(memberships),
+            "activeMembers": len(active_memberships),
+            "inactiveMembers": len(inactive_memberships),
+            "organizerCount": organizer_count,
+            "growth": membership_growth,
+            "roleDistribution": role_distribution,
+            "departmentBreakdown": department_breakdown,
+            "yearBreakdown": year_breakdown,
+        },
+        "events": {
+            "totalEvents": len(events),
+            "upcomingEvents": upcoming,
+            "completedEvents": completed,
+            "totalRegistrations": total_registrations,
+            "avgAttendanceRate": avg_attendance_rate,
+            "perEvent": per_event,
+            "registrationTrend": registration_trend,
+        },
+    }
 
