@@ -41,7 +41,6 @@ from app.utils.seed_data import (
 random.seed(42)
 
 def seed_database(app=None):
-    return
     if app is None:
         app = create_app()
 
