@@ -373,7 +373,14 @@ async function confirmRejectRequest() {
                   <!-- Header: Title + Active Badge + Overflow Menu -->
                   <div class="d-flex justify-content-between align-items-center mb-2">
                     <div class="d-flex align-items-center gap-2">
-                      <h5 class="assignment-title m-0">{{ role.clubName }}</h5>
+                      <h5 
+                        class="assignment-title m-0 cursor-pointer" 
+                        @click="navigateToClub(role.id)"
+                        :title="`Open ${role.clubName} club page`"
+                      >
+                        {{ role.clubName }}
+                        <i class="bi bi-box-arrow-up-right text-xs ms-1"></i>
+                      </h5>
                       <span class="status-pill-subtle">Active</span>
                     </div>
 
@@ -514,7 +521,14 @@ async function confirmRejectRequest() {
               <button class="back-btn" @click="closeDashboard">← Back to Roles</button>
               <div class="banner-emoji">{{ activeRoleView.emoji || '📌' }}</div>
               <div>
-                <h3 class="m-0 text-dark font-bold">{{ activeRoleView.clubName }}</h3>
+                <h3 
+                  class="m-0 text-dark font-bold cursor-pointer" 
+                  @click="navigateToClub(activeRoleView.id || activeRoleView.clubId)"
+                  :title="`Open ${activeRoleView.clubName} club page`"
+                >
+                  {{ activeRoleView.clubName }}
+                  <i class="bi bi-box-arrow-up-right text-xs ms-1"></i>
+                </h3>
                 <span class="badge bg-success px-3 py-1 mt-1">{{ activeRoleView.roleTitle }}</span>
               </div>
             </div>

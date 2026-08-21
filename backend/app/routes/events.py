@@ -15,6 +15,7 @@ from app.services.notification_service import NotificationService
 from app.models.user import User
 from app.models.notification import Notification
 from app.models.tickets import AssignmentTicket, AssignmentStatus, AssignmentRole
+from app.services.event_service import EventService
 
 events_bp = Blueprint('events', __name__, url_prefix='/api/events')
 
@@ -194,29 +195,16 @@ def _auto_create_sessions(event):
 @jwt_required
 def get_events():
     search_q = request.args.get('search')
-    club_id = request.args.get('clubId')
+    club_id = request.args.get('club_id')
     status = request.args.get('status')
 
-    query = Event.query
+    events = EventService.get_events(
+        search_q=search_q,
+        club_id=club_id,
+        status=status
+    )
 
-    if club_id:
-        query = query.filter(Event.club_id == club_id)
-    if status:
-        query = query.filter(Event.event_status == status.upper())
-
-    if search_q:
-        q = f"%{search_q.strip().lower()}%"
-        query = query.join(Club, Event.club_id == Club.id).outerjoin(Venue, Event.venue_id == Venue.id).filter(
-            db.or_(
-                db.func.lower(Event.event_name).like(q),
-                db.func.lower(Event.event_description).like(q),
-                db.func.lower(Club.club_name).like(q),
-                db.func.lower(Venue.venue_name).like(q),
-            )
-        )
-
-    events = query.order_by(Event.start_date.asc()).all()
-    return jsonify([event.to_dict() for event in events]), 200
+    return jsonify(events), 200
 
 
 @events_bp.route('/me', methods=['GET'])
@@ -249,65 +237,16 @@ def get_event(event_id):
 @roles_required('ADMIN', 'FACULTY')
 def create_event():
     data = request.get_json() or {}
-    club_id = data.get('clubId') or data.get('club_id')
-    if not club_id and data.get('club'):
-        club = Club.query.filter(db.func.lower(Club.club_name) == str(data.get('club')).strip().lower()).first()
-        club_id = club.id if club else None
-    if not club_id and data.get('clubName'):
-        club = Club.query.filter(db.func.lower(Club.club_name) == str(data.get('clubName')).strip().lower()).first()
-        club_id = club.id if club else None
 
-    name = (data.get('name') or '').strip()
-    description = data.get('description')
-    venue_id = data.get('venueId')
-    status = (data.get('status') or 'SCHEDULED').upper()
-    start_date = data.get('startDate')
-    end_date = data.get('endDate')
-    start_time = data.get('startTime')
-    end_time = data.get('endTime')
-    capacity = data.get('capacity') or 0
+    try:
+        result = EventService.create_event(
+            data,
+            g.current_user.id
+        )
+        return jsonify(result), 201
 
-    if not club_id:
-        return jsonify({'error': 'clubId is required.'}), 400
-    if not name:
-        return jsonify({'error': 'Event name is required.'}), 400
-    if not start_date or not end_date:
-        return jsonify({'error': 'Event startDate and endDate are required.'}), 400
-
-    club = Club.query.get(club_id)
-    if not club:
-        return jsonify({'error': 'Club not found.'}), 404
-
-    venue = None
-    if venue_id:
-        venue = Venue.query.get(venue_id)
-        if not venue:
-            return jsonify({'error': 'Venue not found.'}), 404
-
-    parsed_start_date = _parse_date(start_date)
-    parsed_end_date = _parse_date(end_date)
-    if not parsed_start_date or not parsed_end_date:
-        return jsonify({'error': 'startDate and endDate must be ISO format YYYY-MM-DD.'}), 400
-
-    parsed_start_time = _parse_time(start_time)
-    parsed_end_time = _parse_time(end_time)
-
-    event = Event(
-        club_id=club.id,
-        venue_id=venue.id if venue else None,
-        created_by=g.current_user.id,
-        event_name=name,
-        event_description=description,
-        event_status=status,
-        start_date=parsed_start_date,
-        end_date=parsed_end_date,
-        start_time=parsed_start_time,
-        end_time=parsed_end_time,
-        capacity=capacity,
-    )
-    db.session.add(event)
-    db.session.commit()
-    return jsonify(event.to_dict()), 201
+    except ValueError as e:
+        return jsonify({'error': str(e)}), 400
 
 
 @events_bp.route('/<int:event_id>/edit', methods=['PUT'])
@@ -315,95 +254,81 @@ def create_event():
 def update_event(event_id):
     event = Event.query.get_or_404(event_id)
     current_user = g.current_user
+
     if not _can_manage_event(event, current_user):
-        return jsonify({'error': 'You do not have permission to edit this event.'}), 403
+        return jsonify({
+            'error': 'You do not have permission to edit this event.'
+        }), 403
 
     data = request.get_json() or {}
-    name = data.get('name')
-    description = data.get('description')
-    venue_id = data.get('venueId')
-    status = data.get('status')
-    start_date = data.get('startDate')
-    end_date = data.get('endDate')
-    start_time = data.get('startTime')
-    end_time = data.get('endTime')
-    capacity = data.get('capacity')
 
-    if name is not None:
-        event.event_name = name.strip()
-    if description is not None:
-        event.event_description = description
-    if venue_id is not None:
-        venue = Venue.query.get(venue_id)
-        if not venue:
-            return jsonify({'error': 'Venue not found.'}), 404
-        event.venue_id = venue.id
-    if status is not None:
-        event.event_status = status.upper()
-    if start_date is not None:
-        parsed = _parse_date(start_date)
-        if not parsed:
-            return jsonify({'error': 'startDate must be ISO format YYYY-MM-DD.'}), 400
-        event.start_date = parsed
-    if end_date is not None:
-        parsed = _parse_date(end_date)
-        if not parsed:
-            return jsonify({'error': 'endDate must be ISO format YYYY-MM-DD.'}), 400
-        event.end_date = parsed
-    if start_time is not None:
-        parsed = _parse_time(start_time)
-        if parsed is None:
-            return jsonify({'error': 'startTime must be ISO format HH:MM or HH:MM:SS.'}), 400
-        event.start_time = parsed
-    if end_time is not None:
-        parsed = _parse_time(end_time)
-        if parsed is None:
-            return jsonify({'error': 'endTime must be ISO format HH:MM or HH:MM:SS.'}), 400
-        event.end_time = parsed
-    if capacity is not None:
-        event.capacity = capacity
+    try:
+        result = EventService.update_event(
+            event_id,
+            data
+        )
+        return jsonify(result), 200
 
-    db.session.commit()
-    return jsonify(event.to_dict()), 200
+    except ValueError as e:
+        return jsonify({'error': str(e)}), 400
 
 
 @events_bp.route('/<int:event_id>/status', methods=['PATCH'])
 @jwt_required
 def update_event_status(event_id):
     event = Event.query.get_or_404(event_id)
+
     if not _can_manage_event(event, g.current_user):
-        return jsonify({'error': 'You do not have permission to change event status.'}), 403
+        return jsonify({
+            'error': 'You do not have permission to change event status.'
+        }), 403
 
     data = request.get_json() or {}
     status = (data.get('status') or '').strip()
-    if not status:
-        return jsonify({'error': 'status is required.'}), 400
 
-    event.event_status = status.upper()
-    db.session.commit()
-    return jsonify(event.to_dict()), 200
+    if not status:
+        return jsonify({
+            'error': 'status is required.'
+        }), 400
+
+    try:
+        result = EventService.update_event_status(
+            event_id,
+            status
+        )
+        return jsonify(result), 200
+
+    except ValueError as e:
+        return jsonify({'error': str(e)}), 400
 
 
 @events_bp.route('/<int:event_id>/venue', methods=['POST'])
 @jwt_required
 def assign_venue(event_id):
     event = Event.query.get_or_404(event_id)
+
     if not _can_manage_event(event, g.current_user):
-        return jsonify({'error': 'You do not have permission to assign a venue.'}), 403
+        return jsonify({
+            'error': 'You do not have permission to assign a venue.'
+        }), 403
 
     data = request.get_json() or {}
     venue_id = data.get('venueId')
+
     if not venue_id:
-        return jsonify({'error': 'venueId is required.'}), 400
+        return jsonify({
+            'error': 'venueId is required.'
+        }), 400
 
-    venue = Venue.query.get(venue_id)
-    if not venue:
-        return jsonify({'error': 'Venue not found.'}), 404
+    try:
+        result = EventService.assign_venue(
+            event_id,
+            venue_id
+        )
+        return jsonify(result), 200
 
-    event.venue_id = venue.id
-    db.session.commit()
-    return jsonify(event.to_dict()), 200
-
+    except ValueError as e:
+        return jsonify({'error': str(e)}), 400
 
 @events_bp.route('/calendar', methods=['GET'])
 @jwt_required

@@ -195,13 +195,26 @@ async function handleApplySubmit() {
                   <div class="role-icon">🛡️</div>
                   <div>
                     <span class="role-type-badge active">{{ role.assignmentRole }}</span>
-                    <h5 class="role-title">{{ role.referenceName || 'Club Role' }}</h5>
+                    <h5 
+                      class="role-title clickable-club" 
+                      @click="role.referenceId ? router.push(`/student/clubs/${role.referenceId}`) : router.push('/student/clubs')"
+                      :title="`Go to ${role.referenceName || 'Club'} page`"
+                    >
+                      {{ role.referenceName || 'Club Role' }}
+                      <i class="bi bi-box-arrow-up-right text-xs ms-1"></i>
+                    </h5>
                     <span class="assigned-date">Granted: {{ new Date(role.grantedAt || role.startsAt || Date.now()).toLocaleDateString() }}</span>
                   </div>
                 </div>
 
                 <p class="role-description">
-                  Holding {{ role.assignmentRole }} position for {{ role.referenceName || 'Club' }}.
+                  Holding {{ role.assignmentRole }} position for 
+                  <RouterLink 
+                    :to="role.referenceId ? `/student/clubs/${role.referenceId}` : '/student/clubs'" 
+                    class="text-primary fw-semibold text-decoration-none"
+                  >
+                    {{ role.referenceName || 'Club' }}
+                  </RouterLink>.
                 </p>
 
                 <div class="role-card-footer">
@@ -236,7 +249,14 @@ async function handleApplySubmit() {
                   <div class="role-icon bg-light text-muted">📜</div>
                   <div>
                     <span class="role-type-badge history">{{ role.status || 'INACTIVE' }}</span>
-                    <h5 class="role-title text-secondary">{{ role.referenceName || 'Past Role' }}</h5>
+                    <h5 
+                      class="role-title text-secondary clickable-club" 
+                      @click="role.referenceId ? router.push(`/student/clubs/${role.referenceId}`) : router.push('/student/clubs')"
+                      :title="`Go to ${role.referenceName || 'Club'} page`"
+                    >
+                      {{ role.referenceName || 'Past Role' }}
+                      <i class="bi bi-box-arrow-up-right text-xs ms-1"></i>
+                    </h5>
                     <span class="assigned-date">Role: {{ role.assignmentRole }}</span>
                   </div>
                 </div>
@@ -259,7 +279,14 @@ async function handleApplySubmit() {
               <button class="back-btn" @click="closeDashboard">← Back to Roles</button>
               <div class="banner-emoji">🛡️</div>
               <div>
-                <h3 class="m-0 text-dark font-bold">{{ activeRoleView.referenceName }}</h3>
+                <h3 
+                  class="m-0 text-dark font-bold clickable-club" 
+                  @click="activeRoleView.referenceId ? router.push(`/student/clubs/${activeRoleView.referenceId}`) : router.push('/student/clubs')"
+                  :title="`Open ${activeRoleView.referenceName} club page`"
+                >
+                  {{ activeRoleView.referenceName }}
+                  <i class="bi bi-box-arrow-up-right text-xs ms-1"></i>
+                </h3>
                 <span class="badge bg-primary px-3 py-1 mt-1">{{ activeRoleView.assignmentRole }}</span>
               </div>
             </div>
@@ -282,7 +309,15 @@ async function handleApplySubmit() {
             <div class="col-md-6">
               <div class="info-box">
                 <label>Target Entity / Club</label>
-                <p>{{ activeRoleView.referenceName }}</p>
+                <p>
+                  <RouterLink 
+                    :to="activeRoleView.referenceId ? `/student/clubs/${activeRoleView.referenceId}` : '/student/clubs'" 
+                    class="text-primary text-decoration-none fw-bold"
+                  >
+                    {{ activeRoleView.referenceName }}
+                    <i class="bi bi-box-arrow-up-right ms-1"></i>
+                  </RouterLink>
+                </p>
               </div>
             </div>
             <div class="col-md-6">
@@ -562,5 +597,15 @@ async function handleApplySubmit() {
   max-width: 540px;
   padding: 24px;
   box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
+}
+
+.clickable-club {
+  cursor: pointer;
+  transition: color 0.2s ease;
+}
+
+.clickable-club:hover {
+  color: #2563eb !important;
+  text-decoration: underline;
 }
 </style>

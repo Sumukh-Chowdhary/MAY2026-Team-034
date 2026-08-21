@@ -8,7 +8,7 @@ import {
   Legend
 } from 'chart.js'
 
-import { userDistribution } from '@/data/analytics.js'
+import { userDistribution as defaultUserDistribution } from '@/data/analytics.js'
 
 ChartJS.register(
   ArcElement,
@@ -16,27 +16,44 @@ ChartJS.register(
   Legend
 )
 
-const chartData = computed(() => ({
-  labels: userDistribution.labels,
-  datasets: [
-    {
-      data: userDistribution.data,
-      backgroundColor: [
-        '#2563EB',
-        '#60A5FA',
-        '#CBD5E1'
-      ],
-      borderWidth: 0
-    }
-  ]
-}))
+const props = defineProps({
+  distribution: {
+    type: Object,
+    default: () => defaultUserDistribution
+  }
+})
+
+const chartData = computed(() => {
+  const dist = props.distribution || defaultUserDistribution
+  return {
+    labels: dist.labels || ['Students', 'Faculty', 'Admins'],
+    datasets: [
+      {
+        data: dist.data || [100, 21, 2],
+        backgroundColor: [
+          '#2563EB',
+          '#10B981',
+          '#F59E0B'
+        ],
+        borderWidth: 0
+      }
+    ]
+  }
+})
 
 const chartOptions = {
   responsive: true,
   maintainAspectRatio: false,
   plugins: {
     legend: {
-      position: 'bottom'
+      position: 'bottom',
+      labels: {
+        font: {
+          family: 'Inter, sans-serif',
+          weight: 600
+        },
+        padding: 16
+      }
     }
   }
 }
@@ -47,7 +64,7 @@ const chartOptions = {
     <div class="card-header">
       <div>
         <h4>User Distribution</h4>
-        <p>Overview of users by role</p>
+        <p>Overview of campus community by role</p>
       </div>
     </div>
 

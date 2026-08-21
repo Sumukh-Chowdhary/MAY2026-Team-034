@@ -26,6 +26,8 @@ const emit = defineEmits(['edit-avatar'])
             <UserAvatar 
               size="header"
               :user="user"
+              :style="user.avatarStyle"
+              :seed="user.avatarSeed"
               :editable="editableAvatar"
               @edit="emit('edit-avatar')"
             />

@@ -219,6 +219,12 @@ const routes = [
     meta: { requiresAuth: true, role: 'STUDENT' }
   },
   {
+    path: '/student/analytics',
+    name: 'StudentClubAnalytics',
+    component: () => import('@/views/student/Analytics.vue'),
+    meta: { requiresAuth: true, role: 'STUDENT' }
+  },
+  {
     path: '/student/profile',
     name: 'StudentProfile',
     component: () => import('@/views/student/Profile.vue'),

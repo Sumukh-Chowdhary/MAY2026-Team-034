@@ -2,6 +2,7 @@ from flask import Blueprint, request, jsonify
 from app.models import db
 from app.models.events import Venue
 from app.utils.auth_jwt import jwt_required, roles_required
+from app.utils.cache import get_cached, set_cached, delete_cached
 
 venues_bp = Blueprint('venues', __name__, url_prefix='/api/venues')
 
@@ -9,6 +10,19 @@ venues_bp = Blueprint('venues', __name__, url_prefix='/api/venues')
 @jwt_required
 def get_venues():
     search_q = request.args.get('search')
+
+    # Only use the "all venues" cache when there is no search filter.
+    if not search_q:
+        cache_key = "venues:all"
+
+        cached = get_cached(cache_key)
+
+        if cached is not None:
+            print("Redis cache HIT:", cache_key)
+            return jsonify(cached), 200
+
+        print("Redis cache MISS:", cache_key)
+
     query = Venue.query
 
     if search_q:
@@ -22,7 +36,14 @@ def get_venues():
         )
 
     venues = query.order_by(Venue.venue_name.asc()).all()
-    return jsonify([venue.to_dict() for venue in venues]), 200
+
+    result = [venue.to_dict() for venue in venues]
+
+    # Only cache the unfiltered list for now.
+    if not search_q:
+        set_cached(cache_key, result)
+
+    return jsonify(result), 200
 
 
 @venues_bp.route('/<int:venue_id>', methods=['GET'])
@@ -61,6 +82,9 @@ def create_venue():
     )
     db.session.add(venue)
     db.session.commit()
+
+    delete_cached("venues:all")
+
     return jsonify(venue.to_dict()), 201
 
 
@@ -85,6 +109,10 @@ def update_venue(venue_id):
         venue.capacity = capacity
 
     db.session.commit()
+
+    delete_cached("venues:all")
+    delete_cached("events:all")
+    
     return jsonify(venue.to_dict()), 200
 
 
@@ -101,6 +129,9 @@ def update_venue_status(venue_id):
 
     venue.availability_status = status.upper()
     db.session.commit()
+
+    delete_cached("venues:all")
+    
     return jsonify(venue.to_dict()), 200
 
 
