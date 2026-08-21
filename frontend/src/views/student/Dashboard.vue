@@ -2,6 +2,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import StudentLayout from '@/layouts/StudentLayout.vue'
+import UserAvatar from '@/components/profile/UserAvatar.vue'
 import { getUser } from '@/api/users'
 import { getMyClubs } from '@/api/student'
 import { getEvents } from '@/api/events'
@@ -12,11 +13,6 @@ const userProfile = ref(null)
 const myClubs = ref([])
 const upcomingEvents = ref([])
 const loading = ref(true)
-
-const avatarInitials = computed(() => {
-  const name = userProfile.value?.fullName || userProfile.value?.name || 'S'
-  return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)
-})
 
 const stats = computed(() => [
   { label: 'Clubs Joined', value: myClubs.value.length, icon: 'bi-collection-fill', color: '#2563eb', bg: '#eff6ff' },
@@ -55,7 +51,7 @@ onMounted(async () => {
     myClubs.value = clubs.status === 'fulfilled' && Array.isArray(clubs.value) ? clubs.value : []
     const allEvents = events.status === 'fulfilled' && Array.isArray(events.value) ? events.value : []
     upcomingEvents.value = allEvents
-      .filter(e => e.startDate ? new Date(e.startDate) >= new Date() : true)
+      .filter(e => e.startDate ? new Date(e.startDate) >= new Date(new Date().setDate(new Date().getDate() - 1)) : true)
       .slice(0, 5)
   } catch (err) {
     console.error('Dashboard load error:', err)
@@ -79,13 +75,32 @@ onMounted(async () => {
         </div>
         <div class="header-right">
           <div class="profile-quick-card" @click="router.push('/student/profile')">
-            <div class="quick-avatar">{{ avatarInitials }}</div>
-            <div class="quick-info">
+            <UserAvatar size="42" :user="userProfile" />
+            <div class="quick-info ms-2">
               <span class="quick-name">{{ userProfile?.fullName || userProfile?.name || 'Student' }}</span>
               <span class="quick-role">View Profile →</span>
             </div>
           </div>
         </div>
+      </div>
+
+      <!-- Quick Nav Shortcuts -->
+      <div class="quick-nav-bar d-flex align-items-center gap-2 mb-4 overflow-x-auto pb-1">
+        <button class="quick-chip active" @click="router.push('/student')">
+          <i class="bi bi-speedometer2 me-1"></i> Overview
+        </button>
+        <button class="quick-chip" @click="router.push('/student/clubs')">
+          <i class="bi bi-collection-fill me-1 text-primary"></i> Browse Clubs
+        </button>
+        <button class="quick-chip" @click="router.push('/student/events')">
+          <i class="bi bi-calendar-event-fill me-1 text-success"></i> Events
+        </button>
+        <button class="quick-chip" @click="router.push('/student/roles')">
+          <i class="bi bi-shield-check me-1 text-warning"></i> My Roles
+        </button>
+        <button class="quick-chip" @click="router.push('/student/requests')">
+          <i class="bi bi-inbox-fill me-1 text-info"></i> Requests
+        </button>
       </div>
 
       <!-- LOADING -->
@@ -126,10 +141,10 @@ onMounted(async () => {
               </div>
               <div v-else>
                 <div v-for="club in myClubs.slice(0, 5)" :key="club.id" class="list-item">
-                  <div class="item-left">
+                  <div class="item-left cursor-pointer" @click="router.push(`/student/clubs/${club.id}`)">
                     <div class="item-icon">{{ getClubEmoji(club.category) }}</div>
                     <div>
-                      <h6 class="item-title">{{ club.name }}</h6>
+                      <h6 class="item-title text-primary-hover">{{ club.name || club.clubName }}</h6>
                       <span class="item-sub">{{ club.membershipRole || 'MEMBER' }}</span>
                     </div>
                   </div>
@@ -155,12 +170,12 @@ onMounted(async () => {
               </div>
               <div v-else>
                 <div v-for="event in upcomingEvents" :key="event.id" class="list-item">
-                  <div class="item-left">
+                  <div class="item-left cursor-pointer" @click="router.push(`/student/events/${event.id}`)">
                     <div class="event-date-badge">
                       <span>{{ formatDate(event.startDate) }}</span>
                     </div>
                     <div>
-                      <h6 class="item-title">{{ event.eventName || event.title }}</h6>
+                      <h6 class="item-title text-primary-hover">{{ event.eventName || event.name || event.title }}</h6>
                       <span class="item-sub">{{ event.clubName || event.club || 'Campus Event' }}</span>
                     </div>
                   </div>
@@ -185,14 +200,20 @@ onMounted(async () => {
                 <p>Join clubs to see them here.</p>
               </div>
               <div v-else class="club-chips-grid">
-                <div v-for="club in myClubs" :key="club.id" class="club-chip">
+                <div 
+                  v-for="club in myClubs" 
+                  :key="club.id" 
+                  class="club-chip cursor-pointer"
+                  @click="router.push(`/student/clubs/${club.id}`)"
+                  :title="`Open ${club.name || club.clubName} page`"
+                >
                   <div class="chip-emoji">{{ getClubEmoji(club.category) }}</div>
                   <div class="chip-info">
-                    <span class="chip-name">{{ club.name }}</span>
+                    <span class="chip-name">{{ club.name || club.clubName }}</span>
                     <span class="chip-role">{{ club.membershipRole || 'MEMBER' }}</span>
                   </div>
                   <div class="chip-members">
-                    <i class="bi bi-people-fill"></i> {{ club.activeMembers || club.totalMembers || 0 }}
+                    <i class="bi bi-people-fill me-1"></i>{{ club.activeMembers || club.totalMembers || 0 }}
                   </div>
                 </div>
               </div>
@@ -210,24 +231,38 @@ onMounted(async () => {
 .dashboard-page { width:100%; max-width:1600px; margin:0 auto; padding-bottom:40px; }
 
 /* Header */
-.dashboard-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:28px; gap:20px; flex-wrap:wrap; }
+.dashboard-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:24px; gap:20px; flex-wrap:wrap; }
 .header-title { margin:0; color:#1e293b; font-size:1.75rem; font-weight:800; }
 .header-sub { margin:6px 0 0; color:#64748b; font-size:0.95rem; }
 .profile-quick-card {
-  display:flex; align-items:center; gap:14px;
-  padding:14px 20px; background:white; border-radius:16px;
+  display:flex; align-items:center; gap:8px;
+  padding:10px 18px; background:white; border-radius:16px;
   box-shadow:0 4px 20px rgba(15,23,42,0.08); cursor:pointer;
   border:1.5px solid #e2e8f0; transition:all 0.2s;
 }
 .profile-quick-card:hover { border-color:#2563eb; box-shadow:0 6px 24px rgba(37,99,235,0.12); transform:translateY(-1px); }
-.quick-avatar {
-  width:42px; height:42px; border-radius:50%;
-  background:linear-gradient(135deg,#2563eb,#1d4ed8);
-  color:white; font-weight:800; font-size:1rem;
-  display:flex; align-items:center; justify-content:center; flex-shrink:0;
-}
 .quick-name { font-size:0.9rem; font-weight:700; color:#1e293b; display:block; }
 .quick-role { font-size:0.75rem; color:#2563eb; font-weight:600; }
+
+.quick-chip {
+  padding: 6px 14px;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 999px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: #475569;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.quick-chip:hover,
+.quick-chip.active {
+  background: #eff6ff;
+  border-color: #bfdbfe;
+  color: #2563eb;
+}
 
 /* Loading skeletons */
 .loading-row { display:grid; grid-template-columns:repeat(4,1fr); gap:18px; margin-bottom:24px; }
@@ -270,7 +305,8 @@ onMounted(async () => {
 .list-item:last-child { border-bottom:none; }
 .item-left { display:flex; align-items:center; gap:14px; min-width:0; flex:1; }
 .item-icon { width:40px; height:40px; border-radius:10px; background:#f1f5f9; display:flex; align-items:center; justify-content:center; font-size:1.25rem; flex-shrink:0; }
-.item-title { font-size:0.88rem; font-weight:700; color:#1e293b; margin:0 0 3px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.item-title { font-size:0.88rem; font-weight:700; color:#1e293b; margin:0 0 3px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; transition:color 0.2s; }
+.item-title.text-primary-hover:hover { color:#2563eb; }
 .item-sub { font-size:0.75rem; color:#94a3b8; }
 .view-btn { padding:6px 14px; background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; color:#2563eb; font-size:0.78rem; font-weight:700; text-decoration:none; flex-shrink:0; transition:all 0.2s; }
 .view-btn:hover { background:#2563eb; color:white; border-color:#2563eb; }
@@ -293,12 +329,14 @@ onMounted(async () => {
   background:#f8fafc; border:1.5px solid #e2e8f0;
   transition:all 0.2s; min-width:200px; flex:1;
 }
-.club-chip:hover { border-color:#2563eb; background:#eff6ff; }
+.club-chip:hover { border-color:#2563eb; background:#eff6ff; transform:translateY(-1px); }
 .chip-emoji { font-size:1.4rem; }
 .chip-info { flex:1; min-width:0; }
 .chip-name { font-size:0.85rem; font-weight:700; color:#1e293b; display:block; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 .chip-role { font-size:0.72rem; color:#64748b; font-weight:500; }
 .chip-members { font-size:0.75rem; color:#94a3b8; font-weight:500; white-space:nowrap; }
+
+.cursor-pointer { cursor:pointer; }
 
 /* Responsive */
 @media (max-width:1100px) { .stats-row { grid-template-columns:repeat(2,1fr); } }

@@ -57,7 +57,7 @@ const resolvedPxSize = computed(() => {
 
 // Extract Effective User Information
 const effectiveName = computed(() => {
-  return props.name || props.user?.name || props.user?.fullName || props.user?.username || props.user?.email || 'User'
+  return props.name || props.user?.fullName || props.user?.name || props.user?.username || props.user?.email || 'User'
 })
 
 const effectiveRole = computed(() => {
@@ -76,23 +76,28 @@ const isAdmin = computed(() => {
 
 // Reserved & Custom Avatar Strategy
 const avatarUrl = computed(() => {
+  const customStyle = props.style || props.user?.avatarStyle
+  const customSeed = props.seed || props.user?.avatarSeed
+
+  // If custom avatar style or seed is specified, always use it
+  if (customStyle) {
+    const seedVal = customSeed || effectiveName.value || 'User'
+    return `https://api.dicebear.com/7.x/${customStyle}/svg?seed=${encodeURIComponent(seedVal)}`
+  }
+
   // 1. Reserved Principal Avatar
   if (isPrincipal.value) {
     return `https://api.dicebear.com/7.x/personas/svg?seed=${encodeURIComponent('Principal Executive')}`
   }
 
-  // 2. Reserved System Administrator Avatar (unless explicit custom style provided)
-  const explicitStyle = props.style || props.user?.avatarStyle
-  const explicitSeed = props.seed || props.user?.avatarSeed
-
-  if (isAdmin.value && !explicitStyle) {
+  // 2. Reserved System Administrator Avatar
+  if (isAdmin.value) {
     return `https://api.dicebear.com/7.x/bottts/svg?seed=${encodeURIComponent('System Administrator')}`
   }
 
   // 3. Normal DiceBear Avatar
-  const activeStyle = explicitStyle || 'adventurer'
-  const activeSeed = explicitSeed || effectiveName.value
-  return `https://api.dicebear.com/7.x/${activeStyle}/svg?seed=${encodeURIComponent(activeSeed)}`
+  const activeSeed = customSeed || effectiveName.value || 'User'
+  return `https://api.dicebear.com/7.x/adventurer/svg?seed=${encodeURIComponent(activeSeed)}`
 })
 
 // Initial Fallback

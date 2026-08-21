@@ -3,6 +3,8 @@ import { ref, computed, onMounted } from 'vue'
 import { getCurrentUser } from '@/services/authService'
 import { getUser, updateUser } from '@/api/users'
 import { getRequests } from '@/api/requests'
+import { getMyClubs } from '@/api/student'
+import { getMySupervisedClubs } from '@/api/faculty'
 import { useNotifications } from '@/stores/useNotifications'
 import { useToast } from '@/composables/useToast'
 import api from '@/api/axios'
@@ -36,6 +38,9 @@ const form = ref({
   phone: '',
   department: '',
   role: '',
+  registerNumber: '',
+  year: '',
+  designation: '',
   bio: '',
   status: 'ACTIVE',
   createdAt: '',
@@ -95,6 +100,9 @@ async function loadProfile() {
       phone: u.phone || u.phoneNumber || '',
       department: u.department || 'General',
       role: u.role || props.layoutRole,
+      registerNumber: u.registerNumber || u.rollNo || u.employeeId || '',
+      year: u.year || u.yearOfStudy || (props.layoutRole === 'STUDENT' ? '3rd Year' : ''),
+      designation: u.designation || (props.layoutRole === 'FACULTY' ? 'Faculty Advisor' : ''),
       bio: u.bio || '',
       status: u.status || 'ACTIVE',
       createdAt: u.createdAt ? new Date(u.createdAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) : 'Aug 2025',
@@ -102,11 +110,38 @@ async function loadProfile() {
       avatarSeed: u.avatarSeed || u.fullName || u.username || 'User'
     }
 
-    userClubs.value = u.clubs || []
-    if (u.role === 'FACULTY') {
-      coordinatorRoles.value = (u.clubs || []).map(club => ({ club, role: 'Faculty Coordinator' }))
-    } else {
-      organizerRoles.value = []
+    // Load actual club entities with IDs
+    try {
+      if (u.role === 'FACULTY') {
+        const clubsRes = await getMySupervisedClubs().catch(() => [])
+        const list = Array.isArray(clubsRes) ? clubsRes : []
+        userClubs.value = list.map(c => ({ id: c.id, name: c.clubName || c.name }))
+        coordinatorRoles.value = list.map(c => ({ 
+          club: c.clubName || c.name, 
+          clubId: c.id, 
+          role: c.roleTitle || 'Faculty Coordinator' 
+        }))
+      } else if (u.role === 'STUDENT') {
+        const clubsRes = await getMyClubs().catch(() => [])
+        const list = Array.isArray(clubsRes) ? clubsRes : []
+        if (list.length) {
+          userClubs.value = list.map(c => ({ id: c.id, name: c.name || c.clubName, role: c.membershipRole }))
+          organizerRoles.value = list
+            .filter(c => c.membershipRole && c.membershipRole.toUpperCase() !== 'MEMBER')
+            .map(c => ({
+              title: c.membershipRole,
+              club: c.name || c.clubName,
+              clubId: c.id,
+              role: c.membershipRole
+            }))
+        } else {
+          userClubs.value = (u.clubs || []).map((c, i) => typeof c === 'object' ? c : { id: i + 1, name: c })
+        }
+      } else {
+        userClubs.value = (u.clubs || []).map((c, i) => typeof c === 'object' ? c : { id: i + 1, name: c })
+      }
+    } catch (e) {
+      userClubs.value = (u.clubs || []).map((c, i) => typeof c === 'object' ? c : { id: i + 1, name: c })
     }
 
     // Fetch REAL request & notification stats
@@ -138,16 +173,55 @@ async function loadProfile() {
 }
 
 function openAvatarPicker() {
-  selectedStyle.value = form.value.avatarStyle
-  customSeed.value = form.value.avatarSeed || form.value.fullName
+  selectedStyle.value = form.value.avatarStyle || 'adventurer'
+  customSeed.value = form.value.avatarSeed || form.value.fullName || 'User'
   showAvatarModal.value = true
 }
 
-function applyAvatar() {
+async function applyAvatar() {
   form.value.avatarStyle = selectedStyle.value
-  form.value.avatarSeed = customSeed.value || form.value.fullName
+  form.value.avatarSeed = customSeed.value || form.value.fullName || 'User'
   showAvatarModal.value = false
-  showToast('Avatar selected! Click "Save Profile Changes" to save.', 'info')
+
+  // Persist directly to backend & localStorage
+  if (userProfile.value?.id) {
+    try {
+      const payload = {
+        fullName: form.value.fullName,
+        phone: form.value.phone,
+        year: form.value.year,
+        designation: form.value.designation,
+        bio: form.value.bio,
+        avatarStyle: form.value.avatarStyle,
+        avatarSeed: form.value.avatarSeed
+      }
+
+      const updated = await updateUser(userProfile.value.id, payload)
+      userProfile.value = { 
+        ...userProfile.value, 
+        ...updated, 
+        avatarStyle: form.value.avatarStyle, 
+        avatarSeed: form.value.avatarSeed 
+      }
+
+      // Sync localStorage
+      const currentStored = getCurrentUser() || {}
+      localStorage.setItem('user', JSON.stringify({ 
+        ...currentStored, 
+        ...updated, 
+        avatarStyle: form.value.avatarStyle, 
+        avatarSeed: form.value.avatarSeed 
+      }))
+
+      window.dispatchEvent(new Event('storage'))
+      showToast('Avatar updated and saved!', 'success')
+    } catch (err) {
+      console.error('Failed to auto-save avatar', err)
+      showToast('Avatar updated in preview! Click Save Profile Changes to persist.', 'info')
+    }
+  } else {
+    showToast('Avatar updated!', 'success')
+  }
 }
 
 async function handleSaveProfile() {
@@ -157,18 +231,31 @@ async function handleSaveProfile() {
     const payload = {
       fullName: form.value.fullName,
       phone: form.value.phone,
+      year: form.value.year,
+      designation: form.value.designation,
       bio: form.value.bio,
       avatarStyle: form.value.avatarStyle,
       avatarSeed: form.value.avatarSeed
     }
 
     const updated = await updateUser(userProfile.value.id, payload)
-    userProfile.value = { ...userProfile.value, ...updated }
+    userProfile.value = { 
+      ...userProfile.value, 
+      ...updated, 
+      avatarStyle: form.value.avatarStyle, 
+      avatarSeed: form.value.avatarSeed 
+    }
 
     // Sync localStorage
     const currentStored = getCurrentUser() || {}
-    localStorage.setItem('user', JSON.stringify({ ...currentStored, ...updated, avatarStyle: form.value.avatarStyle, avatarSeed: form.value.avatarSeed }))
+    localStorage.setItem('user', JSON.stringify({ 
+      ...currentStored, 
+      ...updated, 
+      avatarStyle: form.value.avatarStyle, 
+      avatarSeed: form.value.avatarSeed 
+    }))
 
+    window.dispatchEvent(new Event('storage'))
     showToast('Profile updated successfully!', 'success')
     isEditing.value = false
   } catch (err) {
@@ -441,7 +528,11 @@ async function handlePasswordChange() {
 }
 
 .hover-badge:hover {
-  background: #2563eb !important;
-  color: white !important;
+  background-color: #2563eb !important;
+  color: #ffffff !important;
+}
+
+.cursor-pointer {
+  cursor: pointer;
 }
 </style>
