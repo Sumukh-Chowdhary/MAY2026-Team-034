@@ -92,7 +92,6 @@ def _can_manage_event(event, user):
 
     return False
 
-
 def _can_take_attendance(event, user):
     if not user or user.account_status != 'ACTIVE':
         return False
