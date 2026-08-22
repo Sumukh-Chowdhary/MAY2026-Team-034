@@ -1,7 +1,7 @@
 from app.models.user import User, db
 
 STUDENT = {
-    "email": "rahul@allclub.com",
+    "username": "Y24CS001",
     "password": "student123"
 }
 
@@ -70,18 +70,18 @@ def test_login_missing_fields(client):
         json={}
     )
     assert response.status_code == 400
-    assert response.get_json()["error"] == "Email/Register Number and Password are required"
+    assert response.get_json()["error"] == "Registration ID/Email and Password are required"
 
 def test_login_invalid_password(client):
     response = client.post(
         "/api/auth/login",
         json={
-            "email": "rahul@allclub.com",
+            "username": "Y24CS001",
             "password": "wrongpassword"
         }
     )
     assert response.status_code == 401
-    assert response.get_json()["error"] == "Invalid email/register number or password"
+    assert response.get_json()["error"] == "Invalid Registration ID/Email or password"
 
 def test_login_non_existent_user(client):
     response = client.post(
@@ -96,13 +96,13 @@ def test_login_non_existent_user(client):
 def test_login_deactivated_user(client, app):
     with app.app_context():
         user = User.query.filter_by(email="rahul@allclub.com").first()
-        user.account_status = "DEACTIVATED"
+        user.account_status = "INACTIVE"
         db.session.commit()
 
     response = client.post(
         "/api/auth/login",
         json={
-            "email": "rahul@allclub.com",
+            "username": "Y24CS001",
             "password": "student123"
         }
     )
@@ -241,7 +241,7 @@ def test_change_password(client):
     login_fail_res = client.post(
         "/api/auth/login",
         json={
-            "email": "temp@example.com",
+            "username": "TEMP001",
             "password": "old_password123"
         }
     )
@@ -251,7 +251,7 @@ def test_change_password(client):
     login_success_res = client.post(
         "/api/auth/login",
         json={
-            "email": "temp@example.com",
+            "username": "TEMP001",
             "password": "new_password123"
         }
     )

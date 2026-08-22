@@ -39,8 +39,8 @@ def test_student_ticket_to_organizer_loop(
     )
     assert reg_list_resp.status_code == 200
     registrations = reg_list_resp.get_json()
-    assert any(r['userId'] == 6 for r in registrations), (
-        "Student Rahul (id=6) should be in registrations"
+    assert any(r['userId'] == 24 for r in registrations), (
+        "Student Rahul (id=24) should be in registrations"
     )
 
     # ── Step 2: Student raises a ticket to ORGANIZER ──────────────────────────
@@ -103,18 +103,18 @@ def test_student_ticket_to_organizer_loop(
     assign_resp = client.post(
         f'/api/events/{EVENT_ID}/organizers',
         headers=admin_headers,
-        json={'userId': 7, 'role': 'CO_ORGANIZER'},
+        json={'userId': 25, 'role': 'CO_ORGANIZER'},
     )
     assert assign_resp.status_code == 200
     organizers_list = assign_resp.get_json().get('organizers', [])
-    assert any(o['userId'] == 7 for o in organizers_list), (
-        "Ananya (id=7) should now be an organizer"
+    assert any(o['userId'] == 25 for o in organizers_list), (
+        "Ananya (id=25) should now be an organizer"
     )
 
     # ── Step 7: New organizer (Ananya) checks their managed events ────────────
     ananya_login = client.post(
         '/api/auth/login',
-        json={'email': 'ananya@allclub.com', 'password': 'student123'},
+        json={'username': 'Y25CS002', 'password': 'student123'},
     )
     assert ananya_login.status_code == 200
     ananya_headers = {'Authorization': f"Bearer {ananya_login.get_json()['token']}"}

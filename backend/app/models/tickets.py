@@ -19,7 +19,7 @@ class RequestType:
     SCHEDULE_REQUEST = "SCHEDULE_REQUEST"          # -> Approval-only
 
     # Types that result in an AssignmentTicket once fully approved.
-    ASSIGNMENT_TYPES = {BECOME_ORGANIZER, BECOME_VOLUNTEER, BECOME_FACULTY_COORDINATOR}
+    ASSIGNMENT_TYPES = {BECOME_ORGANIZER, BECOME_VOLUNTEER, BECOME_FACULTY_COORDINATOR, "VOLUNTEER", "ORGANIZER", "FACULTY_COORDINATOR"}
     # Types where the requester just proceeds themselves once approved -
     # no ticket generated at all.
     APPROVAL_ONLY_TYPES = {
@@ -101,21 +101,26 @@ class Request(db.Model):
     __tablename__ = "requests"
 
     id = db.Column(db.Integer, primary_key=True)
-    requester_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
-    request_type = db.Column(db.String(50), nullable=False)
+    requester_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False, index=True)
+    request_type = db.Column(db.String(50), nullable=False, index=True)
     title = db.Column(db.String(150), nullable=False)
     description = db.Column(db.Text, nullable=True)
 
-    reference_type = db.Column(db.String(50), nullable=True)   # "CLUB" / "EVENT"
-    reference_id = db.Column(db.Integer, nullable=True)
+    reference_type = db.Column(db.String(50), nullable=True, index=True)   # "CLUB" / "EVENT"
+    reference_id = db.Column(db.Integer, nullable=True, index=True)
     reference_name = db.Column(db.String(150), nullable=True)
 
-    priority = db.Column(db.String(20), nullable=False, default="MEDIUM")
-    workflow_status = db.Column(db.String(20), nullable=False, default=ApprovalStatus.PENDING)
+    priority = db.Column(db.String(20), nullable=False, default="MEDIUM", index=True)
+    workflow_status = db.Column(db.String(20), nullable=False, default=ApprovalStatus.PENDING, index=True)
     version = db.Column(db.Integer, nullable=False, default=1)
 
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, index=True)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    __table_args__ = (
+        db.Index("ix_request_status_type", "workflow_status", "request_type"),
+        db.Index("ix_request_requester_status", "requester_id", "workflow_status"),
+    )
 
     requester = db.relationship("User", lazy=True)
     approvals = db.relationship(
@@ -176,13 +181,18 @@ class RequestApproval(db.Model):
     __tablename__ = "request_approvals"
 
     id = db.Column(db.Integer, primary_key=True)
-    request_id = db.Column(db.Integer, db.ForeignKey("requests.id"), nullable=False)
-    approver_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
-    approval_order = db.Column(db.Integer, nullable=False, default=1)
-    approval_role = db.Column(db.String(50), nullable=False)  # "ADMIN" / "PRINCIPAL" / "CLUB_ORGANIZER" / "CLUB_FACULTY"
-    status = db.Column(db.String(20), default=ApprovalStatus.PENDING)
+    request_id = db.Column(db.Integer, db.ForeignKey("requests.id"), nullable=False, index=True)
+    approver_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False, index=True)
+    approval_order = db.Column(db.Integer, nullable=False, default=1, index=True)
+    approval_role = db.Column(db.String(50), nullable=False, index=True)  # "ADMIN" / "PRINCIPAL" / "CLUB_ORGANIZER" / "CLUB_FACULTY"
+    status = db.Column(db.String(20), default=ApprovalStatus.PENDING, index=True)
     remarks = db.Column(db.Text)
     approved_at = db.Column(db.DateTime)
+
+    __table_args__ = (
+        db.Index("ix_approval_req_order_status", "request_id", "approval_order", "status"),
+        db.Index("ix_approval_approver_status", "approver_id", "status"),
+    )
 
     approver = db.relationship("User", lazy=True)
 
@@ -232,23 +242,27 @@ class AssignmentTicket(db.Model):
     __tablename__ = "assignment_tickets"
 
     id = db.Column(db.Integer, primary_key=True)
-    request_id = db.Column(db.Integer, db.ForeignKey("requests.id"), nullable=False)
-    holder_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
+    request_id = db.Column(db.Integer, db.ForeignKey("requests.id"), nullable=False, index=True)
+    holder_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False, index=True)
 
-    assignment_role = db.Column(db.String(50), nullable=False)  # AssignmentRole.*
-    reference_type = db.Column(db.String(50))  # "CLUB" / "EVENT"
-    reference_id = db.Column(db.Integer)
+    assignment_role = db.Column(db.String(50), nullable=False, index=True)  # AssignmentRole.*
+    reference_type = db.Column(db.String(50), index=True)  # "CLUB" / "EVENT"
+    reference_id = db.Column(db.Integer, index=True)
 
     duration_type = db.Column(db.String(20), nullable=False, default=AssignmentDuration.INDEFINITE)
     starts_at = db.Column(db.DateTime, default=datetime.utcnow)
     ends_at = db.Column(db.DateTime, nullable=True)  # null for INDEFINITE
 
-    status = db.Column(db.String(20), nullable=False, default=AssignmentStatus.ACTIVE)
+    status = db.Column(db.String(20), nullable=False, default=AssignmentStatus.ACTIVE, index=True)
 
-    granted_by_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=True)
+    granted_by_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=True, index=True)
     granted_at = db.Column(db.DateTime, default=datetime.utcnow)
 
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, index=True)
+
+    __table_args__ = (
+        db.Index("ix_assignment_ticket_holder_status", "holder_id", "status"),
+    )
 
     holder = db.relationship("User", foreign_keys=[holder_id], lazy=True)
     granted_by = db.relationship("User", foreign_keys=[granted_by_id], lazy=True)

@@ -1,7 +1,7 @@
 def test_get_user_assignments(client, student_headers):
-    # Rahul Sharma user_id is 6 in seeded db
+    # Rahul Sharma user_id is 24 in seeded db
     response = client.get(
-        "/api/assignment-tickets/user/6",
+        "/api/assignment-tickets/user/24",
         headers=student_headers
     )
     assert response.status_code == 200
@@ -13,9 +13,9 @@ def test_get_user_assignments(client, student_headers):
 
 
 def test_get_user_assignments_unauthorized(client, student_headers):
-    # Rahul (user_id 6) attempts to access another user's assignments (user_id 3)
+    # Rahul (user_id 24) attempts to access another user's assignments (user_id 4)
     response = client.get(
-        "/api/assignment-tickets/user/3",
+        "/api/assignment-tickets/user/4",
         headers=student_headers
     )
     assert response.status_code == 403
@@ -45,7 +45,7 @@ def test_create_role_request(client, student_headers):
 
 def test_student_leave_assignment_ticket(client, student_headers):
     # First fetch assignments to get an active ticket id
-    res = client.get("/api/assignment-tickets/user/6", headers=student_headers).get_json()
+    res = client.get("/api/assignment-tickets/user/24", headers=student_headers).get_json()
     active_tickets = res["data"]["active"]
     if active_tickets:
         ticket_id = active_tickets[0]["id"]

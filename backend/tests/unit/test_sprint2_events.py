@@ -84,11 +84,11 @@ def test_organizer_my_events_faculty(client, faculty_headers):
 
 def test_organizer_my_events_after_assigning(client, admin_headers, student_headers):
     """After assigning student as organizer, their managed events list grows."""
-    # Assign student (Rahul, id=6) as organizer to event 1
+    # Assign student (Rahul, id=24) as organizer to event 1
     assign_resp = client.post(
         f'/api/events/{EVENT_ID}/organizers',
         headers=admin_headers,
-        json={'userId': 6, 'role': 'ORGANIZER'},
+        json={'userId': 24, 'role': 'ORGANIZER'},
     )
     assert assign_resp.status_code == 200
 

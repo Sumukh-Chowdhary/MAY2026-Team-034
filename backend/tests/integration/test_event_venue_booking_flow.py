@@ -57,5 +57,5 @@ def test_event_venue_booking_and_registration_integration(client, admin_headers,
     assert registrations_response.status_code == 200
     registrations = registrations_response.get_json()
     
-    # User ID 6 is Rahul (the student in the default test fixtures login)
-    assert any(reg['userId'] == 6 for reg in registrations)
+    # User ID 24 is Rahul (the student in the default test fixtures login)
+    assert any(reg['userId'] == 24 for reg in registrations)

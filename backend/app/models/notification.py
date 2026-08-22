@@ -8,14 +8,18 @@ class Notification(db.Model):
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False, index=True)
     title = db.Column(db.String(150), nullable=False)
     message = db.Column(db.Text, nullable=False)
-    type = db.Column(db.String(50), nullable=False, default='GENERAL')
-    entity_type = db.Column(db.String(50), nullable=True)
-    entity_id = db.Column(db.Integer, nullable=True)
-    actor_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)
+    type = db.Column(db.String(50), nullable=False, default='GENERAL', index=True)
+    entity_type = db.Column(db.String(50), nullable=True, index=True)
+    entity_id = db.Column(db.Integer, nullable=True, index=True)
+    actor_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True, index=True)
     context = db.Column(db.String(255), nullable=True)
-    is_read = db.Column(db.Boolean, default=False)
+    is_read = db.Column(db.Boolean, default=False, index=True)
     reference_url = db.Column(db.String(255), nullable=True)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, index=True)
+
+    __table_args__ = (
+        db.Index('ix_notification_user_unread', 'user_id', 'is_read', 'created_at'),
+    )
 
     actor = db.relationship('User', foreign_keys=[actor_id])
 

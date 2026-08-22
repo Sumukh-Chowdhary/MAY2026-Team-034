@@ -10,7 +10,6 @@ from app.models.events import (
 from app.models.user import User
 from app.extensions import socketio
 from app.utils.cache import get_cached, set_cached, delete_cached
-from app.models import club
 
 def _parse_date(value):
     if not value:
@@ -50,7 +49,10 @@ class EventService:
         query = Event.query
 
         if club_id:
-            query = query.filter(Event.club_id == club_id)
+            try:
+                query = query.filter(Event.club_id == int(club_id))
+            except Exception:
+                query = query.filter(Event.club_id == club_id)
 
         if status:
             query = query.filter(
@@ -62,13 +64,13 @@ class EventService:
 
             query = (
                 query
-                .join(club, Event.club_id == club.id)
+                .outerjoin(Club, Event.club_id == Club.id)
                 .outerjoin(Venue, Event.venue_id == Venue.id)
                 .filter(
                     db.or_(
                         db.func.lower(Event.event_name).like(q),
                         db.func.lower(Event.event_description).like(q),
-                        db.func.lower(club.club_name).like(q),
+                        db.func.lower(Club.club_name).like(q),
                         db.func.lower(Venue.venue_name).like(q),
                     )
                 )
@@ -234,13 +236,32 @@ class EventService:
 
     @staticmethod
     def register_for_event(event_id, user_id):
-        event = Event.query.get_or_404(event_id)
+        try:
+            event = Event.query.with_for_update().filter_by(id=event_id).first() or Event.query.get_or_404(event_id)
+        except Exception:
+            event = Event.query.get_or_404(event_id)
+
         existing = EventRegistration.query.filter_by(event_id=event.id, user_id=user_id).first()
         if existing:
             return existing.to_dict()
-        registration = EventRegistration(event_id=event.id, user_id=user_id)
-        db.session.add(registration)
-        db.session.commit()
+
+        if event.capacity and event.capacity > 0:
+            current_count = EventRegistration.query.filter_by(event_id=event.id).filter(
+                EventRegistration.registration_status != 'CANCELLED'
+            ).count()
+            if current_count >= event.capacity:
+                raise ValueError('Event has reached maximum registration capacity.')
+
+        try:
+            registration = EventRegistration(event_id=event.id, user_id=user_id)
+            db.session.add(registration)
+            db.session.commit()
+        except Exception:
+            db.session.rollback()
+            existing = EventRegistration.query.filter_by(event_id=event.id, user_id=user_id).first()
+            if existing:
+                return existing.to_dict()
+            raise
 
         dict_data = registration.to_dict()
         socketio.emit('registration_added', dict_data, room=f'event_{event.id}')

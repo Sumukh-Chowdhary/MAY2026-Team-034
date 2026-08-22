@@ -38,10 +38,18 @@ from app.utils.seed_data import (
     VENUE_DATA_LIST
 )
 
+from werkzeug.security import generate_password_hash
+
+_PASSWORD_HASH_CACHE = {}
+
+def _get_seeded_password_hash(password):
+    if password not in _PASSWORD_HASH_CACHE:
+        _PASSWORD_HASH_CACHE[password] = generate_password_hash(password)
+    return _PASSWORD_HASH_CACHE[password]
+
 random.seed(42)
 
 def seed_database(app=None):
-    return
     if app is None:
         app = create_app()
 
@@ -77,9 +85,9 @@ def seed_database(app=None):
             u_admin = User(
                 email=a_data["email"],
                 role_id=role_map["ADMIN"],
-                account_status="ACTIVE"
+                account_status="ACTIVE",
+                password_hash=_get_seeded_password_hash(a_data["password"])
             )
-            u_admin.set_password(a_data["password"])
             db.session.add(u_admin)
             db.session.flush()
             
@@ -103,9 +111,9 @@ def seed_database(app=None):
             u_fac = User(
                 email=f_data["email"],
                 role_id=role_map["FACULTY"],
-                account_status="ACTIVE"
+                account_status="ACTIVE",
+                password_hash=_get_seeded_password_hash(f_data["password"])
             )
-            u_fac.set_password(f_data["password"])
             db.session.add(u_fac)
             db.session.flush()
 
@@ -132,9 +140,9 @@ def seed_database(app=None):
             u_stu = User(
                 email=s_data["email"],
                 role_id=role_map["STUDENT"],
-                account_status=s_data.get("account_status", "ACTIVE")
+                account_status=s_data.get("account_status", "ACTIVE"),
+                password_hash=_get_seeded_password_hash(s_data["password"])
             )
-            u_stu.set_password(s_data["password"])
             db.session.add(u_stu)
             db.session.flush()
 
@@ -264,6 +272,19 @@ def seed_database(app=None):
         # Scheduled: 2026-08-20 to 2026-11-30
 
         EVENT_SPECS = [
+            # 1. AI Club Competition (Event ID 1)
+            {
+                "name": "AI Hack Sprint 2026",
+                "organizerType": "CLUB", "clubName": "AI Club",
+                "createdBy": faculty_users[0].id,
+                "description": "24-hour hackathon to build state-of-the-art AI prototypes and machine learning solutions.",
+                "status": "LIVE", "format": "COMPETITION",
+                "startDate": date(2026, 8, 7), "endDate": date(2026, 8, 12),
+                "startTime": time(9, 0), "endTime": time(17, 0),
+                "capacity": 80, "venueName": "Innovation Lab",
+                "rounds": ["Round 1 — Preliminary Pitch", "Round 2 — Technical Evaluation", "Round 3 — Grand Final Demos"]
+            },
+
             # INSTITUTIONAL / GENERAL EVENTS (club_id = None)
             {
                 "name": "Freshers Orientation 2026",
@@ -345,17 +366,6 @@ def seed_database(app=None):
 
             # CLUB COMPETITIONS & WORKSHOPS
             # 1. AI Club
-            {
-                "name": "AI Hack Sprint 2026",
-                "organizerType": "CLUB", "clubName": "AI Club",
-                "createdBy": faculty_users[0].id,
-                "description": "24-hour hackathon to build state-of-the-art AI prototypes and machine learning solutions.",
-                "status": "LIVE", "format": "COMPETITION",
-                "startDate": date(2026, 8, 7), "endDate": date(2026, 8, 12),
-                "startTime": time(9, 0), "endTime": time(17, 0),
-                "capacity": 80, "venueName": "Innovation Lab",
-                "rounds": ["Round 1 — Preliminary Pitch", "Round 2 — Technical Evaluation", "Round 3 — Grand Final Demos"]
-            },
             {
                 "name": "Machine Learning Fundamentals Workshop",
                 "organizerType": "CLUB", "clubName": "AI Club",
@@ -652,10 +662,11 @@ def seed_database(app=None):
 
             # Add Organizers
             db.session.add(EventOrganizer(event_id=evt.id, user_id=spec["createdBy"], organizer_role="LEAD_ORGANIZER"))
-            # Add 2 student organizers
-            for org_stu in student_users[:2]:
-                if org_stu.id != spec["createdBy"]:
-                    db.session.add(EventOrganizer(event_id=evt.id, user_id=org_stu.id, organizer_role="COORGANIZER"))
+            # Add organizing club's student organizer if club event
+            if club_obj and club_obj.organizers:
+                for org in club_obj.organizers:
+                    if org.user_id != spec["createdBy"]:
+                        db.session.add(EventOrganizer(event_id=evt.id, user_id=org.user_id, organizer_role="COORGANIZER"))
 
             # Add Volunteers
             for v_idx, vol_stu in enumerate(student_users[5:15]):

@@ -1,11 +1,30 @@
 from flask import Blueprint, request, jsonify, g
+from functools import wraps
 from app.models import db, User, Role
-from app.utils.auth_jwt import jwt_required, roles_required
+from app.utils.auth_jwt import jwt_required, roles_required, decode_jwt_token
 
 users_bp = Blueprint('users', __name__, url_prefix='/api/users')
 
+def optional_jwt(f):
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        auth_header = request.headers.get('Authorization')
+        g.current_user = None
+        if auth_header:
+            parts = auth_header.split()
+            if len(parts) == 2 and parts[0].lower() == 'bearer':
+                try:
+                    payload = decode_jwt_token(parts[1])
+                    user = User.query.get(payload['user_id'])
+                    if user and user.account_status == 'ACTIVE':
+                        g.current_user = user
+                except Exception:
+                    pass
+        return f(*args, **kwargs)
+    return decorated
+
 @users_bp.route('', methods=['GET'])
-@jwt_required
+@optional_jwt
 def get_users():
     role_name = request.args.get('role')
     search_q = request.args.get('search')
@@ -37,15 +56,21 @@ def get_users():
             if (
                 q in u['name'].lower()
                 or q in u['email'].lower()
-                or (u['registerNumber'] and q in u['registerNumber'].lower())
+                or (u.get('registerNumber') and q in u['registerNumber'].lower())
             )
         ]
 
     return jsonify(results), 200
 
 
-@users_bp.route('/<int:user_id>', methods=['GET'])
+@users_bp.route('/me', methods=['GET'])
 @jwt_required
+def get_current_user_profile():
+    return jsonify(g.current_user.to_dict()), 200
+
+
+@users_bp.route('/<int:user_id>', methods=['GET'])
+@optional_jwt
 def get_user(user_id):
     user = User.query.get_or_404(user_id)
 

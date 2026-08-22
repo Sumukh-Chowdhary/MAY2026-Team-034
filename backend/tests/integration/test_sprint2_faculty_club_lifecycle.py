@@ -38,8 +38,7 @@ def test_faculty_club_lifecycle_supervise_to_stepdown(
     initial_member_count = ai_club_entry['memberCount']
 
     # ── Step 2: Faculty edits AI Club details ─────────────────────────────────
-    # Note: facultyCoordinatorIds must include the current faculty's user_id (id=3 for Dr. Meena Rao,
-    # since seed order is: admin=1, principal=2, meena=3, arjun=4, priya=5, students start at 6)
+    # Note: facultyCoordinatorIds must include the current faculty's user_id (id=4 for Dr. Meena Rao)
     edit_resp = client.put(
         f'/api/faculty/clubs/{AI_CLUB}/edit',
         headers=faculty_headers,
@@ -47,7 +46,7 @@ def test_faculty_club_lifecycle_supervise_to_stepdown(
             'name': 'AI Club',
             'description': 'Updated by faculty: Cutting-edge AI research club.',
             'category': 'Technology',
-            'facultyCoordinatorIds': [3],  # Dr. Meena Rao's user_id = 3
+            'facultyCoordinatorIds': [4],  # Dr. Meena Rao's user_id = 4
         },
     )
     assert edit_resp.status_code == 200, f"Club edit failed: {edit_resp.get_json()}"
@@ -64,13 +63,13 @@ def test_faculty_club_lifecycle_supervise_to_stepdown(
     assert isinstance(members, list)
     assert len(members) > 0
 
-    # Confirm Ananya (id=7) is an active member
-    ananya_member = next((m for m in members if m['id'] == 7), None)
-    assert ananya_member is not None, "Ananya (id=7) should be a club member"
+    # Confirm Ananya (id=25) is an active member
+    ananya_member = next((m for m in members if m['id'] == 25), None)
+    assert ananya_member is not None, "Ananya (id=25) should be a club member"
 
     # ── Step 4: Faculty deactivates Ananya ───────────────────────────────────
     deactivate_resp = client.patch(
-        f'/api/faculty/clubs/{AI_CLUB}/members/7/deactivate',
+        f'/api/faculty/clubs/{AI_CLUB}/members/25/deactivate',
         headers=faculty_headers,
     )
     assert deactivate_resp.status_code == 200
@@ -84,13 +83,13 @@ def test_faculty_club_lifecycle_supervise_to_stepdown(
     )
     assert members_after_resp.status_code == 200
     members_after = members_after_resp.get_json()
-    ananya_after = next((m for m in members_after if m['id'] == 7), None)
+    ananya_after = next((m for m in members_after if m['id'] == 25), None)
     assert ananya_after is not None
     assert ananya_after['membershipStatus'] == 'INACTIVE'
 
     # ── Step 6: Faculty reactivates Ananya ───────────────────────────────────
     reactivate_resp = client.patch(
-        f'/api/faculty/clubs/{AI_CLUB}/members/7/reactivate',
+        f'/api/faculty/clubs/{AI_CLUB}/members/25/reactivate',
         headers=faculty_headers,
     )
     assert reactivate_resp.status_code == 200

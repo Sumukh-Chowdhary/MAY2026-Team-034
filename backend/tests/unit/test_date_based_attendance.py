@@ -11,87 +11,102 @@ def get_auth_headers(client, email, password):
     token = res.get_json()['token']
     return {'Authorization': f'Bearer {token}'}
 
-def test_future_event_attendance_rejected(client):
+def test_future_event_attendance_rejected(client, app):
     fac_headers = get_auth_headers(client, 'meena@allclub.com', 'faculty123')
     admin_headers = get_auth_headers(client, 'admin@allclub.com', 'admin123')
-    faculty = User.query.filter_by(email='meena@allclub.com').first()
-
+    
     today = datetime.utcnow().date()
     future_date = today + timedelta(days=10)
 
-    club = Club.query.first()
-    future_evt = Event(
-        club_id=club.id,
-        created_by=faculty.id,
-        event_name="Future AI Summit 2030",
-        event_description="Upcoming event",
-        start_date=future_date,
-        end_date=future_date,
-        event_status="SCHEDULED"
-    )
-    db.session.add(future_evt)
-    db.session.commit()
+    with app.app_context():
+        faculty = User.query.filter_by(email='meena@allclub.com').first()
+        club = Club.query.first()
+        future_evt = Event(
+            club_id=club.id,
+            created_by=faculty.id,
+            event_name="Future AI Summit 2030",
+            event_description="Upcoming event",
+            start_date=future_date,
+            end_date=future_date,
+            event_status="SCHEDULED"
+        )
+        db.session.add(future_evt)
+        db.session.flush()
 
-    student = User.query.filter_by(email='ananya@allclub.com').first()
-    reg = EventRegistration(event_id=future_evt.id, user_id=student.id)
-    db.session.add(reg)
-    db.session.commit()
+        student = User.query.get(25)
+        reg = EventRegistration(event_id=future_evt.id, user_id=student.id)
+        db.session.add(reg)
+        db.session.commit()
+        evt_id = future_evt.id
+        student_id = student.id
 
     # Faculty attempt to take attendance for future event -> Must be rejected (400)
-    res_fac = client.post(f'/api/events/{future_evt.id}/attendance', json={
-        'records': [{'userId': student.id, 'status': 'PRESENT'}]
+    res_fac = client.post(f'/api/events/{evt_id}/attendance', json={
+        'records': [{'userId': student_id, 'status': 'PRESENT'}]
     }, headers=fac_headers)
 
     assert res_fac.status_code == 400
     assert 'Attendance unavailable' in res_fac.get_json()['error']
 
     # Admin attempt -> Should be allowed (admin override for prep)
-    res_admin = client.post(f'/api/events/{future_evt.id}/attendance', json={
-        'records': [{'userId': student.id, 'status': 'PRESENT'}]
+    res_admin = client.post(f'/api/events/{evt_id}/attendance', json={
+        'records': [{'userId': student_id, 'status': 'PRESENT'}]
     }, headers=admin_headers)
     assert res_admin.status_code == 200
 
-def test_current_or_past_event_attendance_allowed(client):
+def test_current_or_past_event_attendance_allowed(client, app):
     fac_headers = get_auth_headers(client, 'meena@allclub.com', 'faculty123')
-    faculty = User.query.filter_by(email='meena@allclub.com').first()
-    evt = Event.query.first()
-    evt.created_by = faculty.id
+    with app.app_context():
+        faculty = User.query.filter_by(email='meena@allclub.com').first()
+        evt = Event.query.filter_by(club_id=1).first() or Event.query.first()
+        evt.created_by = faculty.id
+        past_d = datetime.utcnow().date() - timedelta(days=1)
+        evt.start_date = past_d
+        evt.end_date = past_d
+        for s in evt.sessions:
+            s.session_date = past_d
+        student = User.query.get(25)
+        
+        # Ensure student is registered for event
+        existing_reg = EventRegistration.query.filter_by(event_id=evt.id, user_id=student.id).first()
+        if not existing_reg:
+            db.session.add(EventRegistration(event_id=evt.id, user_id=student.id))
+        db.session.commit()
+        evt_id = evt.id
+        student_id = student.id
 
-    student = User.query.filter_by(email='ananya@allclub.com').first()
-
-    # Ensure event start_date is today or past
-    evt.start_date = datetime.utcnow().date() - timedelta(days=1)
-    db.session.commit()
-
-    res = client.post(f'/api/events/{evt.id}/attendance', json={
-        'records': [{'userId': student.id, 'status': 'PRESENT'}]
+    res = client.post(f'/api/events/{evt_id}/attendance', json={
+        'records': [{'userId': student_id, 'status': 'PRESENT'}]
     }, headers=fac_headers)
 
     assert res.status_code == 200
     assert res.get_json()['success'] is True
 
-def test_unauthorized_faculty_attendance_rejected(client):
+def test_unauthorized_faculty_attendance_rejected(client, app):
     # Faculty 'meena@allclub.com' is not coordinator/creator for this new club event
     meena_headers = get_auth_headers(client, 'meena@allclub.com', 'faculty123')
-    admin = User.query.filter_by(email='admin@allclub.com').first()
+    
+    with app.app_context():
+        admin = User.query.filter_by(email='admin@allclub.com').first()
 
-    # Create club with no meena assignment
-    other_club = Club(club_name="Other Unaffiliated Club", club_category="CULTURAL", club_description="Test club description", club_status="ACTIVE")
-    db.session.add(other_club)
-    db.session.commit()
+        # Create club with no meena assignment
+        other_club = Club(club_name="Other Unaffiliated Club", club_category="CULTURAL", club_description="Test club description", club_status="ACTIVE")
+        db.session.add(other_club)
+        db.session.flush()
 
-    unauth_evt = Event(
-        club_id=other_club.id,
-        created_by=admin.id,
-        event_name="Other Club Event",
-        start_date=datetime.utcnow().date(),
-        end_date=datetime.utcnow().date(),
-        event_status="LIVE"
-    )
-    db.session.add(unauth_evt)
-    db.session.commit()
+        unauth_evt = Event(
+            club_id=other_club.id,
+            created_by=admin.id,
+            event_name="Other Club Event",
+            start_date=datetime.utcnow().date(),
+            end_date=datetime.utcnow().date(),
+            event_status="LIVE"
+        )
+        db.session.add(unauth_evt)
+        db.session.commit()
+        evt_id = unauth_evt.id
 
-    res = client.post(f'/api/events/{unauth_evt.id}/attendance', json={
+    res = client.post(f'/api/events/{evt_id}/attendance', json={
         'records': [{'userId': 1, 'status': 'PRESENT'}]
     }, headers=meena_headers)
 

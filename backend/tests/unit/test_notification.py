@@ -7,19 +7,25 @@ def db_session(app):
     with app.app_context():
         yield db.session
 
-def test_get_notifications_empty(client, student_headers):
+def test_get_notifications_empty(client, app, student_headers):
     """
     User with no notifications should receive an empty list.
     """
+    with app.app_context():
+        Notification.query.filter_by(user_id=24).delete()
+        db.session.commit()
     response = client.get("/api/notifications", headers=student_headers)
     assert response.status_code == 200
     assert response.get_json()["data"] == []
 
 
-def test_unread_notification_count_empty(client, student_headers):
+def test_unread_notification_count_empty(client, app, student_headers):
     """
     Newly logged in user should have zero unread notifications.
     """
+    with app.app_context():
+        Notification.query.filter_by(user_id=24).delete()
+        db.session.commit()
     response = client.get("/api/notifications/unread-count", headers=student_headers)
     assert response.status_code == 200
     assert response.get_json()["count"] == 0
@@ -32,17 +38,17 @@ def test_notification_ordering(client, app, db_session, student_headers):
     2. Newest first
     """
     with app.app_context():
-        from app.models.user import User
+        Notification.query.filter_by(user_id=24).delete()
+        db.session.commit()
         from datetime import datetime, timedelta
-        student = User.query.filter_by(email="rahul@allclub.com").first()
         # 1. Read, Newest
-        n1 = Notification(user_id=student.id, title="1", message="1", is_read=True, created_at=datetime.utcnow() + timedelta(days=1))
+        n1 = Notification(user_id=24, title="1", message="1", is_read=True, created_at=datetime.utcnow() + timedelta(days=1))
         # 2. Unread, Older
-        n2 = Notification(user_id=student.id, title="2", message="2", is_read=False, created_at=datetime.utcnow())
+        n2 = Notification(user_id=24, title="2", message="2", is_read=False, created_at=datetime.utcnow())
         # 3. Unread, Newest
-        n3 = Notification(user_id=student.id, title="3", message="3", is_read=False, created_at=datetime.utcnow() + timedelta(days=1))
-        db_session.add_all([n1, n2, n3])
-        db_session.commit()
+        n3 = Notification(user_id=24, title="3", message="3", is_read=False, created_at=datetime.utcnow() + timedelta(days=1))
+        db.session.add_all([n1, n2, n3])
+        db.session.commit()
     
     response = client.get("/api/notifications", headers=student_headers)
     data = response.get_json()["data"]
@@ -57,12 +63,11 @@ def test_notification_limit_15(client, app, db_session, student_headers):
     API should only return the latest 15 notifications.
     """
     with app.app_context():
-        from app.models.user import User
-        student = User.query.filter_by(email="rahul@allclub.com").first()
+        Notification.query.filter_by(user_id=24).delete()
         for i in range(20):
-            n = Notification(user_id=student.id, title=str(i), message="msg")
-            db_session.add(n)
-        db_session.commit()
+            n = Notification(user_id=24, title=str(i), message="msg")
+            db.session.add(n)
+        db.session.commit()
         
     response = client.get("/api/notifications", headers=student_headers)
     data = response.get_json()["data"]
@@ -76,11 +81,11 @@ def test_mark_notification_as_read(client, app, db_session, student_headers):
     - decrease unread count
     """
     with app.app_context():
-        from app.models.user import User
-        student = User.query.filter_by(email="rahul@allclub.com").first()
-        n = Notification(user_id=student.id, title="Test", message="Test")
-        db_session.add(n)
-        db_session.commit()
+        Notification.query.filter_by(user_id=24).delete()
+        db.session.commit()
+        n = Notification(user_id=24, title="Test", message="Test")
+        db.session.add(n)
+        db.session.commit()
         n_id = n.id
 
     response = client.patch(f"/api/notifications/{n_id}/read", headers=student_headers)
@@ -90,7 +95,7 @@ def test_mark_notification_as_read(client, app, db_session, student_headers):
     assert count_res.get_json()["count"] == 0
 
     with app.app_context():
-        n = db_session.get(Notification, n_id)
+        n = db.session.get(Notification, n_id)
         assert n.is_read == True
 
 
@@ -99,11 +104,9 @@ def test_mark_notification_already_read(client, app, db_session, student_headers
     Marking an already-read notification should not fail.
     """
     with app.app_context():
-        from app.models.user import User
-        student = User.query.filter_by(email="rahul@allclub.com").first()
-        n = Notification(user_id=student.id, title="Test", message="Test", is_read=True)
-        db_session.add(n)
-        db_session.commit()
+        n = Notification(user_id=24, title="Test", message="Test", is_read=True)
+        db.session.add(n)
+        db.session.commit()
         n_id = n.id
 
     response = client.patch(f"/api/notifications/{n_id}/read", headers=student_headers)
@@ -115,12 +118,12 @@ def test_mark_all_notifications_read(client, app, db_session, student_headers):
     All unread notifications should become read.
     """
     with app.app_context():
-        from app.models.user import User
-        student = User.query.filter_by(email="rahul@allclub.com").first()
+        Notification.query.filter_by(user_id=24).delete()
+        db.session.commit()
         for i in range(3):
-            n = Notification(user_id=student.id, title="Test", message="Test")
-            db_session.add(n)
-        db_session.commit()
+            n = Notification(user_id=24, title="Test", message="Test")
+            db.session.add(n)
+        db.session.commit()
 
     count_res1 = client.get("/api/notifications/unread-count", headers=student_headers)
     assert count_res1.get_json()["count"] == 3
@@ -178,7 +181,7 @@ def test_ticket_assignment_notifies_approver(
         "referenceType": "CLUB",
         "referenceId": 1,
         "approvers": [
-            {"approverId": 3, "role": "FACULTY"} # Assuming user 3 is faculty
+            {"approverId": 4, "role": "FACULTY"} # User 4 is Dr. Meena Rao
         ]
     })
     
@@ -204,7 +207,7 @@ def test_ticket_approval_notifies_creator(
         "description": "Testing approval flow",
         "referenceType": "CLUB",
         "referenceId": 1,
-        "approvers": [{"approverId": 3, "role": "FACULTY"}]
+        "approvers": [{"approverId": 4, "role": "FACULTY"}]
     })
     req_id = res.get_json()["data"]["id"]
     
@@ -230,7 +233,7 @@ def test_ticket_rejection_notifies_creator(
         "description": "Testing reject flow",
         "referenceType": "CLUB",
         "referenceId": 1,
-        "approvers": [{"approverId": 3, "role": "FACULTY"}]
+        "approvers": [{"approverId": 4, "role": "FACULTY"}]
     })
     req_id = res.get_json()["data"]["id"]
     
@@ -259,7 +262,7 @@ def test_ticket_fully_approved_notification(
         "referenceType": "CLUB",
         "referenceId": 1,
         "approvers": [
-            {"approverId": 3, "role": "FACULTY"},
+            {"approverId": 4, "role": "FACULTY"},
             {"approverId": 1, "role": "ADMIN"}
         ]
     })
@@ -352,10 +355,9 @@ def test_notification_contains_required_fields(
     createdAt
     """
     with app.app_context():
-        from app.models.user import User
         from app.services.notification_service import NotificationService
-        student = User.query.filter_by(email="rahul@allclub.com").first()
-        NotificationService.create(student.id, "Test", "Test Message", "GENERAL")
+        Notification.query.filter_by(user_id=24).delete()
+        NotificationService.create(24, "Test", "Test Message", "GENERAL")
 
     response = client.get("/api/notifications", headers=student_headers)
     assert response.status_code == 200
@@ -377,15 +379,14 @@ def test_notification_unread_count_matches_database(
     actual unread records in DB.
     """
     with app.app_context():
-        from app.models.user import User
-        student = User.query.filter_by(email="rahul@allclub.com").first()
+        Notification.query.filter_by(user_id=24).delete()
         for i in range(5):
-            n = Notification(user_id=student.id, title="Test", message="Test", is_read=False)
-            db_session.add(n)
+            n = Notification(user_id=24, title="Test", message="Test", is_read=False)
+            db.session.add(n)
         for i in range(3):
-            n = Notification(user_id=student.id, title="Test", message="Test", is_read=True)
-            db_session.add(n)
-        db_session.commit()
+            n = Notification(user_id=24, title="Test", message="Test", is_read=True)
+            db.session.add(n)
+        db.session.commit()
 
     response = client.get("/api/notifications/unread-count", headers=student_headers)
     assert response.status_code == 200

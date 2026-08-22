@@ -372,7 +372,11 @@ def update_request(request_id):
 def approve_request(request_id):
     user = g.current_user
 
-    req = Request.query.get(request_id)
+    try:
+        req = Request.query.with_for_update().filter_by(id=request_id).first() or Request.query.get(request_id)
+    except Exception:
+        req = Request.query.get(request_id)
+
     if not req: return jsonify({"success": False, "error": "Request not found."}), 404
     if req.workflow_status != ApprovalStatus.PENDING:
         return jsonify({"success": False, "error": "This request is no longer pending."}), 409
@@ -518,7 +522,11 @@ def reject_request(request_id):
     user = g.current_user
     data = request.get_json() or {}
 
-    req = Request.query.get(request_id)
+    try:
+        req = Request.query.with_for_update().filter_by(id=request_id).first() or Request.query.get(request_id)
+    except Exception:
+        req = Request.query.get(request_id)
+
     if not req: return jsonify({"success": False, "error": "Request not found."}), 404
     if req.workflow_status != ApprovalStatus.PENDING:
         return jsonify({"success": False, "error": "This request is no longer pending."}), 409
@@ -553,7 +561,11 @@ def request_changes(request_id):
     user = g.current_user
     data = request.get_json() or {}
 
-    req = Request.query.get(request_id)
+    try:
+        req = Request.query.with_for_update().filter_by(id=request_id).first() or Request.query.get(request_id)
+    except Exception:
+        req = Request.query.get(request_id)
+
     if not req: return jsonify({"success": False, "error": "Request not found."}), 404
     if req.workflow_status != ApprovalStatus.PENDING:
         return jsonify({"success": False, "error": "This request is no longer pending."}), 409
