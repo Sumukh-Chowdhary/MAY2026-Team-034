@@ -17,12 +17,10 @@ def login():
             {'error': 'Registration ID/Email and Password are required'}
         ), 400
 
-    # If an email is provided, check if it belongs to a student
+    # Find user by email, registration ID / roll number, or employee ID
     user = None
     if '@' in username:
         user = User.query.filter_by(email=username).first()
-        if user and user.role and user.role.name == 'STUDENT':
-            return jsonify({'error': 'Students must log in using their Registration ID (e.g. Y26CS001). Email login is disabled for students.'}), 400
     
     if not user:
         student_prof = StudentProfile.query.filter(
