@@ -1,6 +1,8 @@
 <script setup>
 import { ref, computed, watch, onMounted } from 'vue'
-import { getCalendarEvents, registerForEvent } from '@/api/events'
+import { getCalendarEvents } from '@/api/events'
+import ScheduleConflictModal from '@/components/common/ScheduleConflictModal.vue'
+import { useScheduleConflictCheck } from '@/composables/useScheduleConflictCheck'
 
 const props = defineProps({
   show: {
@@ -17,6 +19,15 @@ const search = ref('')
 const selectedFilter = ref('ALL') // 'ALL' | 'REGISTERED' | 'UPCOMING' | 'COMPLETED'
 const activeView = ref('agenda') // 'agenda' | 'month'
 const registeringIds = ref({})
+
+const {
+  showConflictModal,
+  pendingConflicts,
+  pendingEventName,
+  registerWithConflictCheck,
+  confirmRegistration,
+  cancelRegistration
+} = useScheduleConflictCheck()
 
 onMounted(() => {
   if (props.show) {
@@ -118,7 +129,8 @@ async function handleRegister(evt) {
   if (registeringIds.value[evt.id] || ['REGISTERED', 'CONFIRMED', 'ATTENDED'].includes(evt.registrationStatus)) return
   registeringIds.value[evt.id] = true
   try {
-    await registerForEvent(evt.id)
+    const result = await registerWithConflictCheck(evt.id, evt.name || evt.title)
+    if (result.cancelled) return
     evt.registrationStatus = 'REGISTERED'
     evt.color = '#10b981'
   } catch (err) {
@@ -259,6 +271,14 @@ async function handleRegister(evt) {
       </div>
     </div>
   </Teleport>
+
+  <ScheduleConflictModal
+    :show="showConflictModal"
+    :event-name="pendingEventName"
+    :conflicts="pendingConflicts"
+    @confirm="confirmRegistration"
+    @cancel="cancelRegistration"
+  />
 </template>
 
 <style scoped>

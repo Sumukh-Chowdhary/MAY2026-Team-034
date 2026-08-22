@@ -338,6 +338,13 @@ def get_calendar_events():
     return jsonify(calendar_items), 200
 
 
+@events_bp.route('/<int:event_id>/schedule-conflicts', methods=['GET'])
+@jwt_required
+def get_schedule_conflicts(event_id):
+    conflicts = EventService.get_schedule_conflicts(g.current_user.id, event_id)
+    return jsonify({"conflicts": conflicts}), 200
+
+
 @events_bp.route('/<int:event_id>/register', methods=['POST'])
 @jwt_required
 def register_for_event(event_id):
@@ -354,7 +361,12 @@ def register_for_event(event_id):
     db.session.add(registration)
     db.session.commit()
 
-    NotificationService.notify_event_registered(event.id, event.event_name, g.current_user.id)
+    NotificationService.notify_event_registered(
+        event.id,
+        event.event_name,
+        event.club.club_name if event.club else None,
+        g.current_user.id
+    )
     return jsonify(registration.to_dict()), 201
 
 
