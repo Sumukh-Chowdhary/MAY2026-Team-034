@@ -27,7 +27,8 @@ import {
   manageEventSchedule,
   manageEventAnnouncements,
   manageEventAttendance,
-  assignVenue
+  assignVenue,
+  downloadEventReport
 } from '@/api/events'
 import { getEventStatus } from '@/utils/eventUtils'
 import { useToast } from '@/composables/useToast'
@@ -39,6 +40,7 @@ const activeTab = ref('schedule')
 const showAttendanceModal = ref(false)
 const event = ref(null)
 const loading = ref(false)
+const isDownloadingReport = ref(false)
 
 const computedEventStatus = computed(() => {
   return getEventStatus(event.value)
@@ -138,6 +140,20 @@ function handleAttendanceClick() {
     return
   }
   showAttendanceModal.value = true
+}
+
+async function handleDownloadReport() {
+  if (!event.value || isDownloadingReport.value) return
+  isDownloadingReport.value = true
+  try {
+    await downloadEventReport(event.value.id, event.value.name)
+    showToast('Report downloaded.', 'success')
+  } catch (error) {
+    console.error('Failed to download report', error)
+    showToast('Failed to download report.', 'error')
+  } finally {
+    isDownloadingReport.value = false
+  }
 }
 
 // Modal & Form States for Event Details page
@@ -300,6 +316,14 @@ async function postAttendance() {
             </div>
 
             <div class="d-flex align-items-center gap-2">
+              <button
+                class="btn btn-outline-secondary btn-sm rounded-pill px-3 fw-semibold"
+                :disabled="isDownloadingReport"
+                @click="handleDownloadReport"
+              >
+                <i class="bi bi-file-earmark-arrow-down me-1"></i>
+                {{ isDownloadingReport ? 'Preparing...' : 'Download Report' }}
+              </button>
               <button 
                 class="btn btn-outline-primary btn-sm rounded-pill px-3 fw-semibold" 
                 :class="{ 'opacity-50': !isAttendanceAvailable }"

@@ -31,3 +31,8 @@ export const checkVenueAvailability = async (venueId, startDate, endDate) => {
   })
   return response.data
 }
+
+export const getVenueCalendar = async (days = 30) => {
+  const response = await api.get('/venues/calendar', { params: { days } })
+  return response.data
+}

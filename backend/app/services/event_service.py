@@ -118,7 +118,12 @@ class EventService:
         end_date = data.get('endDate')
         start_time = data.get('startTime')
         end_time = data.get('endTime')
-        capacity = data.get('capacity') or 0
+        try:
+            capacity = int(data.get('capacity') or 0)
+        except (TypeError, ValueError):
+            raise ValueError('capacity must be a whole number.')
+        if capacity < 0:
+            raise ValueError('capacity cannot be negative.')
 
         if not club_id:
             raise ValueError('clubId is required.')
@@ -136,6 +141,8 @@ class EventService:
             venue = Venue.query.get(venue_id)
             if not venue:
                 raise ValueError('Venue not found.')
+            if venue.capacity and capacity > venue.capacity:
+                raise ValueError(f'capacity cannot exceed the venue capacity ({venue.capacity}).')
 
         parsed_start_date = _parse_date(start_date)
         parsed_end_date = _parse_date(end_date)
@@ -488,3 +495,126 @@ class EventService:
                 })
 
         return conflicts
+
+    @staticmethod
+    def generate_event_report_pdf(event_id):
+        """
+        Builds a downloadable PDF summary report for one event: core details,
+        registration/attendance stats, full registration list, and prize
+        winners if the event has concluded. Returns raw PDF bytes.
+        """
+        import io
+        from reportlab.lib.pagesizes import A4
+        from reportlab.lib.units import cm
+        from reportlab.lib import colors
+        from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+        from reportlab.platypus import (
+            SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
+        )
+
+        event = Event.query.get_or_404(event_id, description="Event not found")
+
+        registrations = EventRegistration.query.filter_by(event_id=event.id).all()
+        confirmed = [r for r in registrations if r.registration_status == 'REGISTERED']
+        waitlisted = [r for r in registrations if r.registration_status == 'WAITLISTED']
+        cancelled = [r for r in registrations if r.registration_status == 'CANCELLED']
+
+        attendance_records = EventAttendance.query.filter_by(event_id=event.id).all()
+        present_count = sum(1 for a in attendance_records if (a.attendance_status or '').upper() == 'PRESENT')
+        attendance_rate = round((present_count / len(confirmed)) * 100, 1) if confirmed else 0
+
+        prizes = EventPrize.query.filter_by(event_id=event.id).all()
+
+        buffer = io.BytesIO()
+        doc = SimpleDocTemplate(
+            buffer, pagesize=A4,
+            topMargin=2 * cm, bottomMargin=2 * cm,
+            leftMargin=2 * cm, rightMargin=2 * cm
+        )
+        styles = getSampleStyleSheet()
+        title_style = ParagraphStyle('ReportTitle', parent=styles['Title'], fontSize=18, spaceAfter=4)
+        subtitle_style = ParagraphStyle('ReportSubtitle', parent=styles['Normal'], fontSize=11, textColor=colors.HexColor('#64748B'), spaceAfter=16)
+        section_style = ParagraphStyle('SectionHeading', parent=styles['Heading2'], fontSize=13, spaceBefore=16, spaceAfter=8, textColor=colors.HexColor('#1E293B'))
+
+        story = []
+
+        story.append(Paragraph(event.event_name, title_style))
+        club_name = event.club.club_name if event.club else 'General / Institutional Event'
+        story.append(Paragraph(
+            f"{club_name} &nbsp;|&nbsp; {event.start_date.isoformat() if event.start_date else 'N/A'} "
+            f"&nbsp;|&nbsp; Status: {event.event_status}",
+            subtitle_style
+        ))
+
+        # --- Summary stats table ---
+        story.append(Paragraph("Summary", section_style))
+        summary_data = [
+            ["Confirmed Registrations", str(len(confirmed))],
+            ["Waitlisted", str(len(waitlisted))],
+            ["Cancelled", str(len(cancelled))],
+            ["Attendance Marked", str(len(attendance_records))],
+            ["Present", str(present_count)],
+            ["Attendance Rate", f"{attendance_rate}%"],
+        ]
+        summary_table = Table(summary_data, colWidths=[8 * cm, 6 * cm])
+        summary_table.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (0, -1), colors.HexColor('#F1F5F9')),
+            ('TEXTCOLOR', (0, 0), (-1, -1), colors.HexColor('#1E293B')),
+            ('FONTSIZE', (0, 0), (-1, -1), 10),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 6),
+            ('TOPPADDING', (0, 0), (-1, -1), 6),
+            ('GRID', (0, 0), (-1, -1), 0.5, colors.HexColor('#E2E8F0')),
+        ]))
+        story.append(summary_table)
+
+        # --- Registrations list ---
+        story.append(Paragraph("Registered Participants", section_style))
+        if confirmed:
+            reg_rows = [["#", "Name", "Reg. No.", "Status"]]
+            for idx, r in enumerate(confirmed + waitlisted, start=1):
+                sp = r.user.student_profile if (r.user and hasattr(r.user, 'student_profile') and r.user.student_profile) else None
+                name = sp.full_name if sp else (r.user.email if r.user else "Unknown")
+                reg_no = (sp.registration_id or sp.roll_no) if sp else "-"
+                reg_rows.append([str(idx), name, reg_no or "-", r.registration_status])
+
+            reg_table = Table(reg_rows, colWidths=[1.2 * cm, 7 * cm, 3.5 * cm, 3 * cm], repeatRows=1)
+            reg_table.setStyle(TableStyle([
+                ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#2563EB')),
+                ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
+                ('FONTSIZE', (0, 0), (-1, -1), 9),
+                ('BOTTOMPADDING', (0, 0), (-1, -1), 5),
+                ('TOPPADDING', (0, 0), (-1, -1), 5),
+                ('GRID', (0, 0), (-1, -1), 0.5, colors.HexColor('#E2E8F0')),
+                ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, colors.HexColor('#F8FAFC')]),
+            ]))
+            story.append(reg_table)
+        else:
+            story.append(Paragraph("No participants have registered for this event yet.", styles['Normal']))
+
+        # --- Prizes / Winners ---
+        if prizes:
+            story.append(Paragraph("Winners", section_style))
+            prize_rows = [["Title", "Winner", "Description"]]
+            for p in prizes:
+                prize_rows.append([p.title, p.winner_name or "-", p.description or "-"])
+            prize_table = Table(prize_rows, colWidths=[4 * cm, 4 * cm, 6.5 * cm], repeatRows=1)
+            prize_table.setStyle(TableStyle([
+                ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#D97706')),
+                ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
+                ('FONTSIZE', (0, 0), (-1, -1), 9),
+                ('BOTTOMPADDING', (0, 0), (-1, -1), 5),
+                ('TOPPADDING', (0, 0), (-1, -1), 5),
+                ('GRID', (0, 0), (-1, -1), 0.5, colors.HexColor('#E2E8F0')),
+            ]))
+            story.append(prize_table)
+
+        story.append(Spacer(1, 20))
+        story.append(Paragraph(
+            f"Generated by AllClub on {datetime.utcnow().strftime('%d %b %Y, %H:%M UTC')}",
+            ParagraphStyle('Footer', parent=styles['Normal'], fontSize=8, textColor=colors.HexColor('#94A3B8'))
+        ))
+
+        doc.build(story)
+        buffer.seek(0)
+        return buffer.getvalue()
+

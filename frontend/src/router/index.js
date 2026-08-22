@@ -94,6 +94,12 @@ const routes = [
     meta: { requiresAuth: true, role: 'ADMIN' }
   },
   {
+    path: '/admin/venue-calendar',
+    name: 'AdminVenueCalendar',
+    component: () => import('@/views/admin/VenueCalendar.vue'),
+    meta: { requiresAuth: true, role: 'ADMIN' }
+  },
+  {
     path: '/admin/profile',
     name: 'AdminProfile',
     component: () => import('@/views/admin/Profile.vue'),
@@ -153,6 +159,12 @@ const routes = [
     path: '/faculty/events/:id',
     name: 'FacultyEventDetail',
     component: () => import('@/views/faculty/EventDetails.vue'),
+    meta: { requiresAuth: true, role: 'FACULTY' }
+  },
+  {
+    path: '/faculty/venue-calendar',
+    name: 'FacultyVenueCalendar',
+    component: () => import('@/views/faculty/VenueCalendar.vue'),
     meta: { requiresAuth: true, role: 'FACULTY' }
   },
   {
@@ -222,6 +234,12 @@ const routes = [
     path: '/student/analytics',
     name: 'StudentClubAnalytics',
     component: () => import('@/views/student/Analytics.vue'),
+    meta: { requiresAuth: true, role: 'STUDENT' }
+  },
+  {
+    path: '/student/venue-calendar',
+    name: 'StudentVenueCalendar',
+    component: () => import('@/views/student/VenueCalendar.vue'),
     meta: { requiresAuth: true, role: 'STUDENT' }
   },
   {
