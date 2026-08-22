@@ -88,10 +88,14 @@ def resolve_principal():
 
 def resolve_club_organizer(club_id, organizer_role="ORGANIZER"):
     entry = ClubOrganizer.query.filter_by(club_id=club_id, organizer_role=organizer_role).first()
+    if not entry:
+        entry = ClubOrganizer.query.filter_by(club_id=club_id).first()
     return entry.user if entry else None
 
 def resolve_club_faculty(club_id, faculty_role="FACULTY_COORDINATOR"):
     entry = ClubFaculty.query.filter_by(club_id=club_id, faculty_role=faculty_role).first()
+    if not entry:
+        entry = ClubFaculty.query.filter_by(club_id=club_id).first()
     return entry.faculty if entry else None
 
 # ---------------------------------------------------------------------------

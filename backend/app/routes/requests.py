@@ -105,6 +105,13 @@ def get_approvers_for_request(req):
     if req.request_type == RequestType.VENUE_REQUEST:
         return [(resolve_admin(), "ADMIN")]
 
+    if req.request_type == RequestType.BECOME_FACULTY_COORDINATOR:
+        club_id = req.reference_id
+        club_faculty = resolve_club_faculty(club_id) if club_id else None
+        if club_faculty and getattr(club_faculty, 'id', None) != req.requester_id:
+            return [(club_faculty, "CLUB_FACULTY"), (resolve_principal(), "PRINCIPAL"), (resolve_admin(), "ADMIN")]
+        return [(resolve_principal(), "PRINCIPAL"), (resolve_admin(), "ADMIN")]
+
     if req.request_type in {RequestType.BECOME_ORGANIZER, RequestType.BECOME_VOLUNTEER, RequestType.EDIT_CLUB_AS_COORDINATOR, RequestType.CREATE_EVENT_AS_ORGANIZER, RequestType.EDIT_EVENT_AS_ORGANIZER}:
         club_id = req.reference_id
         if req.reference_type == "EVENT" and req.reference_id:
@@ -123,6 +130,7 @@ def get_approvers_for_request(req):
             if fac_id and fac_id == req.requester_id:
                 return [(resolve_principal(), "PRINCIPAL"), (resolve_admin(), "ADMIN")]
             return [(club_faculty, "CLUB_FACULTY")]
+        return [(resolve_principal(), "PRINCIPAL"), (resolve_admin(), "ADMIN")]
 
     # Default fallback
     return [(resolve_admin(), "ADMIN")]
@@ -137,8 +145,6 @@ def validate_request_permission(user, request_type, reference_id=None, reference
         if role != "STUDENT":
             return False
 
-        # Club Membership Verification (Requirement 1 & 3):
-        # Student MUST be an active member of the target Club
         club_id = None
         if reference_type == "EVENT" and reference_id:
             from app.models.events import Event
@@ -151,13 +157,9 @@ def validate_request_permission(user, request_type, reference_id=None, reference
             club_id = reference_id
 
         if club_id:
-            from app.models.club import ClubMembership
-            mem = ClubMembership.query.filter_by(
-                club_id=club_id,
-                user_id=user.id,
-                membership_status='ACTIVE'
-            ).first()
-            if not mem:
+            from app.models.club import Club
+            target_club = Club.query.get(club_id)
+            if not target_club or target_club.club_status != 'ACTIVE':
                 return False
         return True
 
@@ -414,6 +416,13 @@ def approve_request(request_id):
                         org = ClubOrganizer.query.filter_by(club_id=req.reference_id, user_id=req.requester_id).first()
                         if not org:
                             db.session.add(ClubOrganizer(club_id=req.reference_id, user_id=req.requester_id, organizer_role="ORGANIZER"))
+                        from app.models.club import ClubMembership
+                        mem = ClubMembership.query.filter_by(club_id=req.reference_id, user_id=req.requester_id).first()
+                        if not mem:
+                            db.session.add(ClubMembership(club_id=req.reference_id, user_id=req.requester_id, membership_role="ORGANIZER", membership_status="ACTIVE"))
+                        else:
+                            mem.membership_status = "ACTIVE"
+                            mem.membership_role = "ORGANIZER"
                     elif role_str == "FACULTY_COORDINATOR":
                         fac = ClubFaculty.query.filter_by(club_id=req.reference_id, faculty_id=req.requester_id).first()
                         if not fac:
@@ -425,6 +434,13 @@ def approve_request(request_id):
                             vol = EventVolunteer.query.filter_by(event_id=req.reference_id, user_id=req.requester_id).first()
                         if vol:
                             vol.volunteer_status = "ACTIVE"
+                        if req.reference_type == "CLUB":
+                            from app.models.club import ClubMembership
+                            mem = ClubMembership.query.filter_by(club_id=req.reference_id, user_id=req.requester_id).first()
+                            if not mem:
+                                db.session.add(ClubMembership(club_id=req.reference_id, user_id=req.requester_id, membership_role="VOLUNTEER", membership_status="ACTIVE"))
+                            else:
+                                mem.membership_status = "ACTIVE"
 
             elif req.request_type == RequestType.CREATE_EVENT_AS_ORGANIZER:
                 import json

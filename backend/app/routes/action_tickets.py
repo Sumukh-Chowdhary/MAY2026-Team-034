@@ -14,6 +14,8 @@ from app.models.tickets import (
 )
 from app.utils.auth_jwt import jwt_required
 from app.services.notification_service import NotificationService
+from app.kafka.producer import publish_event
+from app.kafka.events import REQUEST_APPROVED
 
 action_tickets_bp = Blueprint("action_tickets", __name__, url_prefix="/api/action-tickets")
 
@@ -234,6 +236,16 @@ def approve_action(ticket_id):
             # Notify creator
             NotificationService.notify_ticket_fully_approved(
                 creator_id=ticket.raised_by_id, ticket_id=ticket.id
+            )
+            # Publish Kafka event
+            publish_event(
+                REQUEST_APPROVED,
+                {
+                    "ticket_id": ticket.id,
+                    "creator_id": ticket.raised_by_id,
+                    "title": ticket.title,
+                },
+                key=ticket.id,
             )
         else:
             # Notify creator of partial approval

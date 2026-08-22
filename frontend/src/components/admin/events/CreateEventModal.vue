@@ -167,6 +167,19 @@
           </div>
         </div>
 
+        <div class="mb-3">
+          <label class="form-label text-sm fw-bold">Event Capacity</label>
+          <input
+            v-model.number="form.capacity"
+            type="number"
+            min="0"
+            :max="selectedVenueObj?.capacity || undefined"
+            class="form-control custom-input"
+            placeholder="0 for unlimited"
+          />
+          <small class="text-muted">Set the maximum registrations. Enter 0 for unlimited{{ selectedVenueObj?.capacity ? `; selected venue has ${selectedVenueObj.capacity} seats.` : '.' }}</small>
+        </div>
+
         <!-- Date Pickers (Goal 9) -->
         <div class="row g-3 mb-3">
           <div class="col-6">
@@ -183,6 +196,26 @@
               v-model="form.endDate" 
               type="date" 
               class="form-control custom-input" 
+            />
+          </div>
+        </div>
+
+        <!-- Time Pickers -->
+        <div class="row g-3 mb-3">
+          <div class="col-6">
+            <label class="form-label text-sm fw-bold">Start Time</label>
+            <input
+              v-model="form.startTime"
+              type="time"
+              class="form-control custom-input"
+            />
+          </div>
+          <div class="col-6">
+            <label class="form-label text-sm fw-bold">End Time</label>
+            <input
+              v-model="form.endTime"
+              type="time"
+              class="form-control custom-input"
             />
           </div>
         </div>
@@ -307,6 +340,9 @@ const form = ref({
   eventType: 'General',
   startDate: '',
   endDate: '',
+  startTime: '',
+  endTime: '',
+  capacity: 0,
   description: ''
 })
 
@@ -465,6 +501,7 @@ function selectVenue(v) {
   selectedVenueObj.value = v
   form.value.venueId = v.id
   form.value.venueName = v.name
+  if (!form.value.capacity) form.value.capacity = v.capacity || 0
   venueSearchQuery.value = v.name
   showVenueDropdown.value = false
 }
@@ -490,6 +527,16 @@ async function handleSubmit() {
     return
   }
 
+  const capacity = Number(form.value.capacity) || 0
+  if (capacity < 0) {
+    showToast('Event capacity cannot be negative.', 'warning')
+    return
+  }
+  if (selectedVenueObj.value?.capacity && capacity > selectedVenueObj.value.capacity) {
+    showToast(`Event capacity cannot exceed the selected venue capacity (${selectedVenueObj.value.capacity}).`, 'warning')
+    return
+  }
+
   loading.value = true
 
   const isGeneral = form.value.eventScope === 'GENERAL_EVENT'
@@ -503,12 +550,14 @@ async function handleSubmit() {
     eventType: form.value.eventType,
     startDate: form.value.startDate,
     endDate: form.value.endDate,
+    startTime: form.value.startTime || null,
+    endTime: form.value.endTime || null,
     venueId: form.value.venueId,
     venueName: form.value.venueName || venueSearchQuery.value,
     club: isGeneral ? null : (form.value.club || 'Club Event'),
     clubId: targetClubId,
     facultyOrganizerId: isGeneral ? form.value.facultyOrganizerId : null,
-    capacity: selectedVenueObj.value?.capacity || 0
+    capacity
   }
 
   try {

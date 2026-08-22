@@ -11,7 +11,7 @@ register_event_socket(socketio)
 register_club_socket(socketio)
 
 if __name__ == "__main__":
-    seed_database(app)
+    #seed_database(app)
 
     socketio.run(
         app,

@@ -1,5 +1,5 @@
-from datetime import datetime, time, timedelta
-from flask import Blueprint, request, jsonify, g
+from datetime import datetime, time
+from flask import Blueprint, request, jsonify, g, Response
 from app.models import db
 from app.models.club import Club, ClubOrganizer, ClubFaculty, ClubMembership
 from app.models.events import (
@@ -17,8 +17,16 @@ from app.models.notification import Notification
 from app.models.tickets import AssignmentTicket, AssignmentStatus, AssignmentRole
 from app.services.event_service import EventService
 
-events_bp = Blueprint('events', __name__, url_prefix='/api/events')
+from app.kafka.producer import publish_event
+from app.kafka.events import (
+    EVENT_COMPLETED,
+    PARTICIPANT_PROGRESS_UPDATED,
+    RESULTS_PUBLISHED,
+    WINNERS_ANNOUNCED,
+    REQUEST_APPROVED,
+)
 
+events_bp = Blueprint('events', __name__, url_prefix='/api/events')
 
 def _parse_date(value):
     if not value:
@@ -92,7 +100,6 @@ def _can_manage_event(event, user):
         return True
 
     return False
-
 
 def _can_take_attendance(event, user):
     if not user or user.account_status != 'ACTIVE':
@@ -342,6 +349,33 @@ def get_calendar_events():
     return jsonify(calendar_items), 200
 
 
+@events_bp.route('/<int:event_id>/schedule-conflicts', methods=['GET'])
+@jwt_required
+def get_schedule_conflicts(event_id):
+    conflicts = EventService.get_schedule_conflicts(g.current_user.id, event_id)
+    return jsonify({"conflicts": conflicts}), 200
+
+
+@events_bp.route('/<int:event_id>/report', methods=['GET'])
+@jwt_required
+def download_event_report(event_id):
+    event = Event.query.get_or_404(event_id)
+
+    if not _can_manage_event(event, g.current_user):
+        return jsonify({'error': 'You do not have permission to download this report.'}), 403
+
+    pdf_bytes = EventService.generate_event_report_pdf(event_id)
+    safe_name = "".join(c if c.isalnum() or c in (' ', '-', '_') else '' for c in event.event_name).strip().replace(' ', '_')
+
+    return Response(
+        pdf_bytes,
+        mimetype='application/pdf',
+        headers={
+            'Content-Disposition': f'attachment; filename="{safe_name or "event"}_report.pdf"'
+        }
+    )
+
+
 @events_bp.route('/<int:event_id>/register', methods=['POST'])
 @jwt_required
 def register_for_event(event_id):
@@ -356,6 +390,11 @@ def register_for_event(event_id):
 
     existing = EventRegistration.query.filter_by(event_id=event.id, user_id=g.current_user.id).first()
     if existing:
+        if existing.registration_status == 'CANCELLED':
+            existing.registration_status = _resolve_registration_status(event)
+            existing.registered_at = datetime.utcnow()
+            db.session.commit()
+            return jsonify(existing.to_dict()), 200
         return jsonify(existing.to_dict()), 200
 
     if event.capacity and event.capacity > 0:
@@ -375,9 +414,80 @@ def register_for_event(event_id):
         if existing:
             return jsonify(existing.to_dict()), 200
         return jsonify({'error': 'Failed to complete registration due to concurrent activity. Please try again.'}), 409
+    status = _resolve_registration_status(event)
+    registration = EventRegistration(event_id=event.id, user_id=g.current_user.id, registration_status=status)
+    db.session.add(registration)
+    db.session.commit()
 
-    NotificationService.notify_event_registered(event.id, event.event_name, g.current_user.id)
+    NotificationService.notify_event_registered(
+        event.id,
+        event.event_name,
+        event.club.club_name if event.club else None,
+        g.current_user.id
+    )
+
+    if status == 'WAITLISTED':
+        db.session.add(Notification(
+            user_id=g.current_user.id,
+            title="Added to Waitlist",
+            message=f"{event.event_name} is at full capacity. You've been added to the waitlist and will be notified if a spot opens up.",
+            type='EVENT_WAITLISTED',
+            reference_url=f"/student/events/{event.id}",
+            entity_id=event.id
+        ))
+        db.session.commit()
+
     return jsonify(registration.to_dict()), 201
+
+
+def _resolve_registration_status(event):
+    """Returns REGISTERED if the event still has capacity, otherwise WAITLISTED.
+    An event with capacity 0 is treated as unlimited (no cap set)."""
+    if not event.capacity or event.capacity <= 0:
+        return 'REGISTERED'
+
+    confirmed_count = EventRegistration.query.filter(
+        EventRegistration.event_id == event.id,
+        EventRegistration.registration_status == 'REGISTERED'
+    ).count()
+
+    return 'REGISTERED' if confirmed_count < event.capacity else 'WAITLISTED'
+
+
+@events_bp.route('/<int:event_id>/register', methods=['DELETE'])
+@jwt_required
+def cancel_registration(event_id):
+    event = Event.query.get_or_404(event_id)
+    registration = EventRegistration.query.filter_by(
+        event_id=event.id, user_id=g.current_user.id
+    ).first()
+
+    if not registration or registration.registration_status == 'CANCELLED':
+        return jsonify({'error': 'You are not registered for this event.'}), 404
+
+    was_confirmed = registration.registration_status == 'REGISTERED'
+    registration.registration_status = 'CANCELLED'
+    db.session.commit()
+
+    # If a confirmed seat just opened up, promote the earliest waitlisted student
+    if was_confirmed and event.capacity and event.capacity > 0:
+        next_in_line = EventRegistration.query.filter_by(
+            event_id=event.id, registration_status='WAITLISTED'
+        ).order_by(EventRegistration.registered_at.asc()).first()
+
+        if next_in_line:
+            next_in_line.registration_status = 'REGISTERED'
+            db.session.add(Notification(
+                user_id=next_in_line.user_id,
+                title="You're In! Spot Confirmed",
+                message=f"A spot opened up for {event.event_name} and you've been moved from the waitlist to confirmed.",
+                type='EVENT_PROMOTED',
+                reference_url=f"/student/events/{event.id}",
+                entity_id=event.id
+            ))
+            db.session.commit()
+
+    return jsonify({'status': 'CANCELLED'}), 200
 
 
 @events_bp.route('/<int:event_id>/registrations', methods=['GET'])
@@ -619,60 +729,125 @@ def update_session_status(event_id, session_id):
 @jwt_required
 def shortlist_round_participants(event_id, session_id):
     event = Event.query.get_or_404(event_id)
-    if not _can_manage_event(event, g.current_user):
-        return jsonify({'error': 'You do not have permission to shortlist participants for this event.'}), 403
 
-    session = EventSession.query.filter_by(id=session_id, event_id=event.id).first_or_404()
+    if not _can_manage_event(event, g.current_user):
+        return jsonify({
+            'error': 'You do not have permission to shortlist participants for this event.'
+        }), 403
+
+    session = EventSession.query.filter_by(
+        id=session_id,
+        event_id=event.id
+    ).first_or_404()
+
     data = request.get_json() or {}
 
     selected_user_ids = set(data.get('selectedUserIds') or [])
     elimination_reason = data.get('reason') or 'Not shortlisted'
 
-    # Determine eligible user IDs for this session/round
+    # Determine eligible participants for this round.
     if session.round_number <= 1:
-        eligible_user_ids = [r.user_id for r in EventRegistration.query.filter_by(event_id=event.id).all()]
+        eligible_user_ids = [
+            r.user_id
+            for r in EventRegistration.query.filter_by(
+                event_id=event.id
+            ).all()
+        ]
     else:
-        prev_session = EventSession.query.filter_by(event_id=event.id, round_number=session.round_number - 1).first()
+        prev_session = EventSession.query.filter_by(
+            event_id=event.id,
+            round_number=session.round_number - 1
+        ).first()
+
         if prev_session:
             eligible_user_ids = [
-                prs.user_id for prs in ParticipantRoundStatus.query.filter_by(session_id=prev_session.id).filter(
-                    ParticipantRoundStatus.status.in_(['SHORTLISTED', 'FINALIST', 'WINNER', 'RUNNER_UP'])
+                prs.user_id
+                for prs in ParticipantRoundStatus.query.filter_by(
+                    session_id=prev_session.id
+                ).filter(
+                    ParticipantRoundStatus.status.in_([
+                        'SHORTLISTED',
+                        'FINALIST',
+                        'WINNER',
+                        'RUNNER_UP'
+                    ])
                 ).all()
             ]
         else:
-            eligible_user_ids = [r.user_id for r in EventRegistration.query.filter_by(event_id=event.id).all()]
+            eligible_user_ids = [
+                r.user_id
+                for r in EventRegistration.query.filter_by(
+                    event_id=event.id
+                ).all()
+            ]
 
+    # Update participant progress in the database.
     for u_id in eligible_user_ids:
-        prs = ParticipantRoundStatus.query.filter_by(session_id=session.id, user_id=u_id).first()
+        prs = ParticipantRoundStatus.query.filter_by(
+            session_id=session.id,
+            user_id=u_id
+        ).first()
+
         if not prs:
-            prs = ParticipantRoundStatus(event_id=event.id, session_id=session.id, user_id=u_id)
+            prs = ParticipantRoundStatus(
+                event_id=event.id,
+                session_id=session.id,
+                user_id=u_id
+            )
             db.session.add(prs)
 
         if u_id in selected_user_ids:
             prs.status = 'SHORTLISTED'
             prs.reason = None
-            total_sessions = EventSession.query.filter_by(event_id=event.id).count()
-            if session.round_number == total_sessions - 1:
-                NotificationService.notify_participant_finalist(event.id, event.event_name, u_id)
-            else:
-                NotificationService.notify_participant_shortlisted(event.id, event.event_name, u_id, session.name)
         else:
             prs.status = 'ELIMINATED'
             prs.reason = elimination_reason
-            NotificationService.notify_participant_eliminated(event.id, event.event_name, u_id, session.name, elimination_reason)
 
         prs.updated_by_id = g.current_user.id
         prs.updated_at = datetime.utcnow()
 
     session.status = 'COMPLETED'
+
+    # First save the actual business state.
     db.session.commit()
+
+    # Only after a successful DB commit, publish the asynchronous event.
+    total_sessions = EventSession.query.filter_by(
+        event_id=event.id
+    ).count()
+
+    finalist_round = (
+        session.round_number == total_sessions - 1
+    )
+
+    publish_event(
+        PARTICIPANT_PROGRESS_UPDATED,
+        {
+            'event_id': event.id,
+            'event_name': event.event_name,
+            'session_id': session.id,
+            'session_name': session.name,
+            'round_number': session.round_number,
+            'finalist_round': finalist_round,
+            'shortlisted_user_ids': list(selected_user_ids),
+            'eliminated_user_ids': [
+                user_id
+                for user_id in eligible_user_ids
+                if user_id not in selected_user_ids
+            ],
+            'elimination_reason': elimination_reason,
+        },
+        key=event.id,
+    )
 
     return jsonify({
         'success': True,
-        'message': f"Round '{session.name}' completed. {len(selected_user_ids)} participant(s) shortlisted to advance.",
+        'message': (
+            f"Round '{session.name}' completed. "
+            f"{len(selected_user_ids)} participant(s) shortlisted to advance."
+        ),
         'data': session.to_dict()
     }), 200
-
 
 @events_bp.route('/<int:event_id>/participant-progress', methods=['GET'])
 @jwt_required
@@ -1059,12 +1234,16 @@ def declare_event_results(event_id):
     event.event_status = 'COMPLETED'
     db.session.commit()
 
-    if winner_id:
-        NotificationService.notify_participant_winner(event.id, event.event_name, winner_id, 'Winner')
-    if runner_up_id:
-        NotificationService.notify_participant_winner(event.id, event.event_name, runner_up_id, 'Runner-up')
-    if second_runner_up_id:
-        NotificationService.notify_participant_winner(event.id, event.event_name, second_runner_up_id, 'Second Runner-up')
+    publish_event(
+        WINNERS_ANNOUNCED,
+        {
+            "event_id": event.id,
+            "event_name": event.event_name,
+            "club_name": event.club.club_name if event.club else "General Event",
+            "positions": positions,
+        },
+        key=event.id,
+    )
 
     return jsonify({
         'success': True,
@@ -1073,52 +1252,70 @@ def declare_event_results(event_id):
         'positions': positions
     }), 200
 
-
 @events_bp.route('/<int:event_id>/announce-winners', methods=['POST'])
 @jwt_required
 def announce_event_winners(event_id):
     event = Event.query.get_or_404(event_id)
+
     if not _can_manage_event(event, g.current_user):
-        return jsonify({'error': 'You do not have permission to publish winner announcements.'}), 403
+        return jsonify({
+            'error': 'You do not have permission to publish winner announcements.'
+        }), 403
 
     prizes = event.prizes
+
     if not prizes:
-        return jsonify({'error': 'No results declared yet to publish.'}), 400
+        return jsonify({
+            'error': 'No results declared yet to publish.'
+        }), 400
 
     title = f"{event.event_name} — Results Announced"
-    lines = [f"Congratulations to the winners of {event.event_name}!\n"]
-    for p in prizes:
-        lines.append(f"{p.title}:\n{p.winner_name or 'TBA'}\n")
+
+    lines = [
+        f"Congratulations to the winners of {event.event_name}!\n"
+    ]
+
+    for prize in prizes:
+        lines.append(
+            f"{prize.title}:\n"
+            f"{prize.winner_name or 'TBA'}\n"
+        )
 
     message = "\n".join(lines)
 
+    # Save the announcement as the main synchronous business action.
     announcement = EventAnnouncement(
         event_id=event.id,
         title=title,
         message=message,
         created_by_id=g.current_user.id
     )
+
     db.session.add(announcement)
 
-    registrations = EventRegistration.query.filter_by(event_id=event.id).all()
-    for reg in registrations:
-        db.session.add(Notification(
-            user_id=reg.user_id,
-            title=title,
-            message=f"Results for {event.event_name} have been published!",
-            type='COMPETITION',
-            reference_url=f"/student/events/{event.id}",
-            entity_id=event.id
-        ))
-
+    # Commit first so the announcement definitely exists.
     db.session.commit()
+
+    # Publish the follow-up notification work asynchronously.
+    publish_event(
+        RESULTS_PUBLISHED,
+        {
+            'event_id': event.id,
+            'event_name': event.event_name,
+            'announcement_id': announcement.id,
+            'title': title,
+        },
+        key=event.id,
+    )
 
     return jsonify({
         'success': True,
-        'message': 'Winner results announced and notifications sent to participants.',
+        'message': (
+            'Winner results announced successfully. '
+            'Participant notifications are being processed.'
+        ),
         'data': announcement.to_dict()
     }), 200
-
 
 @events_bp.route('/<int:event_id>/organizers', methods=['GET', 'POST'])
 @jwt_required

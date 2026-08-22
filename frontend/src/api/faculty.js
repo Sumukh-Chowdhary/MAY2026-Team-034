@@ -14,3 +14,9 @@ export const getFacultyGeneralEvents = async () => {
     const response = await api.get("/faculty/general-events")
     return response.data
 }
+
+export const getFacultyAnalytics = async () => {
+    const response = await api.get("/faculty/analytics")
+    return response.data
+}
+

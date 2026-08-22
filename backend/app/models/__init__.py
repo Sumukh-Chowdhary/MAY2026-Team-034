@@ -33,6 +33,7 @@ from app.models.events import (
 )
 
 from app.models.notification import Notification
+from app.models.kafka_event_log import KafkaEventLog
 
 __all__ = [
     'db',

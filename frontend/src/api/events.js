@@ -40,6 +40,30 @@ export const registerForEvent = async (id) => {
   return response.data
 }
 
+export const cancelEventRegistration = async (id) => {
+  const response = await api.delete(`/events/${id}/register`)
+  return response.data
+}
+
+export const getScheduleConflicts = async (id) => {
+  const response = await api.get(`/events/${id}/schedule-conflicts`)
+  return response.data
+}
+
+export const downloadEventReport = async (id, eventName = 'event') => {
+  const response = await api.get(`/events/${id}/report`, { responseType: 'blob' })
+  const safeName = (eventName || 'event').replace(/[^a-zA-Z0-9 _-]/g, '').replace(/\s+/g, '_')
+
+  const url = window.URL.createObjectURL(new Blob([response.data], { type: 'application/pdf' }))
+  const link = document.createElement('a')
+  link.href = url
+  link.setAttribute('download', `${safeName}_report.pdf`)
+  document.body.appendChild(link)
+  link.click()
+  link.remove()
+  window.URL.revokeObjectURL(url)
+}
+
 export const getCalendarEvents = async () => {
   const response = await api.get('/events/calendar')
   return response.data

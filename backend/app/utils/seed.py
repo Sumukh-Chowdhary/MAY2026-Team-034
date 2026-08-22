@@ -49,11 +49,17 @@ def _get_seeded_password_hash(password):
 
 random.seed(42)
 
-def seed_database(app=None):
+def seed_database(app=None, force=False):
     if app is None:
         app = create_app()
 
     with app.app_context():
+        db.create_all()
+
+        if not force and User.query.first() is not None:
+            print("Database already has data — skipping seed (pass force=True to reset).")
+            return
+
         print("1. Dropping and Re-creating Database Schema...")
         db.drop_all()
         db.create_all()
@@ -1076,4 +1082,5 @@ def seed_database(app=None):
 
 if __name__ == '__main__':
     app = create_app()
-    seed_database(app)
+    force_reset = '--force' in sys.argv
+    seed_database(app, force=force_reset)

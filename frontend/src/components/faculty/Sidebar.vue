@@ -123,6 +123,14 @@ onBeforeUnmount(() => {
                 <li>
                     <RouterLink
                         class="nav-item"
+                        to="/faculty/venue-calendar">
+                        <i class="bi bi-calendar3"></i>
+                        <span v-if="!collapsed">Venue Calendar</span>
+                    </RouterLink>
+                </li>
+                <li>
+                    <RouterLink
+                        class="nav-item"
                         to="/faculty/requests">
                         <i class="bi bi-file-earmark-text-fill"></i>
                         <span v-if="!collapsed">Requests</span>
