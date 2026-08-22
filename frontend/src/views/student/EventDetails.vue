@@ -11,10 +11,21 @@ import ParticipantProgressView from '@/components/events/ParticipantProgressView
 import EventResultsView from '@/components/events/EventResultsView.vue'
 import RequestVenueModal from '@/components/events/RequestVenueModal.vue'
 import EventVolunteersSection from '@/components/events/EventVolunteersSection.vue'
+import ScheduleConflictModal from '@/components/common/ScheduleConflictModal.vue'
+import { useScheduleConflictCheck } from '@/composables/useScheduleConflictCheck'
 
 const showProfileModal = ref(false)
 const selectedProfileUserId = ref(null)
 const showVenueRequestModal = ref(false)
+
+const {
+  showConflictModal,
+  pendingConflicts,
+  pendingEventName,
+  registerWithConflictCheck,
+  confirmRegistration,
+  cancelRegistration
+} = useScheduleConflictCheck()
 
 function openUserProfile(id) {
   if (!id) return
@@ -23,7 +34,6 @@ function openUserProfile(id) {
 }
 import {
   getEvent,
-  registerForEvent,
   createEventTicket,
   manageEventSchedule,
   manageEventAnnouncements,
@@ -244,7 +254,15 @@ async function handleRegister() {
   if (isRegistering.value || isRegistered.value) return
   isRegistering.value = true
   try {
-    const response = await registerForEvent(Number(route.params.id))
+    const result = await registerWithConflictCheck(
+      Number(route.params.id),
+      event.value?.name || event.value?.eventName || 'this event'
+    )
+    if (result.cancelled) {
+      isRegistering.value = false
+      return
+    }
+    const response = result.response
     isRegistered.value = true
     event.value.registrations.unshift({
       id: response.id,
@@ -429,7 +447,14 @@ function handleAttendanceClick() {
 <template>
   <StudentLayout>
     <section class="event-details-page">
-      <div class="container py-5" v-if="event">
+      <div v-if="loading" class="container py-5">
+        <div class="loading-state">
+          <div class="spinner-border text-primary" role="status"></div>
+          <p>Loading event details...</p>
+        </div>
+      </div>
+
+      <div class="container py-5" v-else-if="event">
 
         <!-- Module 22 Approved Volunteer Banner -->
         <div v-if="isApprovedVolunteer && !isOrganizer" class="volunteer-banner shadow-sm mb-4">
@@ -749,10 +774,31 @@ function handleAttendanceClick() {
       @submitted="loadEventData"
     />
 
+    <ScheduleConflictModal
+      :show="showConflictModal"
+      :event-name="pendingEventName"
+      :conflicts="pendingConflicts"
+      @confirm="confirmRegistration"
+      @cancel="cancelRegistration"
+    />
+
   </StudentLayout>
 </template>
 
 <style scoped>
+.loading-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 100px 20px;
+  color: #64748B;
+}
+
+.loading-state p {
+  margin-top: 14px;
+}
+
 .event-details-page { width: 100%; max-width: 1500px; margin: 0 auto; }
 .volunteer-banner { background: #fefce8; border: 1px solid #fef08a; border-radius: 20px; padding: 18px 24px; }
 .header-actions { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }

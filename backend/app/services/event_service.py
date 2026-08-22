@@ -418,3 +418,73 @@ class EventService:
             })
 
         return calendar_items
+
+    @staticmethod
+    def _event_datetime_bounds(event):
+        """
+        Combines an event's date + optional time fields into concrete
+        (start_datetime, end_datetime) bounds for overlap comparison.
+        Missing times default to the full day (00:00 - 23:59:59).
+        """
+        start_date = event.start_date
+        end_date = event.end_date or event.start_date
+        if not start_date:
+            return None, None
+
+        start_t = event.start_time or time(0, 0)
+        end_t = event.end_time or time(23, 59, 59)
+
+        start_dt = datetime.combine(start_date, start_t)
+        end_dt = datetime.combine(end_date, end_t)
+
+        # Guard against bad data where end ends up before start
+        if end_dt < start_dt:
+            end_dt = start_dt
+
+        return start_dt, end_dt
+
+    @staticmethod
+    def get_schedule_conflicts(user_id, event_id):
+        """
+        Returns events the given user is already actively registered for
+        whose date/time range overlaps with the target event's date/time range.
+        Used to warn students before they register for a clashing event.
+        """
+        target_event = Event.query.get_or_404(event_id, description="Event not found")
+        target_start, target_end = EventService._event_datetime_bounds(target_event)
+        if target_start is None:
+            return []
+
+        existing_registrations = (
+            EventRegistration.query
+            .filter(
+                EventRegistration.user_id == user_id,
+                EventRegistration.event_id != event_id,
+                EventRegistration.registration_status != "CANCELLED",
+            )
+            .all()
+        )
+
+        conflicts = []
+        for reg in existing_registrations:
+            other_event = reg.event
+            if not other_event:
+                continue
+
+            other_start, other_end = EventService._event_datetime_bounds(other_event)
+            if other_start is None:
+                continue
+
+            # Standard interval overlap check
+            if target_start < other_end and other_start < target_end:
+                conflicts.append({
+                    "eventId": other_event.id,
+                    "name": other_event.event_name,
+                    "clubName": other_event.club.club_name if other_event.club else "General / Institutional",
+                    "startDate": other_event.start_date.isoformat() if other_event.start_date else None,
+                    "endDate": other_event.end_date.isoformat() if other_event.end_date else None,
+                    "startTime": other_event.start_time.strftime('%H:%M') if other_event.start_time else None,
+                    "endTime": other_event.end_time.strftime('%H:%M') if other_event.end_time else None,
+                })
+
+        return conflicts

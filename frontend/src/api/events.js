@@ -40,6 +40,11 @@ export const registerForEvent = async (id) => {
   return response.data
 }
 
+export const getScheduleConflicts = async (id) => {
+  const response = await api.get(`/events/${id}/schedule-conflicts`)
+  return response.data
+}
+
 export const getCalendarEvents = async () => {
   const response = await api.get('/events/calendar')
   return response.data

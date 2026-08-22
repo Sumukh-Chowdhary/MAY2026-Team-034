@@ -187,6 +187,26 @@
           </div>
         </div>
 
+        <!-- Time Pickers -->
+        <div class="row g-3 mb-3">
+          <div class="col-6">
+            <label class="form-label text-sm fw-bold">Start Time</label>
+            <input
+              v-model="form.startTime"
+              type="time"
+              class="form-control custom-input"
+            />
+          </div>
+          <div class="col-6">
+            <label class="form-label text-sm fw-bold">End Time</label>
+            <input
+              v-model="form.endTime"
+              type="time"
+              class="form-control custom-input"
+            />
+          </div>
+        </div>
+
         <!-- Venue Availability Status Indicator -->
         <div v-if="form.startDate && form.endDate" class="mb-3">
           <div v-if="form.endDate < form.startDate" class="p-3 rounded-3 border border-danger bg-danger-subtle text-danger font-semibold d-flex align-items-center gap-2">
@@ -307,6 +327,8 @@ const form = ref({
   eventType: 'General',
   startDate: '',
   endDate: '',
+  startTime: '',
+  endTime: '',
   description: ''
 })
 
@@ -503,6 +525,8 @@ async function handleSubmit() {
     eventType: form.value.eventType,
     startDate: form.value.startDate,
     endDate: form.value.endDate,
+    startTime: form.value.startTime || null,
+    endTime: form.value.endTime || null,
     venueId: form.value.venueId,
     venueName: form.value.venueName || venueSearchQuery.value,
     club: isGeneral ? null : (form.value.club || 'Club Event'),
