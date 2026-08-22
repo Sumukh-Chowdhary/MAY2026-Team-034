@@ -39,7 +39,9 @@ import {
   manageEventAnnouncements,
   manageEventAttendance,
   manageEventPrizes,
-  manageEventVolunteers
+  manageEventVolunteers,
+  cancelEventRegistration,
+  downloadEventReport
 } from '@/api/events'
 import { createRequest } from '@/api/requests'
 import { getUserAssignments } from '@/api/assignmentTickets'
@@ -56,6 +58,9 @@ const event = ref(null)
 const loading = ref(false)
 const isRegistering = ref(false)
 const isRegistered = ref(false)
+const isWaitlisted = ref(false)
+const isCancelling = ref(false)
+const isDownloadingReport = ref(false)
 const isOrganizer = ref(false)
 const currentUserId = ref(null)
 
@@ -201,7 +206,9 @@ async function loadEventData() {
     }
 
     if (currentUserId.value && event.value.registrations) {
-      isRegistered.value = event.value.registrations.some(r => Number(r.userId) === Number(currentUserId.value) || r.name === 'You')
+      const myReg = event.value.registrations.find(r => Number(r.userId) === Number(currentUserId.value) || r.name === 'You')
+      isRegistered.value = !!myReg && myReg.status !== 'WAITLISTED'
+      isWaitlisted.value = !!myReg && myReg.status === 'WAITLISTED'
     }
 
     // Socket real-time updates for Module 22
@@ -251,7 +258,7 @@ onUnmounted(() => {
 })
 
 async function handleRegister() {
-  if (isRegistering.value || isRegistered.value) return
+  if (isRegistering.value || isRegistered.value || isWaitlisted.value) return
   isRegistering.value = true
   try {
     const result = await registerWithConflictCheck(
@@ -263,7 +270,9 @@ async function handleRegister() {
       return
     }
     const response = result.response
-    isRegistered.value = true
+    const waitlisted = response.status === 'WAITLISTED'
+    isRegistered.value = !waitlisted
+    isWaitlisted.value = waitlisted
     event.value.registrations.unshift({
       id: response.id,
       userId: currentUserId.value,
@@ -272,12 +281,50 @@ async function handleRegister() {
       branch: 'Your Branch',
       status: response.status || 'REGISTERED'
     })
-    showToast('Registered for event successfully!', 'success')
+    showToast(
+      waitlisted
+        ? "Event is full — you've been added to the waitlist."
+        : 'Registered for event successfully!',
+      waitlisted ? 'info' : 'success'
+    )
   } catch (error) {
     console.error('Failed to register for event', error)
     showToast('Failed to register', 'error')
   } finally {
     isRegistering.value = false
+  }
+}
+
+async function handleCancelRegistration() {
+  if (isCancelling.value || (!isRegistered.value && !isWaitlisted.value)) return
+  isCancelling.value = true
+  try {
+    await cancelEventRegistration(Number(route.params.id))
+    isRegistered.value = false
+    isWaitlisted.value = false
+    event.value.registrations = event.value.registrations.filter(
+      r => !(Number(r.userId) === Number(currentUserId.value) || r.name === 'You')
+    )
+    showToast('Registration cancelled.', 'success')
+  } catch (error) {
+    console.error('Failed to cancel registration', error)
+    showToast('Failed to cancel registration', 'error')
+  } finally {
+    isCancelling.value = false
+  }
+}
+
+async function handleDownloadReport() {
+  if (isDownloadingReport.value || !event.value) return
+  isDownloadingReport.value = true
+  try {
+    await downloadEventReport(Number(route.params.id), event.value.name)
+    showToast('Report downloaded.', 'success')
+  } catch (error) {
+    console.error('Failed to download report', error)
+    showToast('Failed to download report', 'error')
+  } finally {
+    isDownloadingReport.value = false
   }
 }
 
@@ -483,12 +530,37 @@ function handleAttendanceClick() {
             <div class="header-actions">
               <span class="status-badge" :class="(event.status || 'scheduled').toLowerCase()">{{ event.status }}</span>
               
-              <button class="register-btn" :disabled="isRegistered || isRegistering" @click="handleRegister">
-                {{ isRegistering ? 'Registering…' : isRegistered ? 'Registered ✓' : 'Register' }}
+              <button
+                v-if="!isRegistered && !isWaitlisted"
+                class="register-btn"
+                :disabled="isRegistering"
+                @click="handleRegister"
+              >
+                {{ isRegistering ? 'Registering…' : 'Register' }}
+              </button>
+
+              <button
+                v-else
+                class="register-btn"
+                :class="{ 'waitlist-btn': isWaitlisted }"
+                :disabled="isCancelling"
+                @click="handleCancelRegistration"
+              >
+                {{ isCancelling ? 'Cancelling…' : isWaitlisted ? 'Waitlisted — Cancel' : 'Registered ✓ — Cancel' }}
               </button>
 
               <button class="btn btn-outline-primary rounded-pill px-3 fw-semibold text-xs" @click="showTicketModal = true">
                 <i class="bi bi-ticket-perforated me-1"></i> Raise Ticket
+              </button>
+
+              <button
+                v-if="canManage"
+                class="btn btn-outline-secondary rounded-pill px-3 fw-semibold text-xs"
+                :disabled="isDownloadingReport"
+                @click="handleDownloadReport"
+              >
+                <i class="bi bi-file-earmark-arrow-down me-1"></i>
+                {{ isDownloadingReport ? 'Preparing…' : 'Download Report' }}
               </button>
 
               <button 
@@ -804,6 +876,7 @@ function handleAttendanceClick() {
 .header-actions { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
 .register-btn { border: none; border-radius: 999px; background: #16a34a; color: white; padding: 8px 18px; font-weight: 600; }
 .register-btn:disabled { opacity: 0.7; cursor: default; }
+.waitlist-btn { background: #d97706; }
 .event-detail-card { background: white; border: 1px solid #e5e7eb; border-radius: 24px; padding: 28px; box-shadow: 0 18px 45px rgba(15, 23, 42, 0.06); }
 .header-left { display: flex; align-items: center; gap: 18px; }
 .event-image { width: 70px; height: 70px; border-radius: 50%; background: #eef4ff; display: flex; justify-content: center; align-items: center; font-size: 36px; flex-shrink: 0; }

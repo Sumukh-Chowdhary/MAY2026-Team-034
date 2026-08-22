@@ -1,5 +1,5 @@
 from datetime import datetime, time
-from flask import Blueprint, request, jsonify, g
+from flask import Blueprint, request, jsonify, g, Response
 from app.models import db
 from app.models.club import Club, ClubOrganizer, ClubFaculty
 from app.models.events import (
@@ -344,6 +344,26 @@ def get_schedule_conflicts(event_id):
     return jsonify({"conflicts": conflicts}), 200
 
 
+@events_bp.route('/<int:event_id>/report', methods=['GET'])
+@jwt_required
+def download_event_report(event_id):
+    event = Event.query.get_or_404(event_id)
+
+    if not _can_manage_event(event, g.current_user):
+        return jsonify({'error': 'You do not have permission to download this report.'}), 403
+
+    pdf_bytes = EventService.generate_event_report_pdf(event_id)
+    safe_name = "".join(c if c.isalnum() or c in (' ', '-', '_') else '' for c in event.event_name).strip().replace(' ', '_')
+
+    return Response(
+        pdf_bytes,
+        mimetype='application/pdf',
+        headers={
+            'Content-Disposition': f'attachment; filename="{safe_name or "event"}_report.pdf"'
+        }
+    )
+
+
 @events_bp.route('/<int:event_id>/register', methods=['POST'])
 @jwt_required
 def register_for_event(event_id):
@@ -354,9 +374,15 @@ def register_for_event(event_id):
     event = Event.query.get_or_404(event_id)
     existing = EventRegistration.query.filter_by(event_id=event.id, user_id=g.current_user.id).first()
     if existing:
+        if existing.registration_status == 'CANCELLED':
+            existing.registration_status = _resolve_registration_status(event)
+            existing.registered_at = datetime.utcnow()
+            db.session.commit()
+            return jsonify(existing.to_dict()), 200
         return jsonify(existing.to_dict()), 200
 
-    registration = EventRegistration(event_id=event.id, user_id=g.current_user.id)
+    status = _resolve_registration_status(event)
+    registration = EventRegistration(event_id=event.id, user_id=g.current_user.id, registration_status=status)
     db.session.add(registration)
     db.session.commit()
 
@@ -366,7 +392,69 @@ def register_for_event(event_id):
         event.club.club_name if event.club else None,
         g.current_user.id
     )
+
+    if status == 'WAITLISTED':
+        db.session.add(Notification(
+            user_id=g.current_user.id,
+            title="Added to Waitlist",
+            message=f"{event.event_name} is at full capacity. You've been added to the waitlist and will be notified if a spot opens up.",
+            type='EVENT_WAITLISTED',
+            reference_url=f"/student/events/{event.id}",
+            entity_id=event.id
+        ))
+        db.session.commit()
+
     return jsonify(registration.to_dict()), 201
+
+
+def _resolve_registration_status(event):
+    """Returns REGISTERED if the event still has capacity, otherwise WAITLISTED.
+    An event with capacity 0 is treated as unlimited (no cap set)."""
+    if not event.capacity or event.capacity <= 0:
+        return 'REGISTERED'
+
+    confirmed_count = EventRegistration.query.filter(
+        EventRegistration.event_id == event.id,
+        EventRegistration.registration_status == 'REGISTERED'
+    ).count()
+
+    return 'REGISTERED' if confirmed_count < event.capacity else 'WAITLISTED'
+
+
+@events_bp.route('/<int:event_id>/register', methods=['DELETE'])
+@jwt_required
+def cancel_registration(event_id):
+    event = Event.query.get_or_404(event_id)
+    registration = EventRegistration.query.filter_by(
+        event_id=event.id, user_id=g.current_user.id
+    ).first()
+
+    if not registration or registration.registration_status == 'CANCELLED':
+        return jsonify({'error': 'You are not registered for this event.'}), 404
+
+    was_confirmed = registration.registration_status == 'REGISTERED'
+    registration.registration_status = 'CANCELLED'
+    db.session.commit()
+
+    # If a confirmed seat just opened up, promote the earliest waitlisted student
+    if was_confirmed and event.capacity and event.capacity > 0:
+        next_in_line = EventRegistration.query.filter_by(
+            event_id=event.id, registration_status='WAITLISTED'
+        ).order_by(EventRegistration.registered_at.asc()).first()
+
+        if next_in_line:
+            next_in_line.registration_status = 'REGISTERED'
+            db.session.add(Notification(
+                user_id=next_in_line.user_id,
+                title="You're In! Spot Confirmed",
+                message=f"A spot opened up for {event.event_name} and you've been moved from the waitlist to confirmed.",
+                type='EVENT_PROMOTED',
+                reference_url=f"/student/events/{event.id}",
+                entity_id=event.id
+            ))
+            db.session.commit()
+
+    return jsonify({'status': 'CANCELLED'}), 200
 
 
 @events_bp.route('/<int:event_id>/registrations', methods=['GET'])

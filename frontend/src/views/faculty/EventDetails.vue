@@ -18,7 +18,8 @@ import {
   manageEventAnnouncements,
   manageEventAttendance,
   assignVenue,
-  updateVolunteerStatus
+  updateVolunteerStatus,
+  downloadEventReport
 } from '@/api/events'
 import { getVenues } from '@/api/venues'
 import { useToast } from '@/composables/useToast'
@@ -28,6 +29,7 @@ const { showToast } = useToast()
 const activeTab = ref('schedule')
 const event = ref(null)
 const loading = ref(false)
+const isDownloadingReport = ref(false)
 const statusDraft = ref('SCHEDULED')
 const venues = ref([])
 const selectedVenueId = ref('')
@@ -347,6 +349,20 @@ function handleAttendanceClick() {
   }
   showAttendanceModal.value = true
 }
+
+async function handleDownloadReport() {
+  if (!event.value || isDownloadingReport.value) return
+  isDownloadingReport.value = true
+  try {
+    await downloadEventReport(event.value.id, event.value.name)
+    showToast('Report downloaded.', 'success')
+  } catch (error) {
+    console.error('Failed to download report', error)
+    showToast('Failed to download report.', 'error')
+  } finally {
+    isDownloadingReport.value = false
+  }
+}
 </script>
 
 <template>
@@ -365,6 +381,15 @@ function handleAttendanceClick() {
 
             <div class="header-actions">
               <span class="status-badge" :class="(event.status || 'scheduled').toLowerCase()">{{ event.status }}</span>
+              <button
+                v-if="isAuthorizedFaculty"
+                class="btn btn-sm btn-outline-secondary rounded-pill px-3 fw-semibold"
+                :disabled="isDownloadingReport"
+                @click="handleDownloadReport"
+              >
+                <i class="bi bi-file-earmark-arrow-down me-1"></i>
+                {{ isDownloadingReport ? 'Preparing...' : 'Download Report' }}
+              </button>
               <button 
                 v-if="isAuthorizedFaculty" 
                 class="btn btn-sm btn-outline-primary rounded-pill px-3 fw-semibold"

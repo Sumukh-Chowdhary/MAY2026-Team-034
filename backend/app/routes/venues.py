@@ -46,6 +46,67 @@ def get_venues():
     return jsonify(result), 200
 
 
+@venues_bp.route('/calendar', methods=['GET'])
+@jwt_required
+def get_venue_calendar():
+    """
+    Returns every venue along with its upcoming bookings (non-cancelled,
+    non-completed events) within a date window, so organizers can see at a
+    glance which venues are free before submitting a venue request.
+    Defaults to the next 30 days; accepts ?days=N to widen/narrow the window.
+    """
+    from datetime import date, timedelta
+    from app.models.events import Event
+
+    try:
+        days = int(request.args.get('days', 30))
+    except (TypeError, ValueError):
+        days = 30
+    days = max(1, min(days, 180))
+
+    window_start = date.today()
+    window_end = window_start + timedelta(days=days)
+
+    venues = Venue.query.order_by(Venue.venue_name.asc()).all()
+
+    upcoming_events = Event.query.filter(
+        Event.venue_id.isnot(None),
+        Event.event_status.notin_(['CANCELLED', 'COMPLETED', 'CLOSED']),
+        Event.start_date <= window_end,
+        Event.end_date >= window_start
+    ).order_by(Event.start_date.asc()).all()
+
+    bookings_by_venue = {}
+    for ev in upcoming_events:
+        bookings_by_venue.setdefault(ev.venue_id, []).append({
+            'eventId': ev.id,
+            'eventName': ev.event_name,
+            'clubName': ev.club.club_name if ev.club else 'General / Institutional',
+            'startDate': ev.start_date.isoformat() if ev.start_date else None,
+            'endDate': ev.end_date.isoformat() if ev.end_date else None,
+            'startTime': ev.start_time.strftime('%H:%M') if ev.start_time else None,
+            'endTime': ev.end_time.strftime('%H:%M') if ev.end_time else None,
+        })
+
+    result = []
+    for v in venues:
+        result.append({
+            'id': v.id,
+            'name': v.venue_name,
+            'location': v.venue_location,
+            'type': v.venue_type,
+            'capacity': v.capacity,
+            'availabilityStatus': v.availability_status,
+            'bookings': bookings_by_venue.get(v.id, [])
+        })
+
+    return jsonify({
+        'windowStart': window_start.isoformat(),
+        'windowEnd': window_end.isoformat(),
+        'venues': result
+    }), 200
+
+
 @venues_bp.route('/<int:venue_id>', methods=['GET'])
 @jwt_required
 def get_venue(venue_id):
