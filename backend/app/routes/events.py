@@ -17,8 +17,16 @@ from app.models.notification import Notification
 from app.models.tickets import AssignmentTicket, AssignmentStatus, AssignmentRole
 from app.services.event_service import EventService
 
-events_bp = Blueprint('events', __name__, url_prefix='/api/events')
+from app.kafka.producer import publish_event
+from app.kafka.events import (
+    EVENT_COMPLETED,
+    PARTICIPANT_PROGRESS_UPDATED,
+    RESULTS_PUBLISHED,
+    WINNERS_ANNOUNCED,
+    REQUEST_APPROVED,
+)
 
+events_bp = Blueprint('events', __name__, url_prefix='/api/events')
 
 def _parse_date(value):
     if not value:
@@ -696,60 +704,125 @@ def update_session_status(event_id, session_id):
 @jwt_required
 def shortlist_round_participants(event_id, session_id):
     event = Event.query.get_or_404(event_id)
-    if not _can_manage_event(event, g.current_user):
-        return jsonify({'error': 'You do not have permission to shortlist participants for this event.'}), 403
 
-    session = EventSession.query.filter_by(id=session_id, event_id=event.id).first_or_404()
+    if not _can_manage_event(event, g.current_user):
+        return jsonify({
+            'error': 'You do not have permission to shortlist participants for this event.'
+        }), 403
+
+    session = EventSession.query.filter_by(
+        id=session_id,
+        event_id=event.id
+    ).first_or_404()
+
     data = request.get_json() or {}
 
     selected_user_ids = set(data.get('selectedUserIds') or [])
     elimination_reason = data.get('reason') or 'Not shortlisted'
 
-    # Determine eligible user IDs for this session/round
+    # Determine eligible participants for this round.
     if session.round_number <= 1:
-        eligible_user_ids = [r.user_id for r in EventRegistration.query.filter_by(event_id=event.id).all()]
+        eligible_user_ids = [
+            r.user_id
+            for r in EventRegistration.query.filter_by(
+                event_id=event.id
+            ).all()
+        ]
     else:
-        prev_session = EventSession.query.filter_by(event_id=event.id, round_number=session.round_number - 1).first()
+        prev_session = EventSession.query.filter_by(
+            event_id=event.id,
+            round_number=session.round_number - 1
+        ).first()
+
         if prev_session:
             eligible_user_ids = [
-                prs.user_id for prs in ParticipantRoundStatus.query.filter_by(session_id=prev_session.id).filter(
-                    ParticipantRoundStatus.status.in_(['SHORTLISTED', 'FINALIST', 'WINNER', 'RUNNER_UP'])
+                prs.user_id
+                for prs in ParticipantRoundStatus.query.filter_by(
+                    session_id=prev_session.id
+                ).filter(
+                    ParticipantRoundStatus.status.in_([
+                        'SHORTLISTED',
+                        'FINALIST',
+                        'WINNER',
+                        'RUNNER_UP'
+                    ])
                 ).all()
             ]
         else:
-            eligible_user_ids = [r.user_id for r in EventRegistration.query.filter_by(event_id=event.id).all()]
+            eligible_user_ids = [
+                r.user_id
+                for r in EventRegistration.query.filter_by(
+                    event_id=event.id
+                ).all()
+            ]
 
+    # Update participant progress in the database.
     for u_id in eligible_user_ids:
-        prs = ParticipantRoundStatus.query.filter_by(session_id=session.id, user_id=u_id).first()
+        prs = ParticipantRoundStatus.query.filter_by(
+            session_id=session.id,
+            user_id=u_id
+        ).first()
+
         if not prs:
-            prs = ParticipantRoundStatus(event_id=event.id, session_id=session.id, user_id=u_id)
+            prs = ParticipantRoundStatus(
+                event_id=event.id,
+                session_id=session.id,
+                user_id=u_id
+            )
             db.session.add(prs)
 
         if u_id in selected_user_ids:
             prs.status = 'SHORTLISTED'
             prs.reason = None
-            total_sessions = EventSession.query.filter_by(event_id=event.id).count()
-            if session.round_number == total_sessions - 1:
-                NotificationService.notify_participant_finalist(event.id, event.event_name, u_id)
-            else:
-                NotificationService.notify_participant_shortlisted(event.id, event.event_name, u_id, session.name)
         else:
             prs.status = 'ELIMINATED'
             prs.reason = elimination_reason
-            NotificationService.notify_participant_eliminated(event.id, event.event_name, u_id, session.name, elimination_reason)
 
         prs.updated_by_id = g.current_user.id
         prs.updated_at = datetime.utcnow()
 
     session.status = 'COMPLETED'
+
+    # First save the actual business state.
     db.session.commit()
+
+    # Only after a successful DB commit, publish the asynchronous event.
+    total_sessions = EventSession.query.filter_by(
+        event_id=event.id
+    ).count()
+
+    finalist_round = (
+        session.round_number == total_sessions - 1
+    )
+
+    publish_event(
+        PARTICIPANT_PROGRESS_UPDATED,
+        {
+            'event_id': event.id,
+            'event_name': event.event_name,
+            'session_id': session.id,
+            'session_name': session.name,
+            'round_number': session.round_number,
+            'finalist_round': finalist_round,
+            'shortlisted_user_ids': list(selected_user_ids),
+            'eliminated_user_ids': [
+                user_id
+                for user_id in eligible_user_ids
+                if user_id not in selected_user_ids
+            ],
+            'elimination_reason': elimination_reason,
+        },
+        key=event.id,
+    )
 
     return jsonify({
         'success': True,
-        'message': f"Round '{session.name}' completed. {len(selected_user_ids)} participant(s) shortlisted to advance.",
+        'message': (
+            f"Round '{session.name}' completed. "
+            f"{len(selected_user_ids)} participant(s) shortlisted to advance."
+        ),
         'data': session.to_dict()
     }), 200
-
 
 @events_bp.route('/<int:event_id>/participant-progress', methods=['GET'])
 @jwt_required
@@ -1127,12 +1200,16 @@ def declare_event_results(event_id):
     event.event_status = 'COMPLETED'
     db.session.commit()
 
-    if winner_id:
-        NotificationService.notify_participant_winner(event.id, event.event_name, winner_id, 'Winner')
-    if runner_up_id:
-        NotificationService.notify_participant_winner(event.id, event.event_name, runner_up_id, 'Runner-up')
-    if second_runner_up_id:
-        NotificationService.notify_participant_winner(event.id, event.event_name, second_runner_up_id, 'Second Runner-up')
+    publish_event(
+        WINNERS_ANNOUNCED,
+        {
+            "event_id": event.id,
+            "event_name": event.event_name,
+            "club_name": event.club.club_name if event.club else "General Event",
+            "positions": positions,
+        },
+        key=event.id,
+    )
 
     return jsonify({
         'success': True,
@@ -1141,52 +1218,70 @@ def declare_event_results(event_id):
         'positions': positions
     }), 200
 
-
 @events_bp.route('/<int:event_id>/announce-winners', methods=['POST'])
 @jwt_required
 def announce_event_winners(event_id):
     event = Event.query.get_or_404(event_id)
+
     if not _can_manage_event(event, g.current_user):
-        return jsonify({'error': 'You do not have permission to publish winner announcements.'}), 403
+        return jsonify({
+            'error': 'You do not have permission to publish winner announcements.'
+        }), 403
 
     prizes = event.prizes
+
     if not prizes:
-        return jsonify({'error': 'No results declared yet to publish.'}), 400
+        return jsonify({
+            'error': 'No results declared yet to publish.'
+        }), 400
 
     title = f"{event.event_name} — Results Announced"
-    lines = [f"Congratulations to the winners of {event.event_name}!\n"]
-    for p in prizes:
-        lines.append(f"{p.title}:\n{p.winner_name or 'TBA'}\n")
+
+    lines = [
+        f"Congratulations to the winners of {event.event_name}!\n"
+    ]
+
+    for prize in prizes:
+        lines.append(
+            f"{prize.title}:\n"
+            f"{prize.winner_name or 'TBA'}\n"
+        )
 
     message = "\n".join(lines)
 
+    # Save the announcement as the main synchronous business action.
     announcement = EventAnnouncement(
         event_id=event.id,
         title=title,
         message=message,
         created_by_id=g.current_user.id
     )
+
     db.session.add(announcement)
 
-    registrations = EventRegistration.query.filter_by(event_id=event.id).all()
-    for reg in registrations:
-        db.session.add(Notification(
-            user_id=reg.user_id,
-            title=title,
-            message=f"Results for {event.event_name} have been published!",
-            type='COMPETITION',
-            reference_url=f"/student/events/{event.id}",
-            entity_id=event.id
-        ))
-
+    # Commit first so the announcement definitely exists.
     db.session.commit()
+
+    # Publish the follow-up notification work asynchronously.
+    publish_event(
+        RESULTS_PUBLISHED,
+        {
+            'event_id': event.id,
+            'event_name': event.event_name,
+            'announcement_id': announcement.id,
+            'title': title,
+        },
+        key=event.id,
+    )
 
     return jsonify({
         'success': True,
-        'message': 'Winner results announced and notifications sent to participants.',
+        'message': (
+            'Winner results announced successfully. '
+            'Participant notifications are being processed.'
+        ),
         'data': announcement.to_dict()
     }), 200
-
 
 @events_bp.route('/<int:event_id>/organizers', methods=['GET', 'POST'])
 @jwt_required

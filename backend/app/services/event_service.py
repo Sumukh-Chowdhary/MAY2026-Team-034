@@ -12,6 +12,9 @@ from app.extensions import socketio
 from app.utils.cache import get_cached, set_cached, delete_cached
 from app.models import club
 
+from app.kafka.producer import publish_event
+from app.kafka.events import EVENT_COMPLETED
+
 def _parse_date(value):
     if not value:
         return None
@@ -213,14 +216,32 @@ class EventService:
     @staticmethod
     def update_event_status(event_id, status):
         event = Event.query.get_or_404(event_id)
-        event.event_status = status.upper()
+
+        previous_status = (event.event_status or "").upper()
+        new_status = status.upper()
+
+        event.event_status = new_status
         db.session.commit()
 
         delete_cached("events:all")
 
+        # Publish only on an actual transition to COMPLETED.
+        if new_status == "COMPLETED" and previous_status != "COMPLETED":
+            publish_event(
+                EVENT_COMPLETED,
+                {
+                    "event_id": event.id,
+                    "event_name": event.event_name,
+                    "previous_status": previous_status,
+                    "status": new_status,
+                },
+                key=event.id,
+            )
+
         dict_data = event.to_dict()
         socketio.emit('event_updated', dict_data, room=f'event_{event.id}')
         socketio.emit('event_updated', dict_data, room='events_room')
+
         return dict_data
 
     @staticmethod
