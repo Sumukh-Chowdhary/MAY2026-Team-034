@@ -11,5 +11,7 @@ socketio = SocketIO(
 
 redis_client = redis.Redis.from_url(
     Config.REDIS_URL,
-    decode_responses=True
+    decode_responses=True,
+    socket_connect_timeout=1,
+    socket_timeout=1
 )

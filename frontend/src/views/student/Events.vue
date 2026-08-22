@@ -5,7 +5,9 @@ import EventSearch from '@/components/student/events/EventSearch.vue'
 import EventStatusTabs from '@/components/student/events/EventStatusTabs.vue'
 import EventGrid from '@/components/student/events/EventGrid.vue'
 import StudentLayout from '@/layouts/StudentLayout.vue'
-import { getEvents, getMyEvents, registerForEvent } from '@/api/events'
+import ScheduleConflictModal from '@/components/common/ScheduleConflictModal.vue'
+import { getEvents, getMyEvents } from '@/api/events'
+import { useScheduleConflictCheck } from '@/composables/useScheduleConflictCheck'
 
 const search = ref('')
 const statusFilter = ref('all')
@@ -14,6 +16,15 @@ const myRegisteredEventIds = ref([])
 const myParticipatedEventIds = ref([])
 const loading = ref(false)
 const registeringIds = ref({})
+
+const {
+  showConflictModal,
+  pendingConflicts,
+  pendingEventName,
+  registerWithConflictCheck,
+  confirmRegistration,
+  cancelRegistration
+} = useScheduleConflictCheck()
 
 const normalizeEvent = (event) => ({
   ...event,
@@ -74,7 +85,8 @@ async function handleRegister(event) {
   if (registeringIds.value[event.id]) return
   registeringIds.value[event.id] = true
   try {
-    await registerForEvent(event.id)
+    const result = await registerWithConflictCheck(event.id, event.name)
+    if (result.cancelled) return
     myRegisteredEventIds.value = Array.from(new Set([...myRegisteredEventIds.value, event.id]))
   } catch (error) {
     console.error('Failed to register for event', error)
@@ -110,17 +122,32 @@ function isRegisteringFor(eventId) {
       <EventStatusTabs v-model="statusFilter" :counts="counts" />
     </div>
 
-    <EventGrid
-      :events="filteredEvents"
-      :isRegisteredFor="isRegisteredFor"
-      :isRegisteringFor="isRegisteringFor"
-      :onRegister="handleRegister"
-    />
-
-    <div v-if="filteredEvents.length === 0" class="empty-state">
-      <h3>No events matched your search.</h3>
-      <p>Try searching with another keyword or switching tabs.</p>
+    <div v-if="loading" class="loading-state">
+      <div class="spinner-border text-primary" role="status"></div>
+      <p>Loading events...</p>
     </div>
+
+    <template v-else>
+      <EventGrid
+        :events="filteredEvents"
+        :isRegisteredFor="isRegisteredFor"
+        :isRegisteringFor="isRegisteringFor"
+        :onRegister="handleRegister"
+      />
+
+      <div v-if="filteredEvents.length === 0" class="empty-state">
+        <h3>No events matched your search.</h3>
+        <p>Try searching with another keyword or switching tabs.</p>
+      </div>
+    </template>
+
+    <ScheduleConflictModal
+      :show="showConflictModal"
+      :event-name="pendingEventName"
+      :conflicts="pendingConflicts"
+      @confirm="confirmRegistration"
+      @cancel="cancelRegistration"
+    />
   </StudentLayout>
 </template>
 
@@ -176,5 +203,15 @@ function isRegisteringFor(eventId) {
 .empty-state h3 {
   color: #1f2937;
   margin-bottom: 10px;
+}
+
+.loading-state {
+  text-align: center;
+  padding: 90px 20px;
+  color: #6b7280;
+}
+
+.loading-state p {
+  margin-top: 16px;
 }
 </style>
