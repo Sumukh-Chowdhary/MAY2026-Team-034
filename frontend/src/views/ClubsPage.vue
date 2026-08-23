@@ -15,6 +15,7 @@ function openClub(club) {
 
 const search = ref('')
 const clubList = ref([])
+const loading = ref(true)
 
 onMounted(async () => {
     try {
@@ -22,6 +23,9 @@ onMounted(async () => {
     }
     catch (err) {
         console.error("Failed to load clubs:", err)
+    }
+    finally {
+        loading.value = false
     }
 })
 
@@ -54,8 +58,15 @@ const filteredClubs = computed(() => {
       <ClubGrid :clubs="filteredClubs" @view="openClub" />
     </div>
 
+    <div v-if="loading" class="empty-state">
+      <div class="spinner-border text-primary" role="status">
+        <span class="visually-hidden">Loading...</span>
+      </div>
+      <p class="mt-3">Loading clubs...</p>
+    </div>
+
     <div
-      v-if="filteredClubs.length === 0"
+      v-else-if="filteredClubs.length === 0"
       class="empty-state"
     >
       <h3>No clubs matched your search.</h3>

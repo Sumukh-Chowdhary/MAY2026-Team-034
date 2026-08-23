@@ -3,6 +3,7 @@ import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 
 import AdminLayout from '@/layouts/AdminLayout.vue'
+import LoadingState from '@/components/common/LoadingState.vue'
 import UserProfileModal from '@/components/common/UserProfileModal.vue'
 import EventAttendanceView from '@/components/events/EventAttendanceView.vue'
 import EventAttendanceModal from '@/components/events/EventAttendanceModal.vue'
@@ -298,7 +299,10 @@ async function postAttendance() {
 <template>
   <AdminLayout>
     <section class="event-details-page">
-      <div class="container py-5" v-if="event">
+      <div v-if="loading" class="container py-5">
+        <LoadingState label="Loading event details..." />
+      </div>
+      <div class="container py-5" v-else-if="event">
         <!-- Back Navigation Button -->
         <button class="back-btn mb-4" @click="goBack">← Back</button>
 

@@ -5,6 +5,7 @@ import EventSearch from '@/components/admin/events/EventSearch.vue'
 import EventStatusTabs from '@/components/admin/events/EventStatusTabs.vue'
 import EventGrid from '@/components/admin/events/EventGrid.vue'
 import AdminLayout from '@/layouts/AdminLayout.vue'
+import LoadingState from '@/components/common/LoadingState.vue'
 import { getEvents, createEvent } from '@/api/events'
 
 const search = ref('')
@@ -98,14 +99,29 @@ const filteredEvents = computed(() => {
       </div>
     </div>
 
-    <EventGrid :events="filteredEvents" />
-    <div v-if="filteredEvents.length === 0" class="empty-state">
-      <h3>No events matched your search.</h3>
-      <p>Try searching with another keyword or switching tabs.</p>
+    <div v-if="loading" class="loading-state">
+      <div class="spinner-border text-primary" role="status"></div>
+      <p>Loading events…</p>
     </div>
+    <template v-else>
+      <EventGrid :events="filteredEvents" />
+      <div v-if="filteredEvents.length === 0" class="empty-state">
+        <h3>No events matched your search.</h3>
+        <p>Try searching with another keyword or switching tabs.</p>
+      </div>
+    </template>
   </AdminLayout>
 </template>
 <style scoped>
+.loading-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 100px 20px;
+  color: #64748B;
+}
+.loading-state p { margin-top: 14px; }
 
 .page-header {
   display: flex;

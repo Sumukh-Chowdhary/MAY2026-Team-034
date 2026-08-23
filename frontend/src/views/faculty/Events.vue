@@ -4,6 +4,7 @@ import { ref, computed, onMounted } from 'vue'
 import EventSearch from '@/components/faculty/events/EventSearch.vue'
 import EventGrid from '@/components/faculty/events/EventGrid.vue'
 import FacultyLayout from '@/layouts/FacultyLayout.vue'
+import LoadingState from '@/components/common/LoadingState.vue'
 import { getEvents } from '@/api/events'
 import { getMySupervisedClubs, getFacultyGeneralEvents } from '@/api/faculty'
 import { getEventStatus, sortEventsByStatusOrder } from '@/utils/eventUtils'
@@ -162,34 +163,40 @@ const filteredAllClubEvents = computed(() => {
       </div>
 
       <!-- SECTION 1: My Events (Organized / Coordinated Active Events) -->
-      <div class="events-section mb-5" v-if="filteredMyEvents.length > 0">
-        <div class="d-flex align-items-center gap-2 mb-3">
-          <span class="material-symbols-rounded text-primary fs-4">stars</span>
-          <h4 class="fw-bold m-0 text-dark">My Events</h4>
-          <span class="badge bg-primary-subtle text-primary border rounded-pill px-2.5 py-1 text-xs">
-            {{ filteredMyEvents.length }} Managed
-          </span>
-        </div>
-        <EventGrid :events="filteredMyEvents" />
+      <div v-if="loading" class="loading-state">
+        <LoadingState label="Loading events..." />
       </div>
 
-      <!-- SECTION 2: All Club Events -->
-      <div class="events-section">
-        <div class="d-flex align-items-center gap-2 mb-3">
-          <span class="material-symbols-rounded text-secondary fs-4">groups</span>
-          <h4 class="fw-bold m-0 text-dark">All Club Events</h4>
-          <span class="badge bg-secondary-subtle text-secondary border rounded-pill px-2.5 py-1 text-xs">
-            {{ filteredAllClubEvents.length }} Active
-          </span>
+      <template v-else>
+        <div class="events-section mb-5" v-if="filteredMyEvents.length > 0">
+          <div class="d-flex align-items-center gap-2 mb-3">
+            <span class="material-symbols-rounded text-primary fs-4">stars</span>
+            <h4 class="fw-bold m-0 text-dark">My Events</h4>
+            <span class="badge bg-primary-subtle text-primary border rounded-pill px-2.5 py-1 text-xs">
+              {{ filteredMyEvents.length }} Managed
+            </span>
+          </div>
+          <EventGrid :events="filteredMyEvents" />
         </div>
 
-        <EventGrid :events="filteredAllClubEvents" />
+        <!-- SECTION 2: All Club Events -->
+        <div class="events-section">
+          <div class="d-flex align-items-center gap-2 mb-3">
+            <span class="material-symbols-rounded text-secondary fs-4">groups</span>
+            <h4 class="fw-bold m-0 text-dark">All Club Events</h4>
+            <span class="badge bg-secondary-subtle text-secondary border rounded-pill px-2.5 py-1 text-xs">
+              {{ filteredAllClubEvents.length }} Active
+            </span>
+          </div>
 
-        <div v-if="filteredAllClubEvents.length === 0" class="empty-state">
-          <h3>No active events matched your search.</h3>
-          <p>Try searching with another keyword or switching status filters.</p>
+          <EventGrid :events="filteredAllClubEvents" />
+
+          <div v-if="filteredAllClubEvents.length === 0" class="empty-state">
+            <h3>No active events matched your search.</h3>
+            <p>Try searching with another keyword or switching status filters.</p>
+          </div>
         </div>
-      </div>
+      </template>
     </section>
   </FacultyLayout>
 </template>

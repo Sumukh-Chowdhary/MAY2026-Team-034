@@ -1,5 +1,6 @@
 <script setup>
 import AdminLayout from '@/layouts/AdminLayout.vue'
+import LoadingState from '@/components/common/LoadingState.vue'
 import ClubSearch from '@/components/admin/club/ClubSearch.vue'
 import ClubGrid from '@/components/admin/club/ClubGrid.vue'
 import AddClubModal from '@/components/admin/club/AddClubModal.vue'
@@ -13,6 +14,7 @@ import { getClubs, updateClubStatus, createClub, updateClub } from '@/api/clubs'
 
 const router = useRouter()
 const clubList = ref([])
+const loading = ref(true)
 const selectedStatus = ref("ALL")
 const search = ref('')
 const selectedClub = ref(null)
@@ -28,9 +30,12 @@ const pageInputRef = ref(null)
 
 const fetchClubs = async () => {
   try {
+    loading.value = true
     clubList.value = await getClubs()
   } catch (error) {
     console.error(error)
+  } finally {
+    loading.value = false
   }
 }
 
@@ -299,7 +304,11 @@ async function startEditingPage() {
         <button @click="nextPage" :disabled="currentPage === totalPages">Next →</button>
       </div>
 
-      <div v-if="filteredClubs.length === 0" class="empty-state">
+      <div v-if="loading" class="loading-state">
+        <LoadingState label="Loading clubs..." />
+      </div>
+
+      <div v-if="!loading && filteredClubs.length === 0" class="empty-state">
         <h3>No clubs matched your search.</h3>
         <p>Try searching with another keyword.</p>
       </div>

@@ -13,7 +13,7 @@ const showCalendar = ref(false)
     <div class="dashboard" :class="{ collapsed: collapsed }">
         <Sidebar @toggle="collapsed = $event" />
         <main class="page-content relative">
-            <div class="header-actions-bar" style="position: absolute; top: 1rem; right: 1.5rem; z-index: 40; display: flex; align-items: center; gap: 12px;">
+            <div class="header-actions-bar">
                 <button class="btn btn-sm btn-white border shadow-sm rounded-pill px-3 fw-semibold text-slate-700" @click="showCalendar = true">
                     <i class="bi bi-calendar3 text-primary me-1"></i> Campus Calendar
                 </button>
@@ -27,6 +27,16 @@ const showCalendar = ref(false)
 </template>
 
 <style scoped>
+.header-actions-bar {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 12px;
+    margin-bottom: 20px;
+    position: relative;
+    z-index: 10;
+}
+
 .dashboard{
     display:flex;
     min-height:100vh;
