@@ -3,6 +3,7 @@ import { ref, computed, onMounted } from 'vue'
 import UserAvatar from '@/components/profile/UserAvatar.vue'
 import { useRouter } from 'vue-router'
 import FacultyLayout from '@/layouts/FacultyLayout.vue'
+import LoadingState from '@/components/common/LoadingState.vue'
 import StatCard from '@/components/admin/analytics/StatCard.vue'
 
 import FacultyClubChart from '@/components/faculty/analytics/FacultyClubChart.vue'
@@ -180,6 +181,11 @@ function navigateToClub(clubId) {
         </div>
       </div>
 
+      <div v-if="loading" class="loading-state">
+        <LoadingState label="Loading dashboard..." />
+      </div>
+
+      <template v-else>
       <!-- Quick Nav Shortcuts -->
       <div class="quick-nav-bar d-flex align-items-center gap-2 mb-4 overflow-x-auto pb-1">
         <button class="quick-chip active" @click="router.push('/faculty')">
@@ -526,6 +532,7 @@ function navigateToClub(clubId) {
         </div>
 
       </div>
+      </template>
     </section>
 
     <!-- Profile Edit Modal -->

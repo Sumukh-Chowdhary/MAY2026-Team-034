@@ -26,6 +26,17 @@ export async function login(username, password) {
     return user;
 }
 
+export async function register(payload) {
+    const response = await axios.post(`${API}/register`, payload);
+
+    const { token, user } = response.data;
+
+    localStorage.setItem("token", token);
+    localStorage.setItem("user", JSON.stringify(user));
+
+    return user;
+}
+
 export function getCurrentUser() {
     return JSON.parse(localStorage.getItem("user"));
 }

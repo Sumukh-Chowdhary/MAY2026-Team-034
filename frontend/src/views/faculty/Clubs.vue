@@ -18,6 +18,7 @@ const itemsPerPage = 9
 const editingPage = ref(false)
 const pageInput = ref(1)
 const pageInputRef = ref(null)
+const loading = ref(true)
 
 const fetchClubs = async () => {
   try {
@@ -29,6 +30,8 @@ const fetchClubs = async () => {
     myClubsList.value = my || []
   } catch (error) {
     console.error('Error fetching faculty clubs:', error)
+  } finally {
+    loading.value = false
   }
 }
 
@@ -240,7 +243,14 @@ async function startEditingPage() {
           <button @click="nextPage" :disabled="currentPage === totalPages">Next →</button>
         </div>
 
-        <div v-if="filteredAllClubs.length === 0" class="empty-state">
+        <div v-if="loading" class="empty-state">
+          <div class="spinner-border text-primary" role="status">
+            <span class="visually-hidden">Loading...</span>
+          </div>
+          <p class="mt-3">Loading clubs...</p>
+        </div>
+
+        <div v-else-if="filteredAllClubs.length === 0" class="empty-state">
           <h3>No clubs matched your search.</h3>
           <p>Try searching with another keyword.</p>
         </div>

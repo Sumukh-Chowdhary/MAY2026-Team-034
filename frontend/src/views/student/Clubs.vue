@@ -12,6 +12,7 @@ const clubList = ref([])
 const myClubs = ref([])
 const selectedClub = ref(null)
 const showDetailsModal = ref(false)
+const loading = ref(true)
 const router = useRouter()
 
 function visitClubPage() {
@@ -36,6 +37,8 @@ onMounted(async () => {
 
   } catch (error) {
     console.error(error)
+  } finally {
+    loading.value = false
   }
 })
 
@@ -161,7 +164,14 @@ const handleLeaveClub = async () => {
         />
       </div>
 
-      <div v-if="filteredMyClubs.length === 0 && filteredAllClubs.length === 0" class="empty-state">
+      <div v-if="loading" class="empty-state">
+        <div class="spinner-border text-primary" role="status">
+          <span class="visually-hidden">Loading...</span>
+        </div>
+        <p class="mt-3">Loading clubs...</p>
+      </div>
+
+      <div v-else-if="filteredMyClubs.length === 0 && filteredAllClubs.length === 0" class="empty-state">
         <h3>No clubs matched your search.</h3>
         <p>Try searching with another keyword.</p>
       </div>
