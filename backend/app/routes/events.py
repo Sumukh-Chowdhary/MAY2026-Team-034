@@ -1,4 +1,4 @@
-from datetime import datetime, time
+from datetime import datetime, time, timedelta
 from flask import Blueprint, request, jsonify, g, Response
 from app.models import db
 from app.models.club import Club, ClubOrganizer, ClubFaculty, ClubMembership
@@ -404,8 +404,9 @@ def register_for_event(event_id):
         if current_count >= event.capacity:
             return jsonify({'error': 'Event has reached maximum registration capacity.'}), 400
 
+    status = _resolve_registration_status(event)
     try:
-        registration = EventRegistration(event_id=event.id, user_id=g.current_user.id)
+        registration = EventRegistration(event_id=event.id, user_id=g.current_user.id, registration_status=status)
         db.session.add(registration)
         db.session.commit()
     except Exception:
@@ -414,10 +415,6 @@ def register_for_event(event_id):
         if existing:
             return jsonify(existing.to_dict()), 200
         return jsonify({'error': 'Failed to complete registration due to concurrent activity. Please try again.'}), 409
-    status = _resolve_registration_status(event)
-    registration = EventRegistration(event_id=event.id, user_id=g.current_user.id, registration_status=status)
-    db.session.add(registration)
-    db.session.commit()
 
     NotificationService.notify_event_registered(
         event.id,
@@ -1293,7 +1290,18 @@ def announce_event_winners(event_id):
 
     db.session.add(announcement)
 
-    # Commit first so the announcement definitely exists.
+    registrations = EventRegistration.query.filter_by(event_id=event.id).all()
+    for reg in registrations:
+        db.session.add(Notification(
+            user_id=reg.user_id,
+            title=title,
+            message=f"Results for {event.event_name} have been published!",
+            type='COMPETITION',
+            reference_url=f"/student/events/{event.id}",
+            entity_id=event.id
+        ))
+
+    # Commit first so the announcement and notifications definitely exist.
     db.session.commit()
 
     # Publish the follow-up notification work asynchronously.
