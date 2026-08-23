@@ -21,6 +21,8 @@ def login():
     user = None
     if '@' in username:
         user = User.query.filter_by(email=username).first()
+        if user and user.role and user.role.name == 'STUDENT':
+            return jsonify({'error': 'Students must log in using their Registration ID'}), 400
     
     if not user:
         student_prof = StudentProfile.query.filter(

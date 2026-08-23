@@ -8,10 +8,18 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')
 
 import pytest
 
+from unittest.mock import patch
+
 from app import create_app
 from app.models.user import db
 from app.utils.seed import seed_database
 from config import Config
+
+
+@pytest.fixture(autouse=True)
+def mock_kafka():
+    with patch("app.kafka.producer.publish_event", return_value={"published": False, "partition": 0, "offset": 0}):
+        yield
 
 
 @pytest.fixture(scope="session")
