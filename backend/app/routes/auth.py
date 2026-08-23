@@ -112,6 +112,7 @@ def register():
             department_id=dept_id
         )
         db.session.add(prof)
+    elif role_name == 'STUDENT':
         from app.utils.registration_id import generate_registration_id, get_branch_code, parse_registration_id
 
         dept_code = department.code if department else 'CS'

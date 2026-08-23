@@ -35,7 +35,7 @@ def test_action_ticket_workflow(client, admin_headers, student_headers):
         "ticketType": "EDIT_CLUB_ADMIN",
         "title": "Complete Profile",
         "description": "Please complete your profile details.",
-        "approvers": [{"approverId": 6, "role": "ASSIGNEE"}] # Student (Rahul - user 6) needs to acknowledge/complete it
+        "approvers": [{"approverId": 24, "role": "ASSIGNEE"}] # Student (Rahul - user 24) needs to acknowledge/complete it
     })
     assert res.status_code == 201, res.get_json()
     ticket_id = res.get_json()["data"]["id"]
@@ -55,14 +55,16 @@ def test_action_ticket_reject(client, admin_headers, student_headers):
         "ticketType": "EDIT_CLUB_ADMIN",
         "title": "Another Task",
         "description": "Do this",
-        "approvers": [{"approverId": 6, "role": "ASSIGNEE"}]
+        "approvers": [{"approverId": 24, "role": "ASSIGNEE"}]
     })
     assert res.status_code == 201, res.get_json()
     ticket_id = res.get_json()["data"]["id"]
     
     # Student rejects the task
-    res_reject = client.post(f"/api/action-tickets/{ticket_id}/reject", headers=student_headers, json={"remarks": "Cannot do this"})
+    res_reject = client.post(f"/api/action-tickets/{ticket_id}/reject", headers=student_headers, json={"remarks": "Cannot do"})
     assert res_reject.status_code == 200
     
+    # Verify ticket is REJECTED
     res_verify = client.get(f"/api/action-tickets/{ticket_id}", headers=admin_headers)
-    assert res_verify.get_json()["data"]["approvalStatus"] == "REJECTED"
+    data = res_verify.get_json()["data"]
+    assert data["approvalStatus"] == "REJECTED"

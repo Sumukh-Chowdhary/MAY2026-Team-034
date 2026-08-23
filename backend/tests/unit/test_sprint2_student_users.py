@@ -8,7 +8,8 @@
 
 AI_CLUB      = 1
 INVALID_CLUB = 999
-RAHUL_ID     = 6    # first student in seed, id=6  (admin=1, 4 faculty=2-5)
+RAHUL_ID     = 24   # first student in seed (2 admins=1..2, 21 faculty/principal=3..23)
+ANANYA_ID    = 25
 ADMIN_ID     = 1
 
 
@@ -57,7 +58,7 @@ def test_non_organizer_student_blocked(client):
     """Ananya is NOT organizer of AI Club — must get 403."""
     login = client.post(
         '/api/auth/login',
-        json={'email': 'ananya@allclub.com', 'password': 'student123'},
+        json={'username': 'Y25CS002', 'password': 'student123'},
     )
     assert login.status_code == 200
     token = login.get_json()['token']
@@ -194,7 +195,7 @@ def test_user_can_update_own_profile(client, student_headers):
 def test_user_cannot_update_other_profile(client, student_headers):
     """Student cannot update another user's profile — 403."""
     response = client.put(
-        '/api/users/7',  # Ananya's ID
+        f'/api/users/{ANANYA_ID}',  # Ananya's ID
         headers=student_headers,
         json={'bio': 'Should be rejected'},
     )
@@ -247,8 +248,8 @@ def test_update_user_invalid_id(client, admin_headers):
 
 def test_admin_can_delete_user(client, admin_headers):
     """Admin can delete a user."""
-    # Delete Ananya (id=7) — she won't affect other tests since each test gets fresh DB
-    response = client.delete('/api/users/7', headers=admin_headers)
+    # Delete Ananya — she won't affect other tests since each test gets fresh DB
+    response = client.delete(f'/api/users/{ANANYA_ID}', headers=admin_headers)
     assert response.status_code == 200
     body = response.get_json()
     assert 'message' in body
@@ -256,13 +257,13 @@ def test_admin_can_delete_user(client, admin_headers):
 
 def test_student_cannot_delete_user(client, student_headers):
     """Student must get 403 when trying to delete."""
-    response = client.delete('/api/users/7', headers=student_headers)
+    response = client.delete(f'/api/users/{ANANYA_ID}', headers=student_headers)
     assert response.status_code == 403
 
 
 def test_faculty_cannot_delete_user(client, faculty_headers):
     """Faculty must get 403 when trying to delete."""
-    response = client.delete('/api/users/7', headers=faculty_headers)
+    response = client.delete(f'/api/users/{ANANYA_ID}', headers=faculty_headers)
     assert response.status_code == 403
 
 
@@ -274,14 +275,14 @@ def test_delete_nonexistent_user(client, admin_headers):
 
 def test_delete_user_unauthenticated(client):
     """Unauthenticated delete returns 401."""
-    response = client.delete('/api/users/7')
+    response = client.delete(f'/api/users/{ANANYA_ID}')
     assert response.status_code == 401
 
 
 def test_deleted_user_not_found(client, admin_headers):
     """After deletion, the user must no longer be found by GET."""
-    del_resp = client.delete('/api/users/7', headers=admin_headers)
+    del_resp = client.delete(f'/api/users/{ANANYA_ID}', headers=admin_headers)
     assert del_resp.status_code == 200
 
-    get_resp = client.get('/api/users/7')
+    get_resp = client.get(f'/api/users/{ANANYA_ID}')
     assert get_resp.status_code == 404

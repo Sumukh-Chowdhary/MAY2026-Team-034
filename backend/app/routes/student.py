@@ -17,6 +17,8 @@ from app.utils.auth_jwt import jwt_required, roles_required, check_legacy_user_a
 from werkzeug.exceptions import NotFound
 
 
+from app.utils.cache import delete_cached
+
 student_bp = Blueprint(
     "student",
     __name__,
@@ -105,8 +107,12 @@ def join_club(club_id):
     if legacy_err:
         return legacy_err
 
-    # Check if club exists
-    club = Club.query.get(club_id)
+    # Check if club exists with row lock for concurrency
+    try:
+        club = Club.query.with_for_update().filter_by(id=club_id).first() or Club.query.get(club_id)
+    except Exception:
+        club = Club.query.get(club_id)
+
     if not club:
         return jsonify({"error": "Club not found"}), 404
 
@@ -121,7 +127,6 @@ def join_club(club_id):
     ).first()
 
     if membership:
-
         # Already an active member
         if membership.membership_status == "ACTIVE":
             return jsonify({"message": "You are already a member of this club"}), 409
@@ -129,9 +134,7 @@ def join_club(club_id):
         # Reactivate previous membership
         membership.membership_status = "ACTIVE"
         membership.joined_at = datetime.utcnow()
-
         club.active_members += 1
-
     else:
         # Create a new membership
         membership = ClubMembership(
@@ -140,13 +143,20 @@ def join_club(club_id):
             membership_role="MEMBER",
             membership_status="ACTIVE"
         )
-
         db.session.add(membership)
-
         club.total_members += 1
         club.active_members += 1
 
-    db.session.commit()
+    try:
+        db.session.commit()
+        delete_cached("clubs:all")
+    except Exception:
+        db.session.rollback()
+        # Handle concurrent race condition
+        existing = ClubMembership.query.filter_by(club_id=club.id, user_id=current_user.id).first()
+        if existing and existing.membership_status == "ACTIVE":
+            return jsonify({"message": "You are already a member of this club"}), 409
+        raise
 
     return jsonify({
         "message": "Joined club successfully",
@@ -166,8 +176,12 @@ def leave_club(club_id):
     if legacy_err:
         return legacy_err
 
-    # Check if club exists
-    club = Club.query.get(club_id)
+    # Check if club exists with row lock
+    try:
+        club = Club.query.with_for_update().filter_by(id=club_id).first() or Club.query.get(club_id)
+    except Exception:
+        club = Club.query.get(club_id)
+
     if not club:
         return jsonify({"error": "Club not found"}), 404
 
@@ -186,10 +200,11 @@ def leave_club(club_id):
     # Deactivate membership
     membership.membership_status = "INACTIVE"
 
-    # Update club counts
-    club.active_members -= 1
+    # Update club counts safely
+    club.active_members = max(0, club.active_members - 1)
 
     db.session.commit()
+    delete_cached("clubs:all")
 
     return jsonify({
         "message": "Left club successfully",

@@ -1,7 +1,7 @@
 def test_get_user_profile(client, faculty_headers):
-    # Faculty user meena@allclub.com is ID 3
+    # Faculty user meena@allclub.com is ID 4
     response = client.get(
-        "/api/users/3",
+        "/api/users/4",
         headers=faculty_headers
     )
     assert response.status_code == 200
@@ -18,7 +18,7 @@ def test_update_self_profile(client, faculty_headers):
         "bio": "Updated bio statement for testing."
     }
     response = client.put(
-        "/api/users/3",
+        "/api/users/4",
         json=payload,
         headers=faculty_headers
     )
@@ -29,12 +29,12 @@ def test_update_self_profile(client, faculty_headers):
 
 
 def test_update_other_user_profile_forbidden(client, student_headers):
-    # Student (user_id 6) attempts to update Faculty (user_id 3)
+    # Student (user_id 24) attempts to update Faculty (user_id 4)
     payload = {
         "fullName": "Hacked Name"
     }
     response = client.put(
-        "/api/users/3",
+        "/api/users/4",
         json=payload,
         headers=student_headers
     )
@@ -47,7 +47,7 @@ def test_admin_update_any_user_profile(client, admin_headers):
         "accountStatus": "ACTIVE"
     }
     response = client.put(
-        "/api/users/6",
+        "/api/users/24",
         json=payload,
         headers=admin_headers
     )
@@ -57,38 +57,38 @@ def test_admin_update_any_user_profile(client, admin_headers):
 
 
 def test_phone_privacy_matrix(client, admin_headers, faculty_headers, student_headers):
-    # Ensure student 6 has phone number set for test
-    client.put("/api/users/6", json={"phone": "+91 98765 43210"}, headers=admin_headers)
-    # Ensure faculty 3 has phone number set for test
-    client.put("/api/users/3", json={"phone": "+91 91234 56789"}, headers=admin_headers)
+    # Ensure student 24 has phone number set for test
+    client.put("/api/users/24", json={"phone": "+91 98765 43210"}, headers=admin_headers)
+    # Ensure faculty 4 has phone number set for test
+    client.put("/api/users/4", json={"phone": "+91 91234 56789"}, headers=admin_headers)
 
-    # 1. ADMIN viewing Student (6) -> Phone visible
-    res = client.get("/api/users/6", headers=admin_headers)
+    # 1. ADMIN viewing Student (24) -> Phone visible
+    res = client.get("/api/users/24", headers=admin_headers)
     assert res.status_code == 200
     assert res.get_json()["phone"] == "+91 98765 43210"
 
-    # 2. ADMIN viewing Faculty (3) -> Phone visible
-    res = client.get("/api/users/3", headers=admin_headers)
+    # 2. ADMIN viewing Faculty (4) -> Phone visible
+    res = client.get("/api/users/4", headers=admin_headers)
     assert res.status_code == 200
     assert res.get_json()["phone"] == "+91 91234 56789"
 
-    # 3. FACULTY viewing Student (6) -> Phone visible
-    res = client.get("/api/users/6", headers=faculty_headers)
+    # 3. FACULTY viewing Student (24) -> Phone visible
+    res = client.get("/api/users/24", headers=faculty_headers)
     assert res.status_code == 200
     assert res.get_json()["phone"] == "+91 98765 43210"
 
-    # 4. FACULTY viewing Faculty (3) -> Phone visible (own/faculty)
-    res = client.get("/api/users/3", headers=faculty_headers)
+    # 4. FACULTY viewing Faculty (4) -> Phone visible (own/faculty)
+    res = client.get("/api/users/4", headers=faculty_headers)
     assert res.status_code == 200
     assert res.get_json()["phone"] == "+91 91234 56789"
 
-    # 5. STUDENT (6) viewing ANOTHER Student / Faculty (3) -> Phone NOT visible (None)
-    res = client.get("/api/users/3", headers=student_headers)
+    # 5. STUDENT (24) viewing ANOTHER Student / Faculty (4) -> Phone NOT visible (None)
+    res = client.get("/api/users/4", headers=student_headers)
     assert res.status_code == 200
     assert res.get_json()["phone"] is None
 
-    # 6. STUDENT (6) viewing OWN profile (6) -> Phone IS visible
-    res = client.get("/api/users/6", headers=student_headers)
+    # 6. STUDENT (24) viewing OWN profile (24) -> Phone IS visible
+    res = client.get("/api/users/24", headers=student_headers)
     assert res.status_code == 200
     assert res.get_json()["phone"] == "+91 98765 43210"
 

@@ -67,7 +67,7 @@ def jwt_required(f):
         try:
             payload = decode_jwt_token(token)
             user = User.query.get(payload['user_id'])
-            if not user or user.account_status != 'ACTIVE':
+            if not user or user.account_status not in ['ACTIVE', 'LEGACY']:
                 return jsonify({
                     'error': 'User account is inactive or disabled'
                     }), 403

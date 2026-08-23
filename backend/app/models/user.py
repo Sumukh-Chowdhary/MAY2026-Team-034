@@ -34,11 +34,11 @@ class User(db.Model):
     __tablename__ = 'users'
 
     id = db.Column(db.Integer, primary_key=True)
-    email = db.Column(db.String(120), unique=True, nullable=False)
+    email = db.Column(db.String(120), unique=True, nullable=False, index=True)
     password_hash = db.Column(db.String(255), nullable=False)
-    role_id = db.Column(db.Integer, db.ForeignKey('roles.id'), nullable=False)
-    account_status = db.Column(db.String(20), nullable=False, default='ACTIVE')
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    role_id = db.Column(db.Integer, db.ForeignKey('roles.id'), nullable=False, index=True)
+    account_status = db.Column(db.String(20), nullable=False, default='ACTIVE', index=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, index=True)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
     role = db.relationship('Role', lazy=True)
@@ -133,17 +133,17 @@ class StudentProfile(db.Model):
     __tablename__ = 'student_profiles'
 
     id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), unique=True, nullable=False)
-    roll_no = db.Column(db.String(50), unique=True, nullable=False) # Stores formatted Registration ID (e.g. Y26CS001)
-    registration_id = db.Column(db.String(50), unique=True, nullable=True)
-    batch_year = db.Column(db.Integer, nullable=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), unique=True, nullable=False, index=True)
+    roll_no = db.Column(db.String(50), unique=True, nullable=False, index=True) # Stores formatted Registration ID (e.g. Y26CS001)
+    registration_id = db.Column(db.String(50), unique=True, nullable=True, index=True)
+    batch_year = db.Column(db.Integer, nullable=True, index=True)
     branch_code = db.Column(db.String(10), nullable=True)
     roll_number = db.Column(db.Integer, nullable=True)
-    graduation_year = db.Column(db.Integer, nullable=True)
+    graduation_year = db.Column(db.Integer, nullable=True, index=True)
     full_name = db.Column(db.String(100), nullable=False)
     phone_number = db.Column(db.String(30), nullable=True)
     year_of_study = db.Column(db.String(20), nullable=True)
-    department_id = db.Column(db.Integer, db.ForeignKey('departments.id'), nullable=True)
+    department_id = db.Column(db.Integer, db.ForeignKey('departments.id'), nullable=True, index=True)
     bio = db.Column(db.Text, nullable=True)
     avatar_style = db.Column(db.String(50), default='adventurer')
     avatar_seed = db.Column(db.String(100), nullable=True)
@@ -182,12 +182,12 @@ class FacultyProfile(db.Model):
     __tablename__ = 'faculty_profiles'
 
     id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), unique=True, nullable=False)
-    employee_id = db.Column(db.String(50), unique=True, nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), unique=True, nullable=False, index=True)
+    employee_id = db.Column(db.String(50), unique=True, nullable=False, index=True)
     full_name = db.Column(db.String(100), nullable=False)
     phone_number = db.Column(db.String(30), nullable=True)
-    designation = db.Column(db.String(100), nullable=True, default='Faculty Advisor')
-    department_id = db.Column(db.Integer, db.ForeignKey('departments.id'), nullable=True)
+    designation = db.Column(db.String(100), nullable=True, default='Faculty Advisor', index=True)
+    department_id = db.Column(db.Integer, db.ForeignKey('departments.id'), nullable=True, index=True)
     bio = db.Column(db.Text, nullable=True)
     avatar_style = db.Column(db.String(50), default='adventurer')
     avatar_seed = db.Column(db.String(100), nullable=True)
@@ -219,4 +219,4 @@ class TokenBlocklist(db.Model):
 
     id = db.Column(db.Integer, primary_key=True)
     jti = db.Column(db.String(36), nullable=False, unique=True, index=True)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False, index=True)

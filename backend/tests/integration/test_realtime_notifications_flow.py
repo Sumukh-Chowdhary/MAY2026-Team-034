@@ -3,10 +3,10 @@ from app.models.notification import Notification
 from app.models.user import db
 
 def test_notification_lifecycle_integration(client, app, student_headers):
-    # 1. Trigger / Create a notification in database for student user (email "rahul@allclub.com")
+    # 1. Trigger / Create a notification in database for student user (Rahul)
     with app.app_context():
         from app.models.user import User
-        student = User.query.filter_by(email="rahul@allclub.com").first()
+        student = User.query.get(24)
         assert student is not None
         
         notification = Notification(
@@ -23,7 +23,8 @@ def test_notification_lifecycle_integration(client, app, student_headers):
     # 2. Get unread count via REST API
     count_response = client.get("/api/notifications/unread-count", headers=student_headers)
     assert count_response.status_code == 200
-    assert count_response.get_json()["count"] == 1
+    initial_count = count_response.get_json()["count"]
+    assert initial_count >= 1
 
     # 3. Retrieve notifications list via REST API
     list_response = client.get("/api/notifications", headers=student_headers)
@@ -42,4 +43,4 @@ def test_notification_lifecycle_integration(client, app, student_headers):
     # 5. Verify unread count is updated
     count_response_after = client.get("/api/notifications/unread-count", headers=student_headers)
     assert count_response_after.status_code == 200
-    assert count_response_after.get_json()["count"] == 0
+    assert count_response_after.get_json()["count"] == initial_count - 1

@@ -1,5 +1,6 @@
 import os
 import tempfile
+import shutil
 import sys
 
 # Ensure backend directory is in the Python path
@@ -13,10 +14,33 @@ from app.utils.seed import seed_database
 from config import Config
 
 
-@pytest.fixture
-def app():
+@pytest.fixture(scope="session")
+def template_db():
+    fd, path = tempfile.mkstemp(suffix=".db")
+    os.close(fd)
 
-    db_fd, db_path = tempfile.mkstemp()
+    class TemplateConfig(Config):
+        TESTING = True
+        SQLALCHEMY_DATABASE_URI = f"sqlite:///{path}"
+
+    app = create_app(TemplateConfig)
+    seed_database(app)
+
+    with app.app_context():
+        db.session.remove()
+        db.engine.dispose()
+
+    yield path
+
+    if os.path.exists(path):
+        os.unlink(path)
+
+
+@pytest.fixture
+def app(template_db):
+    db_fd, db_path = tempfile.mkstemp(suffix=".db")
+    os.close(db_fd)
+    shutil.copyfile(template_db, db_path)
 
     class TestConfig(Config):
         TESTING = True
@@ -24,17 +48,14 @@ def app():
 
     app = create_app(TestConfig)
 
-    seed_database(app)
-
     yield app
 
     with app.app_context():
         db.session.remove()
-        db.drop_all()
         db.engine.dispose()
 
-    os.close(db_fd)
-    os.unlink(db_path)
+    if os.path.exists(db_path):
+        os.unlink(db_path)
 
 
 @pytest.fixture
@@ -85,7 +106,7 @@ def student_headers(client):
     response = client.post(
         "/api/auth/login",
         json={
-            "email": "rahul@allclub.com",
+            "username": "Y24CS001",
             "password": "student123"
         }
     )

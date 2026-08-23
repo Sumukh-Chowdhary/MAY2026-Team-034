@@ -1,12 +1,12 @@
 from datetime import datetime, time
 from flask import Blueprint, request, jsonify, g, Response
 from app.models import db
-from app.models.club import Club, ClubOrganizer, ClubFaculty
+from app.models.club import Club, ClubOrganizer, ClubFaculty, ClubMembership
 from app.models.events import (
     Event, Venue,
     EventScheduleItem, EventAnnouncement,
     EventRegistration, EventAttendance, EventSession, ParticipantRoundStatus,
-    EventPrize, EventOrganizer, EventVolunteer,
+    EventPrize, EventOrganizer, EventVolunteer, EventVolunteerPosition,
 )
 from app.models.tickets import ActionTicket, ActionTicketType
 from app.utils.auth_jwt import jwt_required, roles_required, check_legacy_user_action
@@ -203,7 +203,7 @@ def _auto_create_sessions(event):
 @jwt_required
 def get_events():
     search_q = request.args.get('search')
-    club_id = request.args.get('club_id')
+    club_id = request.args.get('clubId') or request.args.get('club_id')
     status = request.args.get('status')
 
     events = EventService.get_events(
@@ -254,6 +254,8 @@ def create_event():
         return jsonify(result), 201
 
     except ValueError as e:
+        if 'not found' in str(e).lower():
+            return jsonify({'error': str(e)}), 404
         return jsonify({'error': str(e)}), 400
 
 
@@ -336,6 +338,8 @@ def assign_venue(event_id):
         return jsonify(result), 200
 
     except ValueError as e:
+        if 'not found' in str(e).lower():
+            return jsonify({'error': str(e)}), 404
         return jsonify({'error': str(e)}), 400
 
 @events_bp.route('/calendar', methods=['GET'])
@@ -379,7 +383,11 @@ def register_for_event(event_id):
     if legacy_err:
         return legacy_err
 
-    event = Event.query.get_or_404(event_id)
+    try:
+        event = Event.query.with_for_update().filter_by(id=event_id).first() or Event.query.get_or_404(event_id)
+    except Exception:
+        event = Event.query.get_or_404(event_id)
+
     existing = EventRegistration.query.filter_by(event_id=event.id, user_id=g.current_user.id).first()
     if existing:
         if existing.registration_status == 'CANCELLED':
@@ -389,6 +397,23 @@ def register_for_event(event_id):
             return jsonify(existing.to_dict()), 200
         return jsonify(existing.to_dict()), 200
 
+    if event.capacity and event.capacity > 0:
+        current_count = EventRegistration.query.filter_by(event_id=event.id).filter(
+            EventRegistration.registration_status != 'CANCELLED'
+        ).count()
+        if current_count >= event.capacity:
+            return jsonify({'error': 'Event has reached maximum registration capacity.'}), 400
+
+    try:
+        registration = EventRegistration(event_id=event.id, user_id=g.current_user.id)
+        db.session.add(registration)
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
+        existing = EventRegistration.query.filter_by(event_id=event.id, user_id=g.current_user.id).first()
+        if existing:
+            return jsonify(existing.to_dict()), 200
+        return jsonify({'error': 'Failed to complete registration due to concurrent activity. Please try again.'}), 409
     status = _resolve_registration_status(event)
     registration = EventRegistration(event_id=event.id, user_id=g.current_user.id, registration_status=status)
     db.session.add(registration)
@@ -1033,7 +1058,13 @@ def manage_attendance(event_id):
         }), 200
 
     data = request.get_json() or {}
-    session_id = data.get('sessionId') or (sessions[0].id if sessions else None)
+    if isinstance(data, list):
+        session_id = sessions[0].id if sessions else None
+        items = data
+    else:
+        session_id = data.get('sessionId') or (sessions[0].id if sessions else None)
+        items = data.get('records') if 'records' in data else [data]
+
     if not session_id:
         return jsonify({'error': 'No session specified for attendance.'}), 400
 
@@ -1097,7 +1128,10 @@ def manage_attendance(event_id):
             db.session.add(rec)
 
     db.session.commit()
-    return jsonify({'success': True, 'message': 'Attendance saved successfully.'}), 200
+    res = event.to_dict()
+    res['success'] = True
+    res['message'] = 'Attendance saved successfully.'
+    return jsonify(res), 200
 
 
 @events_bp.route('/<int:event_id>/prizes', methods=['GET', 'POST', 'PUT'])
@@ -1446,7 +1480,7 @@ def apply_as_volunteer(event_id):
         request_id=req.id,
         approver_id=fac_coord.faculty_id,
         approval_role="FACULTY_COORDINATOR",
-        order=1,
+        approval_order=1,
         status=ApprovalStatus.PENDING
     )
     db.session.add(appr)
@@ -1463,7 +1497,13 @@ def apply_as_volunteer(event_id):
     db.session.add(vol)
     db.session.commit()
 
-    NotificationService.notify_request_submitted(fac_coord.faculty_id, req.id, req_title)
+    NotificationService.notify_ticket_created(
+        creator_id=user.id,
+        ticket_id=req.id,
+        approver_ids=[fac_coord.faculty_id],
+        ticket_title=req_title,
+        club_name=club.club_name if club else None
+    )
 
     return jsonify({
         'success': True,

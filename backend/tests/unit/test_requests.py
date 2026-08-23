@@ -79,7 +79,7 @@ def test_approve_request(client, student_headers, faculty_headers):
         "referenceType": "CLUB",
         "referenceId": 1,
         "approvers": [
-            {"approverId": 3, "role": "FACULTY"} # Assuming user 3 is faculty (Meena)
+            {"approverId": 4, "role": "FACULTY"} # User 4 is Dr. Meena Rao
         ]
     })
     assert res.status_code == 201, res.get_json()
@@ -102,7 +102,7 @@ def test_reject_request(client, student_headers, faculty_headers):
         "description": "Testing reject flow",
         "referenceType": "CLUB",
         "referenceId": 1,
-        "approvers": [{"approverId": 3, "role": "FACULTY"}]
+        "approvers": [{"approverId": 4, "role": "FACULTY"}]
     })
     assert res.status_code == 201, res.get_json()
     req_id = res.get_json()["data"]["id"]
@@ -120,7 +120,7 @@ def test_request_changes_and_resubmit(client, student_headers, faculty_headers):
         "description": "Initial description",
         "referenceType": "CLUB",
         "referenceId": 1,
-        "approvers": [{"approverId": 3, "role": "FACULTY"}]
+        "approvers": [{"approverId": 4, "role": "FACULTY"}]
     })
     assert res.status_code == 201, res.get_json()
     req_id = res.get_json()["data"]["id"]
@@ -136,7 +136,7 @@ def test_request_changes_and_resubmit(client, student_headers, faculty_headers):
     res_resubmit = client.post(f"/api/requests/{req_id}/resubmit", headers=student_headers, json={
         "title": "Change Request Test",
         "description": "Updated description with more info",
-        "approvers": [{"approverId": 3, "role": "FACULTY"}]
+        "approvers": [{"approverId": 4, "role": "FACULTY"}]
     })
     assert res_resubmit.status_code == 200
     

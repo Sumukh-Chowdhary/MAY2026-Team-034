@@ -6,11 +6,11 @@ class Venue(db.Model):
     __tablename__ = 'venues'
 
     id = db.Column(db.Integer, primary_key=True)
-    venue_name = db.Column(db.String(120), unique=True, nullable=False)
+    venue_name = db.Column(db.String(120), unique=True, nullable=False, index=True)
     venue_location = db.Column(db.String(255), nullable=False)
-    venue_type = db.Column(db.String(80), nullable=True)
+    venue_type = db.Column(db.String(80), nullable=True, index=True)
     capacity = db.Column(db.Integer, nullable=False, default=0)
-    availability_status = db.Column(db.String(30), nullable=False, default='AVAILABLE')
+    availability_status = db.Column(db.String(30), nullable=False, default='AVAILABLE', index=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
@@ -33,23 +33,28 @@ class Event(db.Model):
     __tablename__ = 'events'
 
     id = db.Column(db.Integer, primary_key=True)
-    club_id = db.Column(db.Integer, db.ForeignKey('clubs.id'), nullable=True)
-    venue_id = db.Column(db.Integer, db.ForeignKey('venues.id'), nullable=True)
-    created_by = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
-    organizer_type = db.Column(db.String(20), nullable=False, default='CLUB') # 'CLUB' or 'GENERAL'
+    club_id = db.Column(db.Integer, db.ForeignKey('clubs.id'), nullable=True, index=True)
+    venue_id = db.Column(db.Integer, db.ForeignKey('venues.id'), nullable=True, index=True)
+    created_by = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False, index=True)
+    organizer_type = db.Column(db.String(20), nullable=False, default='CLUB', index=True) # 'CLUB' or 'GENERAL'
     reservation_status = db.Column(db.String(30), nullable=False, default='RESERVED') # 'RESERVED', 'PENDING', 'RELEASED', 'NONE'
     reserved_at = db.Column(db.DateTime, default=datetime.utcnow)
-    event_name = db.Column(db.String(150), nullable=False)
+    event_name = db.Column(db.String(150), nullable=False, index=True)
     event_description = db.Column(db.Text, nullable=True)
-    event_status = db.Column(db.String(40), nullable=False, default='SCHEDULED')
-    start_date = db.Column(db.Date, nullable=False)
-    end_date = db.Column(db.Date, nullable=False)
+    event_status = db.Column(db.String(40), nullable=False, default='SCHEDULED', index=True)
+    start_date = db.Column(db.Date, nullable=False, index=True)
+    end_date = db.Column(db.Date, nullable=False, index=True)
     start_time = db.Column(db.Time, nullable=True)
     end_time = db.Column(db.Time, nullable=True)
     capacity = db.Column(db.Integer, nullable=False, default=0)
     event_format = db.Column(db.String(20), nullable=False, default='COMPETITION')
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, index=True)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    __table_args__ = (
+        db.Index('ix_event_venue_dates', 'venue_id', 'start_date', 'end_date', 'event_status'),
+        db.Index('ix_event_club_status', 'club_id', 'event_status'),
+    )
 
     club = db.relationship('Club', backref='events', lazy=True)
     creator = db.relationship('User', lazy=True, foreign_keys=[created_by])
@@ -146,7 +151,7 @@ class Event(db.Model):
 class EventScheduleItem(db.Model):
     __tablename__ = 'event_schedule_items'
     id = db.Column(db.Integer, primary_key=True)
-    event_id = db.Column(db.Integer, db.ForeignKey('events.id'), nullable=False)
+    event_id = db.Column(db.Integer, db.ForeignKey('events.id'), nullable=False, index=True)
     schedule_time = db.Column(db.String(20), nullable=False)
     activity = db.Column(db.String(255), nullable=False)
 
@@ -161,11 +166,11 @@ class EventScheduleItem(db.Model):
 class EventAnnouncement(db.Model):
     __tablename__ = 'event_announcements'
     id = db.Column(db.Integer, primary_key=True)
-    event_id = db.Column(db.Integer, db.ForeignKey('events.id'), nullable=False)
+    event_id = db.Column(db.Integer, db.ForeignKey('events.id'), nullable=False, index=True)
     title = db.Column(db.String(120), nullable=False)
     message = db.Column(db.Text, nullable=False)
-    created_by_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_by_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True, index=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, index=True)
 
     created_by = db.relationship('User', foreign_keys=[created_by_id], lazy=True)
 
@@ -188,13 +193,16 @@ class EventAnnouncement(db.Model):
 
 class EventRegistration(db.Model):
     __tablename__ = 'event_registrations'
-    __table_args__ = (db.UniqueConstraint('event_id', 'user_id', name='uq_event_registration'),)
+    __table_args__ = (
+        db.UniqueConstraint('event_id', 'user_id', name='uq_event_registration'),
+        db.Index('ix_event_registration_lookup', 'event_id', 'user_id', 'registration_status'),
+    )
 
     id = db.Column(db.Integer, primary_key=True)
-    event_id = db.Column(db.Integer, db.ForeignKey('events.id'), nullable=False)
-    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
-    registration_status = db.Column(db.String(30), nullable=False, default='REGISTERED')
-    registered_at = db.Column(db.DateTime, default=datetime.utcnow)
+    event_id = db.Column(db.Integer, db.ForeignKey('events.id'), nullable=False, index=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False, index=True)
+    registration_status = db.Column(db.String(30), nullable=False, default='REGISTERED', index=True)
+    registered_at = db.Column(db.DateTime, default=datetime.utcnow, index=True)
 
     user = db.relationship('User', lazy=True)
 
@@ -223,11 +231,11 @@ class EventSession(db.Model):
     __tablename__ = 'event_sessions'
 
     id = db.Column(db.Integer, primary_key=True)
-    event_id = db.Column(db.Integer, db.ForeignKey('events.id'), nullable=False)
+    event_id = db.Column(db.Integer, db.ForeignKey('events.id'), nullable=False, index=True)
     name = db.Column(db.String(100), nullable=False)
-    round_number = db.Column(db.Integer, nullable=False, default=1)
-    status = db.Column(db.String(20), nullable=False, default='UPCOMING')
-    session_date = db.Column(db.Date, nullable=True)
+    round_number = db.Column(db.Integer, nullable=False, default=1, index=True)
+    status = db.Column(db.String(20), nullable=False, default='UPCOMING', index=True)
+    session_date = db.Column(db.Date, nullable=True, index=True)
     start_time = db.Column(db.String(30), nullable=True)
     end_time = db.Column(db.String(30), nullable=True)
     description = db.Column(db.Text, nullable=True)
@@ -284,13 +292,18 @@ class ParticipantRoundStatus(db.Model):
     __tablename__ = 'participant_round_statuses'
 
     id = db.Column(db.Integer, primary_key=True)
-    event_id = db.Column(db.Integer, db.ForeignKey('events.id'), nullable=False)
-    session_id = db.Column(db.Integer, db.ForeignKey('event_sessions.id'), nullable=False)
-    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
-    status = db.Column(db.String(30), nullable=False, default='REGISTERED')
+    event_id = db.Column(db.Integer, db.ForeignKey('events.id'), nullable=False, index=True)
+    session_id = db.Column(db.Integer, db.ForeignKey('event_sessions.id'), nullable=False, index=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False, index=True)
+    status = db.Column(db.String(30), nullable=False, default='REGISTERED', index=True)
     reason = db.Column(db.Text, nullable=True)
-    updated_by_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)
+    updated_by_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True, index=True)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    __table_args__ = (
+        db.UniqueConstraint('session_id', 'user_id', name='uq_prs_session_user'),
+        db.Index('ix_prs_session_user_status', 'session_id', 'user_id', 'status'),
+    )
 
     session = db.relationship('EventSession', backref=db.backref('round_statuses', lazy=True, cascade='all, delete-orphan'))
     user = db.relationship('User', foreign_keys=[user_id], lazy=True)
@@ -327,13 +340,17 @@ class EventAttendance(db.Model):
     __tablename__ = 'event_attendance'
 
     id = db.Column(db.Integer, primary_key=True)
-    event_id = db.Column(db.Integer, db.ForeignKey('events.id'), nullable=False)
-    session_id = db.Column(db.Integer, db.ForeignKey('event_sessions.id'), nullable=True)
-    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
-    attendance_status = db.Column(db.String(20), nullable=False, default='PRESENT')
-    marked_by_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)
+    event_id = db.Column(db.Integer, db.ForeignKey('events.id'), nullable=False, index=True)
+    session_id = db.Column(db.Integer, db.ForeignKey('event_sessions.id'), nullable=True, index=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False, index=True)
+    attendance_status = db.Column(db.String(20), nullable=False, default='PRESENT', index=True)
+    marked_by_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True, index=True)
     marked_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    __table_args__ = (
+        db.Index('ix_attendance_session_user', 'session_id', 'user_id'),
+    )
 
     user = db.relationship('User', foreign_keys=[user_id], lazy=True)
     marked_by = db.relationship('User', foreign_keys=[marked_by_id], lazy=True)
@@ -371,7 +388,7 @@ class EventAttendance(db.Model):
 class EventPrize(db.Model):
     __tablename__ = 'event_prizes'
     id = db.Column(db.Integer, primary_key=True)
-    event_id = db.Column(db.Integer, db.ForeignKey('events.id'), nullable=False)
+    event_id = db.Column(db.Integer, db.ForeignKey('events.id'), nullable=False, index=True)
     title = db.Column(db.String(120), nullable=False)
     winner_name = db.Column(db.String(120), nullable=True)
     description = db.Column(db.Text, nullable=True)
@@ -389,11 +406,14 @@ class EventPrize(db.Model):
 
 class EventOrganizer(db.Model):
     __tablename__ = 'event_organizers'
-    __table_args__ = (db.UniqueConstraint('event_id', 'user_id', name='uq_event_organizer'),)
+    __table_args__ = (
+        db.UniqueConstraint('event_id', 'user_id', name='uq_event_organizer'),
+        db.Index('ix_event_organizer_lookup', 'event_id', 'user_id'),
+    )
 
     id = db.Column(db.Integer, primary_key=True)
-    event_id = db.Column(db.Integer, db.ForeignKey('events.id'), nullable=False)
-    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    event_id = db.Column(db.Integer, db.ForeignKey('events.id'), nullable=False, index=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False, index=True)
     organizer_role = db.Column(db.String(50), nullable=False, default='ORGANIZER')
     assigned_at = db.Column(db.DateTime, default=datetime.utcnow)
 
@@ -424,8 +444,8 @@ class EventVolunteerPosition(db.Model):
     __tablename__ = 'event_volunteer_positions'
 
     id = db.Column(db.Integer, primary_key=True)
-    event_id = db.Column(db.Integer, db.ForeignKey('events.id'), nullable=False)
-    position_name = db.Column(db.String(100), nullable=False)
+    event_id = db.Column(db.Integer, db.ForeignKey('events.id'), nullable=False, index=True)
+    position_name = db.Column(db.String(100), nullable=False, index=True)
     max_capacity = db.Column(db.Integer, nullable=False, default=3)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
@@ -457,17 +477,20 @@ class EventVolunteerPosition(db.Model):
 
 class EventVolunteer(db.Model):
     __tablename__ = 'event_volunteers'
-    __table_args__ = (db.UniqueConstraint('event_id', 'user_id', 'position_name', name='uq_event_volunteer_user_pos'),)
+    __table_args__ = (
+        db.UniqueConstraint('event_id', 'user_id', 'position_name', name='uq_event_volunteer_user_pos'),
+        db.Index('ix_event_volunteer_lookup', 'event_id', 'user_id', 'volunteer_status'),
+    )
 
     id = db.Column(db.Integer, primary_key=True)
-    event_id = db.Column(db.Integer, db.ForeignKey('events.id'), nullable=False)
-    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
-    request_id = db.Column(db.Integer, db.ForeignKey('requests.id'), nullable=True)
-    position_name = db.Column(db.String(100), nullable=False, default='General Volunteer')
-    volunteer_status = db.Column(db.String(30), nullable=False, default='PENDING')
+    event_id = db.Column(db.Integer, db.ForeignKey('events.id'), nullable=False, index=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False, index=True)
+    request_id = db.Column(db.Integer, db.ForeignKey('requests.id'), nullable=True, index=True)
+    position_name = db.Column(db.String(100), nullable=False, default='General Volunteer', index=True)
+    volunteer_status = db.Column(db.String(30), nullable=False, default='PENDING', index=True)
     start_date = db.Column(db.DateTime, nullable=True)
     end_date = db.Column(db.DateTime, nullable=True)
-    requested_at = db.Column(db.DateTime, default=datetime.utcnow)
+    requested_at = db.Column(db.DateTime, default=datetime.utcnow, index=True)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
     user = db.relationship('User', lazy=True)

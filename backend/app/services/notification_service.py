@@ -188,7 +188,10 @@ class NotificationService:
             )
 
     @staticmethod
-    def notify_event_registered(event_id, event_name, club_name, user_id):
+    def notify_event_registered(event_id, event_name, club_name=None, user_id=None):
+        if user_id is None and isinstance(club_name, int):
+            user_id = club_name
+            club_name = None
         ctx = f"{club_name or 'Club'} · {event_name}"
         NotificationService.create(
             user_id=user_id,
@@ -202,7 +205,15 @@ class NotificationService:
         )
 
     @staticmethod
-    def notify_event_schedule_changed(event_id, event_name, club_name, update_details, target_user_ids):
+    def notify_event_schedule_changed(event_id, event_name, *args):
+        # args can be (club_name, update_details, target_user_ids) or (update_details, target_user_ids)
+        if len(args) == 2:
+            club_name = None
+            update_details, target_user_ids = args
+        elif len(args) >= 3:
+            club_name, update_details, target_user_ids = args[0], args[1], args[2]
+        else:
+            club_name, update_details, target_user_ids = None, "", []
         ctx = f"{club_name or 'Club'} · {event_name}"
         msg = f"The {event_name} schedule has been updated: {update_details}."
         for uid in set(target_user_ids or []):
@@ -218,7 +229,15 @@ class NotificationService:
             )
 
     @staticmethod
-    def notify_event_venue_changed(event_id, event_name, club_name, venue_name, target_user_ids):
+    def notify_event_venue_changed(event_id, event_name, *args):
+        # args can be (club_name, venue_name, target_user_ids) or (venue_name, target_user_ids)
+        if len(args) == 2:
+            club_name = None
+            venue_name, target_user_ids = args
+        elif len(args) >= 3:
+            club_name, venue_name, target_user_ids = args[0], args[1], args[2]
+        else:
+            club_name, venue_name, target_user_ids = None, "", []
         ctx = f"{club_name or 'Club'} · {event_name}"
         for uid in set(target_user_ids or []):
             NotificationService.create(
@@ -294,7 +313,15 @@ class NotificationService:
         )
 
     @staticmethod
-    def notify_participant_shortlisted(event_id, event_name, club_name, user_id, round_name):
+    def notify_participant_shortlisted(event_id, event_name, *args):
+        # args can be (club_name, user_id, round_name) or (user_id, round_name)
+        if len(args) == 2:
+            club_name = None
+            user_id, round_name = args
+        elif len(args) >= 3:
+            club_name, user_id, round_name = args[0], args[1], args[2]
+        else:
+            club_name, user_id, round_name = None, None, "Next Round"
         ctx = f"{club_name or 'Club'} · {event_name}"
         NotificationService.create(
             user_id=user_id,
@@ -308,9 +335,62 @@ class NotificationService:
         )
 
     @staticmethod
-    def notify_participant_winner(event_id, event_name, club_name, user_id, role_name):
+    def notify_participant_eliminated(event_id, event_name, *args):
+        # args can be (club_name, user_id, round_name, reason) or (user_id, round_name, reason)
+        if len(args) == 3:
+            club_name = None
+            user_id, round_name, reason = args
+        elif len(args) >= 4:
+            club_name, user_id, round_name, reason = args[0], args[1], args[2], args[3]
+        else:
+            club_name, user_id, round_name, reason = None, args[0] if args else None, "Round", ""
         ctx = f"{club_name or 'Club'} · {event_name}"
-        title = "Event Results Announced"
+        msg = f"You have been eliminated from {round_name} of {event_name}." + (f" Reason: {reason}" if reason else "")
+        NotificationService.create(
+            user_id=user_id,
+            title="Event Update",
+            message=msg,
+            notification_type="EVENT_ELIMINATED",
+            entity_type="EVENT",
+            entity_id=event_id,
+            context=ctx,
+            reference_url=f"/student/events/{event_id}"
+        )
+
+    @staticmethod
+    def notify_participant_finalist(event_id, event_name, *args):
+        # args can be (club_name, user_id) or (user_id,)
+        if len(args) == 1:
+            club_name = None
+            user_id = args[0]
+        elif len(args) >= 2:
+            club_name, user_id = args[0], args[1]
+        else:
+            club_name, user_id = None, None
+        ctx = f"{club_name or 'Club'} · {event_name}"
+        NotificationService.create(
+            user_id=user_id,
+            title="You're a Finalist! 🌟",
+            message=f"Congratulations! You have reached the Final round of {event_name}.",
+            notification_type="EVENT_FINALIST",
+            entity_type="EVENT",
+            entity_id=event_id,
+            context=ctx,
+            reference_url=f"/student/events/{event_id}"
+        )
+
+    @staticmethod
+    def notify_participant_winner(event_id, event_name, *args):
+        # args can be (club_name, user_id, role_name) or (user_id, role_name)
+        if len(args) == 2:
+            club_name = None
+            user_id, role_name = args
+        elif len(args) >= 3:
+            club_name, user_id, role_name = args[0], args[1], args[2]
+        else:
+            club_name, user_id, role_name = None, None, "Winner"
+        ctx = f"{club_name or 'Club'} · {event_name}"
+        title = "Congratulations! 🏆"
         message = f"Results for {event_name} have been published. You finished as {role_name}!"
         NotificationService.create(
             user_id=user_id,
@@ -322,6 +402,35 @@ class NotificationService:
             context=ctx,
             reference_url=f"/student/events/{event_id}"
         )
+
+    @staticmethod
+    def notify_event_cancelled(event_id, event_name, target_user_ids, club_name=None):
+        ctx = f"{club_name or 'Club'} · {event_name}"
+        for uid in set(target_user_ids or []):
+            NotificationService.create(
+                user_id=uid,
+                title="Event Cancelled",
+                message=f"{event_name} has been cancelled.",
+                notification_type="EVENT_CANCELLED",
+                entity_type="EVENT",
+                entity_id=event_id,
+                context=ctx,
+                reference_url="/student/events"
+            )
+
+    @staticmethod
+    def notify_club_status_changed(club_id, club_name, status, target_user_ids):
+        for uid in set(target_user_ids or []):
+            NotificationService.create(
+                user_id=uid,
+                title=f"Club {status.capitalize()}",
+                message=f"{club_name} status has been changed to {status}.",
+                notification_type="CLUB_UPDATED",
+                entity_type="CLUB",
+                entity_id=club_id,
+                context=club_name,
+                reference_url=f"/student/clubs/{club_id}"
+            )
 
     @staticmethod
     def notify_budget_approved(user_id, request_id, club_name, amount):

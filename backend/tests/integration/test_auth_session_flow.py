@@ -15,12 +15,14 @@ def test_student_registration_and_login_flow(client):
         }
     )
     assert reg_response.status_code == 201
+    user_data = reg_response.get_json()["user"]
+    student_reg_id = user_data.get("registerNumber") or user_data.get("rollNumber")
     
     # 2. Login with the new student credentials
     login_response = client.post(
         "/api/auth/login",
         json={
-            "email": "test_integration_student@allclub.com",
+            "username": student_reg_id,
             "password": "password123"
         }
     )
